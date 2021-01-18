@@ -138,40 +138,7 @@ class Config(object):
 
         self.ID = 0
 
-    # def print(self):
-    #     print(
-    #         *(" version: ", self.version, "\n"),
-    #         *("N_tot: ", self.N_tot, "\n"),
-    #         *("rho: ", self.rho, "\n"),
-    #         *("epsilon_rho: ", self.epsilon_rho, "\n"),
-    #         *("mu: ", self.mu, "\n"),
-    #         *("sigma_mu: ", self.sigma_mu, "\n"),
-    #         *("beta: ", self.beta, "\n"),
-    #         *("sigma_beta: ", self.sigma_beta, "\n"),
-    #         *("algo: ", self.algo, "\n"),
-    #         *("N_init: ", self.N_init, "\n"),
-    #         *("lambda_E: ", self.lambda_E, "\n"),
-    #         *("lambda_I: ", self.lambda_I, "\n"),
-    #         *("make_random_initial_infections: ", self.make_random_initial_infections, "\n"),
-    #         *("day_max: ", self.day_max, "\n"),
-    #         *("N_events: ", self.N_events, "\n"),
-    #         *("event_size_max: ", self.event_size_max, "\n"),
-    #         *("event_size_mean: ", self.event_size_mean, "\n"),
-    #         *("event_beta_scaling: ", self.event_beta_scaling, "\n"),
-    #         *("event_weekend_multiplier: ", self.event_weekend_multiplier, "\n"),
-    #         # *("do_interventions: ", self.do_interventions, "\n"),
-    #         # *("interventions_to_apply: ", self.interventions_to_apply, "\n"),
-    #         # *("f_daily_tests: ", self.f_daily_tests, "\n"),
-    #         # *("test_delay_in_clicks: ", self.test_delay_in_clicks, "\n"),
-    #         # *("results_delay_in_clicks: ", self.results_delay_in_clicks, "\n"),
-    #         # *("chance_of_finding_infected: ", self.chance_of_finding_infected, "\n"),
-    #         # *("days_looking_back: ", self.days_looking_back, "\n"),
-    #         # *("masking_rate_reduction: ", self.masking_rate_reduction, "\n"),
-    #         # *("lockdown_rate_reduction: ", self.lockdown_rate_reduction, "\n"),
-    #         # *("isolation_rate_reduction: ", self.isolation_rate_reduction, "\n"),
-    #         # *("tracking_rates: ", self.tracking_rates, "\n"),
-    #         *("ID: ", self.ID, "\n"),
-    #     )
+   
 
 
 def initialize_nb_cfg(cfg):

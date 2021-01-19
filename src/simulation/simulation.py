@@ -1,3 +1,4 @@
+from re import X
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -65,15 +66,18 @@ class Simulation:
                 raise AssertionError("interventions not yet implemented for version 1")
 
     def _initialize_network(self):
+        """ Initializing the network for the simulation
+        """
 
+        # generate coordinates based on population density
         self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.ID)
         coordinates_raw = utils.df_coordinates_to_coordinates(self.df_coordinates)
 
         if self.verbose:
             print(f"\nINITIALIZE VERSION {self.cfg.version} NETWORK")
 
+        #Version 1 do not have [house, work, other], from version 2 this is implemented. 
         if self.cfg.version >= 2:
-
             (
                 people_in_household,
                 age_distribution_per_people_in_household,
@@ -81,7 +85,7 @@ class Simulation:
             N_ages = age_distribution_per_people_in_household.shape[1]
 
             if self.verbose:
-                print("Connect Families")
+                print("Connect Household") #was household and families are used interchangebly. Most places it is changed to house(hold) since it just is people living at the same adress. 
 
             (
                 mu_counter,
@@ -94,6 +98,9 @@ class Simulation:
                 coordinates_raw,
             )
 
+
+            #make connectivity matrices, right now they are uniform.
+            # TODO: take real input to get better matrices. 
             if self.verbose:
                 print("Using uniform work and other matrices")
 
@@ -114,7 +121,6 @@ class Simulation:
                 self.my,
                 N_ages,
                 mu_counter,
-                # work_other_ratio,
                 matrix_work,
                 matrix_other,
                 agents_in_age_group,
@@ -131,7 +137,6 @@ class Simulation:
                 print("CONNECT NODES")
             nb_simulation.v1_connect_nodes(self.my)
 
-            # counter_ages = np.array([cfg.N_tot], dtype=np.uint16)
             agents_in_age_group = List()
             agents_in_age_group.append(np.arange(self.cfg.N_tot, dtype=np.uint32))
 
@@ -152,17 +157,17 @@ class Simulation:
             f.create_dataset("N_ages", data=self.N_ages)
             self._add_cfg_to_hdf5_file(f)
 
-    def _load_initialized_network(self, filename):
-        if self.verbose:
-            print(f"Loading previously initialized network, please wait", flush=True)
-        with h5py.File(filename, "r") as f:
-            self.agents_in_age_group = utils.NestedArray.from_hdf5(
-                f, "agents_in_age_group"
-            ).to_nested_numba_lists()
-            self.N_ages = f["N_ages"][()]
-            my_hdf5ready = nb_load_jitclass.load_jitclass_to_dict(f["my"])
-            self.my = nb_load_jitclass.load_My_from_dict(my_hdf5ready, self.cfg)
-        self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.ID)
+    # def _load_initialized_network(self, filename):
+    #     if self.verbose:
+    #         print(f"Loading previously initialized network, please wait", flush=True)
+    #     with h5py.File(filename, "r") as f:
+    #         self.agents_in_age_group = utils.NestedArray.from_hdf5(
+    #             f, "agents_in_age_group"
+    #         ).to_nested_numba_lists()
+    #         self.N_ages = f["N_ages"][()]
+    #         my_hdf5ready = nb_load_jitclass.load_jitclass_to_dict(f["my"])
+    #         self.my = nb_load_jitclass.load_My_from_dict(my_hdf5ready, self.cfg)
+    #     self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.ID)
 
     def initialize_network(
         self, force_rerun=False, save_initial_network=True, force_load_initial_network=False
@@ -341,18 +346,20 @@ class Simulation:
 
         with h5py.File(filename_hdf5, "w", **hdf5_kwargs) as f:  #
             f.create_dataset("my_state", data=self.my_state)
+            f.create_dataset("my_corona_type", data=self.my.corona_type)
             f.create_dataset("my_number_of_contacts", data=self.my.number_of_contacts)
             f.create_dataset("day_found_infected", data=self.intervention.day_found_infected)
+            f.create_dataset("coordinates", data=self.my.coordinates)
             # import ast; ast.literal_eval(str(cfg))
             f.create_dataset("cfg_str", data=str(self.cfg))
             f.create_dataset("R_true", data=self.intervention.R_true_list)
             f.create_dataset("freedom_impact", data=self.intervention.freedom_impact_list)
             f.create_dataset("pandemic_control", data=self.intervention.pandemic_control_list)
             f.create_dataset("df", data=utils.dataframe_to_hdf5_format(self.df))
-            f.create_dataset(
-                "df_coordinates",
-                data=utils.dataframe_to_hdf5_format(self.df_coordinates, cols_to_str="kommune"),
-            )
+            # f.create_dataset(
+            #     "df_coordinates",
+            #     data=utils.dataframe_to_hdf5_format(self.df_coordinates, cols_to_str="kommune"),
+            # )
 
             if time_elapsed:
                 f.create_dataset("time_elapsed", data=time_elapsed)
@@ -508,6 +515,9 @@ if debugging:
             "clustering_connection_retries": 0,
             "work_other_ratio": 0.5,
             "N_contacts_max": 200,
+            # English type
+            "N_init_UK": 100,
+            "beta_UK_multiplier": 1.7,
             # contacts
             "N_events": 0,
             "event_size_max": 50,
@@ -517,7 +527,8 @@ if debugging:
             # lockdown / intervention
             "do_interventions": True,
             "threshold_info": [[1,2], [200, 50], [15, 15]],
-            "interventions_to_apply": [1, 2,3, 4, 5, 6],
+            "interventions_to_apply": [1, 2, 3, 4, 5, 6],
+
             "f_daily_tests": 0.01,
             "test_delay_in_clicks": [0, 0, 25],
             "results_delay_in_clicks": [10, 10, 10],
@@ -532,7 +543,8 @@ if debugging:
         }
     )
 
-    if __name__ == "__main__" and True:
+    if __name__ == "__main__" and False:
+
         with Timer() as t:
             simulation = Simulation(cfg, verbose)
             simulation.initialize_network(
@@ -550,6 +562,9 @@ if debugging:
 
         my = simulation.my
         df_coordinates = simulation.df_coordinates
+
+        my.coordinates
+
         intervention = simulation.intervention
         g = simulation.g
 
@@ -601,3 +616,5 @@ if debugging:
         #         "ID": 0,
         #     }
         # )
+
+# %%

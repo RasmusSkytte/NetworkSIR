@@ -102,12 +102,14 @@ def plot_single_ABM_simulation(
 
     T_max = 0
     lw = 0.3 * 10 / np.sqrt(len(filenames))
+    lw_SEIR = 4
 
     stochastic_noise_I = []
     stochastic_noise_R = []
 
     # file, i = abm_files[ABM_parameter][0], 0
     for i, filename in enumerate(filenames):
+        # break
         df = file_loaders.pandas_load_file(filename)
         t = df["time"].values
         label = r"ABM" if i == 0 else None
@@ -128,13 +130,13 @@ def plot_single_ABM_simulation(
         ax.plot(
             df_deterministic["time"],
             df_deterministic[variable] / N_tot,
-            lw=lw * 4,
+            lw=lw_SEIR,
             color=d_colors["red"],
             label="SEIR",
         )
         leg = ax.legend(loc=d_label_loc[variable], fontsize=legend_fontsize)
         for legobj in leg.legendHandles:
-            legobj.set_linewidth(lw * 4)
+            legobj.set_linewidth(lw_SEIR)
 
         ax.set(
             xlabel="Time [days]",
@@ -251,7 +253,7 @@ def plot_single_ABM_simulation_test_focus(
     return fig, ax
 
 
-def plot_ABM_simulations(abm_files, force_rerun=False, plot_found_vs_real_inf=False):
+def plot_ABM_simulations(abm_files, force_rerun=False, plot_found_vs_real_inf=False, **kwargs):
 
     # pdf_name = "test.pdf"
     pdf_name = Path(f"Figures/ABM_simulations.pdf")
@@ -275,11 +277,11 @@ def plot_ABM_simulations(abm_files, force_rerun=False, plot_found_vs_real_inf=Fa
             total=len(abm_files.cfgs),
         ):
 
-            # break
+            #     break
             if plot_found_vs_real_inf:
                 fig_ax = plot_single_ABM_simulation_test_focus(cfg, abm_files)
             else:
-                fig_ax = plot_single_ABM_simulation(cfg, abm_files)
+                fig_ax = plot_single_ABM_simulation(cfg, abm_files, **kwargs)
 
             if fig_ax is not None:
                 fig, ax = fig_ax
@@ -1539,6 +1541,260 @@ def make_MCMC_plots(
             fig_ax = plot_multiple_ABM_simulations(
                 cfgs, abm_files, variable, R_effs, reverse_order, days
             )
+
+            if fig_ax is not None:
+                fig, ax = fig_ax
+                pdf.savefig(fig, dpi=100)
+            plt.close("all")
+
+
+#%%
+
+
+def _load_corona_type_data(filename, start_day=0, end_day=-1):
+    with h5py.File(filename, "r") as f:
+        my_corona_type = f["my_corona_type"][()]
+        if end_day == -1:
+            end_day = len(f["my_state"])
+        my_state = f["my_state"][start_day:end_day]
+    return my_corona_type, my_state
+
+
+@njit
+def get_I_corona_types(my_state, my_corona_type):
+    # getting I states that also has specified corona_type
+    I_states = (my_state >= 4) & (my_state < 8)
+    type_0 = I_states & (my_corona_type == 0)
+    type_1 = I_states & (my_corona_type == 1)
+
+    type_1_sum = type_1.sum(axis=1)
+    type_0_sum = I_states.sum(axis=1) - type_1_sum
+    return type_0_sum, type_1_sum
+    # return (I_states & (my_corona_type[start_day:end_day, :] == corona_type)).sum(axis=1)
+
+
+xlim = (0, None)
+ylim_scale = 1.0
+legend_fontsize = 30
+d_label_loc = None
+
+
+def plot_corona_type_single_plot(
+    cfg,
+    network_files,
+    xlim=(0, None),
+    ylim_scale=1.0,
+    legend_fontsize=30,
+    d_label_loc=None,
+    N_max_runs=None,
+    reposition_x_axis=False,
+    normalize=True,
+):
+
+    filenames = network_files.cfg_to_filenames(cfg)
+    # filenames = [filename for filename in network_files.iter_all_files()]
+    if N_max_runs:
+        filenames = filenames[:N_max_runs]
+
+    if not isinstance(cfg, utils.DotDict):
+        cfg = utils.DotDict(cfg)
+
+    # d_ylabel = {"I": "Fraction Infected", "R": "Fraction Infected"}
+    # if d_label_loc is None:
+    # d_label_loc = {"I": "upper right", "R": "upper right"}
+
+    N_tot = cfg.N_tot if normalize else 1
+    start_day = xlim[0]
+    end_day = xlim[1] if xlim[1] is not None else -1
+    delta_t = xlim[0] if reposition_x_axis else 0
+
+    lw = 0.3 * 10 / np.sqrt(len(filenames))
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    fig.subplots_adjust(top=0.75)
+
+    # file, i = abm_files[ABM_parameter][0], 0
+    for i, filename in enumerate(filenames):
+        # break
+        df = file_loaders.pandas_load_file(filename)
+        my_corona_type, my_state = _load_corona_type_data(filename, start_day, end_day)
+        c = f"C{i}"
+
+        t = df["time"].values - delta_t
+        label = r"Total" if i == 0 else None
+
+        ax.plot(t, df["I"] / N_tot, lw=lw * 1.5, c=c, label=label)
+
+        t_days = np.arange(len(my_state)) + start_day - delta_t
+        I_normal, I_UK = get_I_corona_types(my_state, my_corona_type)
+
+        ax.plot(
+            t_days,
+            I_normal / N_tot,
+            lw=lw / 1.5,
+            ls="dotted",
+            c=c,
+            label=r"DK" if i == 0 else None,
+        )
+        ax.plot(
+            t_days,
+            I_UK / N_tot,
+            lw=lw / 1.5,
+            ls="dashed",
+            c=c,
+            label=r"UK" if i == 0 else None,
+        )
+
+    ax.legend(fontsize=legend_fontsize)
+
+    if reposition_x_axis:
+        xlim = (xlim[0] - delta_t, xlim[1] - delta_t)
+
+    ax.set(
+        xlabel="Tid [dage]",
+        ylim=(0, None),
+        ylabel="Inficerede",
+        xlim=xlim,
+    )
+    ax.set_ylim(0, ax.get_ylim()[1] * ylim_scale)
+    if normalize:
+        ax.yaxis.set_major_formatter(PercentFormatter(xmax=1))
+    else:
+        ax.yaxis.set_major_formatter(EngFormatter())
+
+    title = utils.dict_to_title(cfg, len(filenames))
+    fig.suptitle(title, fontsize=15)
+    return fig, ax
+
+
+def plot_corona_type(network_files, force_rerun=False, **kwargs):
+
+    # pdf_name = "test.pdf"
+    pdf_name = Path(f"Figures/corona_type_infection_curves_simulations.pdf")
+    utils.make_sure_folder_exist(pdf_name)
+
+    if pdf_name.exists() and not force_rerun:
+        print(f"{pdf_name} already exists\n", flush=True)
+        return None
+
+    with PdfPages(pdf_name) as pdf:
+
+        for cfg in tqdm(
+            network_files.iter_cfgs(),
+            desc="Plotting corona type infections",
+            total=len(network_files.cfgs),
+        ):
+            # break
+
+            #     break
+            fig_ax = plot_corona_type_single_plot(cfg, network_files, **kwargs)
+
+            if fig_ax is not None:
+                fig, ax = fig_ax
+                pdf.savefig(fig, dpi=100)
+            plt.close("all")
+
+
+#%%
+
+
+# xlim = (10, 100)
+
+
+def plot_corona_type_ratio_plot_single_plot(
+    cfg,
+    network_files,
+    xlim=(0, None),
+    # ylim_scale=1.0,
+):
+
+    filenames = network_files.cfg_to_filenames(cfg)
+    # filenames = filenames[0:1]
+
+    if not isinstance(cfg, utils.DotDict):
+        cfg = utils.DotDict(cfg)
+
+    d_ylabel = {"I": "UK / DK", "R": "log10 (UK / DK)"}
+
+    N_tot = cfg.N_tot
+
+    start_day = xlim[0]
+    end_day = xlim[1] if xlim[1] is not None else -1
+
+    lw = 0.3 * 10 / np.sqrt(len(filenames))
+
+    fig, axes = plt.subplots(ncols=2, figsize=(16, 7))
+    fig.subplots_adjust(top=0.75)
+
+    # file, i = abm_files[ABM_parameter][0], 0
+    for i, filename in enumerate(filenames):
+        # break
+        df = file_loaders.pandas_load_file(filename)
+        my_corona_type, my_state = _load_corona_type_data(filename, start_day, end_day)
+
+        t_days = np.arange(len(my_state)) + start_day
+
+        I_normal, I_UK = get_I_corona_types(my_state, my_corona_type)
+
+        axes[0].plot(
+            t_days,
+            I_UK / I_normal,
+            lw=lw,
+            c="k",
+            label=r"UK / DK" if i == 0 else None,
+        )
+
+        axes[1].plot(
+            t_days,
+            I_UK / I_normal,
+            lw=lw,
+            c="k",
+            label=r"log10 (UK / DK)" if i == 0 else None,
+        )
+        axes[1].set_yscale("log", base=10, nonpositive="mask")
+
+    for variable, ax in zip(["I", "R"], axes):
+
+        # leg = ax.legend(loc=d_label_loc[variable], fontsize=legend_fontsize)
+        # for legobj in leg.legendHandles:
+        #     legobj.set_linewidth(lw * 4)
+
+        ax.set(
+            xlabel="Time [days]",
+            ylim=(0, None) if variable == "I" else None,
+            ylabel=d_ylabel[variable],
+            xlim=xlim,
+        )
+        # ax.set_ylim(0, ax.get_ylim()[1] * ylim_scale)
+        # ax.yaxis.set_major_formatter(PercentFormatter(xmax=1))
+
+    title = utils.dict_to_title(cfg, len(filenames))
+    fig.suptitle(title, fontsize=15)
+    plt.subplots_adjust(wspace=0.4)
+
+    return fig, axes
+
+
+def plot_corona_type_ratio_plot(network_files, force_rerun=False, **kwargs):
+
+    # pdf_name = "test.pdf"
+    pdf_name = Path(f"Figures/corona_type_infection_ratio_curves_simulations.pdf")
+    utils.make_sure_folder_exist(pdf_name)
+
+    if pdf_name.exists() and not force_rerun:
+        print(f"{pdf_name} already exists\n", flush=True)
+        return None
+
+    with PdfPages(pdf_name) as pdf:
+
+        for cfg in tqdm(
+            network_files.iter_cfgs(),
+            desc="Plotting corona type infection ratios",
+            total=len(network_files.cfgs),
+        ):
+
+            #     break
+            fig_ax = plot_corona_type_ratio_plot_single_plot(cfg, network_files, **kwargs)
 
             if fig_ax is not None:
                 fig, ax = fig_ax

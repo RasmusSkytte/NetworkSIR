@@ -52,6 +52,7 @@ spec_cfg = {
     "make_random_initial_infections": nb.boolean,
     "weighted_random_initial_infections": nb.boolean,
     "make_initial_infections_at_kommune": nb.boolean,
+    "make_restrictions_at_kommune_level": nb.boolean,
     "clustering_connection_retries": nb.uint32,
     "work_other_ratio": nb.float32,  # 0.2 = 20% work, 80% other
     "N_contacts_max": nb.uint16,
@@ -64,6 +65,7 @@ spec_cfg = {
     # lockdown-related / interventions
     "do_interventions": nb.boolean,
     # "interventions_to_apply": nb.types.Set(nb.int64),
+    "threshold_info": nb.int64[:, ::1], 
     "interventions_to_apply": ListType(nb.int64),
     "f_daily_tests": nb.float32,
     "test_delay_in_clicks": nb.int64[:],
@@ -75,6 +77,7 @@ spec_cfg = {
     "isolation_rate_reduction": nb.float64[:],
     "tracking_rates": nb.float64[:],
     "tracking_delay": nb.int64,
+    "intervention_removal_delay_in_clicks": nb.int32,
     # ID
     "ID": nb.uint16,
 }
@@ -102,6 +105,7 @@ class Config(object):
         self.make_random_initial_infections = True
         self.weighted_random_initial_infections = False
         self.make_initial_infections_at_kommune = False
+        self.make_restrictions_at_kommune_level = True
         self.day_max = 0
         self.clustering_connection_retries = 0
         self.work_other_ratio = 0.5
@@ -113,21 +117,22 @@ class Config(object):
         self.event_size_mean = 50
         self.event_beta_scaling = 10
         self.event_weekend_multiplier = 1.0
-
         # Interventions / Lockdown
-        self.do_interventions = False
+        self.do_interventions = True
         # self.interventions_to_apply = {1, 4, 6}
-        self.interventions_to_apply = List([1, 4, 6])
-        self.f_daily_tests = 0.01
+        self.threshold_info = np.array([[1,2], [200, 50], [15, 15]])
+        self.interventions_to_apply = List([1 , 2, 3, 4, 5, 6])
+        self.f_daily_tests = 0.05
         self.test_delay_in_clicks = np.array([0, 0, 25])
         self.results_delay_in_clicks = np.array([5, 10, 5])
         self.chance_of_finding_infected = np.array([0.0, 0.15, 0.15, 0.15, 0.0])
         self.days_looking_back = 7
         self.masking_rate_reduction = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.8]])
-        self.lockdown_rate_reduction = np.array([[0.0, 1.0, 0.6], [0.0, 0.6, 0.6]])
+        self.lockdown_rate_reduction = np.array([[0.0, 0.6, 0.6], [0.0, 0.6, 0.6]])
         self.isolation_rate_reduction = np.array([0.2, 1.0, 1.0])
-        self.tracking_rates = np.array([1.0, 0.8, 0.0])
+        self.tracking_rates = np.array([1.0, 0.8, 0.2])
         self.tracking_delay = 10
+        self.intervention_removal_delay_in_clicks = 30 
 
         self.ID = 0
 
@@ -318,12 +323,17 @@ spec_intervention = {
     "labels": nb.uint8[:],  # affilitation? XXX
     "label_counter": nb.uint32[:],
     "N_labels": nb.uint32,
+    "freedom_impact": nb.float64[:],
+    "freedom_impact_list": ListType(nb.float64),
+    "R_true_list": ListType(nb.float64),
+    "pandemic_control_list": ListType(nb.float64),
     "day_found_infected": nb.int32[:],
     "reason_for_test": nb.int8[:],
     "positive_test_counter": nb.uint32[:],
     "clicks_when_tested": nb.int32[:],
     "clicks_when_tested_result": nb.int32[:],
     "clicks_when_isolated": nb.int32[:],
+    "clicks_when_restriction_stops": nb.int32[:],
     "types": nb.uint8[:],
     "started_as": nb.uint8[:],
     "verbose": nb.boolean,
@@ -377,12 +387,16 @@ class Intervention(object):
         self._initialize_labels(labels)
 
         self.day_found_infected = np.full(self.cfg.N_tot, fill_value=-1, dtype=np.int32)
+        self.freedom_impact = np.full(self.cfg.N_tot, fill_value=0.0, dtype=np.float64)
+        self.freedom_impact_list = List([0.0])
+        self.R_true_list = List([0.0])
+        self.pandemic_control_list = List([0.0])
         self.reason_for_test = np.full(self.cfg.N_tot, fill_value=-1, dtype=np.int8)
         self.positive_test_counter = np.zeros(3, dtype=np.uint32)
         self.clicks_when_tested = np.full(self.cfg.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_tested_result = np.full(self.cfg.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_isolated = np.full(self.cfg.N_tot, fill_value=-1, dtype=np.int32)
-
+        self.clicks_when_restriction_stops = np.full(self.N_labels, fill_value=-1, dtype=np.int32)
         self.types = np.zeros(self.N_labels, dtype=np.uint8)
         self.started_as = np.zeros(self.N_labels, dtype=np.uint8)
 
@@ -1163,7 +1177,8 @@ def run_simulation(
     nts,
     verbose,
 ):
-
+    print("apply intervention", intervention.apply_interventions)
+    
     out_time = List()
     out_state_counts = List()
     out_my_state = List()
@@ -1176,6 +1191,7 @@ def run_simulation(
 
     s_counter = np.zeros(4)
     where_infections_happened_counter = np.zeros(4)
+    
 
     # Run the simulation ################################
     continue_run = True
@@ -1315,7 +1331,7 @@ def run_simulation(
             if daily_counter >= 10:
 
                 if intervention.apply_interventions and intervention.apply_interventions_on_label:
-                    apply_interventions_on_label(my, g, intervention, day, click)
+                    apply_interventions_on_label(my, g, intervention, day, click, my.cfg.threshold_info)
 
                 if my.cfg.N_events > 0:
                     add_daily_events(
@@ -1331,11 +1347,22 @@ def run_simulation(
                 daily_counter = 0
                 day += 1
                 out_my_state.append(my.state.copy())
+                if verbose:
+                    print("day", day, "n_inf", np.sum(where_infections_happened_counter) )
+                    print("R_true", intervention.R_true_list[-1])
+                    print("freedom_impact", intervention.freedom_impact_list[-1])
+                    print("pandemic_control_list", intervention.pandemic_control_list[-1])
+
+
 
             if intervention.apply_interventions:
-
                 test_tagged_agents(my, g, intervention, day, click)
-
+            
+            intervention.R_true_list.append(calculate_R_True(my, g))
+            intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
+            intervention.pandemic_control_list.append(calculate_pandemic_control(my, intervention))
+            
+            
             click += 1
 
         continue_run = do_bug_check(
@@ -1360,6 +1387,7 @@ def run_simulation(
         print("s_counter", s_counter)
         print("Where", where_infections_happened_counter)
         print("positive_test_counter", intervention.positive_test_counter)
+        print("n_found", np.sum(np.array([1 for day_found in intervention.day_found_infected if day_found>=0])))
         # print("N_daily_tests", intervention.N_daily_tests)
         # print("N_positive_tested", N_positive_tested)
 
@@ -1374,6 +1402,32 @@ def run_simulation(
 # ██      ██ ██   ██ ██   ██    ██    ██ ██   ████    ██
 #
 #%%
+
+@njit
+def calculate_R_True(my, g):
+    lambda_I = my.cfg.lambda_I
+    rate_sum = g.total_sum_infections
+    N_infected = 0
+    for agent in range(my.cfg.N_tot):
+        if my.agent_is_infectious(agent):
+            N_infected += 1
+    return rate_sum / lambda_I / np.maximum(N_infected,1.0) * 4
+
+@njit 
+def calculate_population_freedom_impact(intervention):
+    return np.mean(intervention.freedom_impact)
+
+@njit 
+def calculate_pandemic_control(my, intervention):
+    I_crit = 2000.0*my.cfg.N_tot/5_800_000/my.cfg.lambda_I*4
+    b = np.log(2)/I_crit
+    N_infected = 0
+    for agent in range(my.cfg.N_tot):
+        if my.agent_is_infectious(agent):
+            N_infected += 1
+    return (1.0/(1.0+np.exp(-b*(N_infected-I_crit)))-(1/3))*3/2
+
+
 
 
 @njit
@@ -1434,7 +1488,7 @@ def test_if_label_needs_intervention(
     intervention,
     day,
     intervention_type_to_init,
-    threshold=0.000,  # threshold is the fraction that need to be positive.
+    threshold=0.02,  # threshold is the fraction that need to be positive.
 ):
     infected_per_label = np.zeros_like(intervention.label_counter, dtype=np.uint32)
 
@@ -1463,9 +1517,51 @@ def test_if_label_needs_intervention(
 
     return None
 
+@njit
+def test_if_label_needs_intervention_multi(
+    intervention,
+    day,
+    threshold_info,
+):
+    infected_per_label = np.zeros_like(intervention.label_counter, dtype=np.uint32)
+
+    for agent, day_found in enumerate(intervention.day_found_infected):
+        if day_found > max(0, day - intervention.cfg.days_looking_back):
+            infected_per_label[intervention.labels[agent]] += 1
+
+    it = enumerate(
+        zip(
+            infected_per_label,
+            intervention.label_counter,
+            intervention.types,
+        )
+    )
+    for i_label, (N_infected, N_inhabitants, my_intervention_type) in it:
+        for ith_intervention in range(0, len(threshold_info) + 1):
+            if my_intervention_type == 0:
+                possible_interventions = [1, 2]
+            elif my_intervention_type == 1:
+                possible_interventions = [7] # random integer that doesn't mean anything, 
+            elif my_intervention_type == 2:
+                possible_interventions = [1]    
+                
+            if N_infected / N_inhabitants > threshold_info[ith_intervention+1][0]/100_000.0 and threshold_info[0][ith_intervention] in possible_interventions:
+                if intervention.verbose:
+                    intervention_type_name = ["nothing","lockdown","masking"]
+                    print(
+                        *(intervention_type_name[threshold_info[0][ith_intervention]]," at label", i_label),
+                        *("at day", day),
+                        *("the num of infected is", N_infected),
+                        *("/", N_inhabitants),
+                    )
+
+                intervention.types[i_label] = threshold_info[0][ith_intervention]
+                break
+
+    return None
 
 @njit
-def reset_rates_of_agent(my, g, agent, connection_type_weight=None):
+def reset_rates_of_agent(my, g, agent, intervention, connection_type_weight=None):
 
     if connection_type_weight is None:
         # reset infection rate to origin times this number for [home, job, other]
@@ -1480,6 +1576,7 @@ def reset_rates_of_agent(my, g, agent, connection_type_weight=None):
         )
 
         rate = infection_rate - g.rates[agent][ith_contact]
+        intervention.freedom_impact[agent] = 0
         g.rates[agent][ith_contact] = infection_rate
 
         if my.agent_is_infectious(agent) and my.agent_is_susceptable(contact):
@@ -1490,9 +1587,13 @@ def reset_rates_of_agent(my, g, agent, connection_type_weight=None):
 
             # check if the contact found is myself
             if agent == possible_agent:
+                infection_rate = (
+                    my.infection_weight[contact]
+                    * connection_type_weight[my.connections_type[contact][ith_contact_of_contact]]                )
 
                 # update rates from contact to agent.
                 c_rate = my.infection_weight[contact] - g.rates[contact][ith_contact_of_contact]
+                intervention.freedom_impact[contact] = 0
                 g.rates[contact][ith_contact_of_contact] = my.infection_weight[contact]
 
                 # updates to gillespie sums, if contact is infectious and agent is susceptible
@@ -1509,12 +1610,12 @@ def reset_rates_of_agent(my, g, agent, connection_type_weight=None):
 def remove_intervention_at_label(my, g, intervention, ith_label):
     for agent in range(my.cfg.N_tot):
         if intervention.labels[agent] == ith_label:
-            reset_rates_of_agent(my, g, agent, connection_type_weight=None)
+            reset_rates_of_agent(my, g, agent, intervention, connection_type_weight=None)
     return None
 
 
 @njit
-def test_if_intervention_on_labels_can_be_removed(my, g, intervention, day, threshold=0.5):
+def test_if_intervention_on_labels_can_be_removed(my, g, intervention, day, threshold=0.001):
 
     infected_per_label = np.zeros(intervention.N_labels, dtype=np.int32)
     for agent, day_found in enumerate(intervention.day_found_infected):
@@ -1529,7 +1630,7 @@ def test_if_intervention_on_labels_can_be_removed(my, g, intervention, day, thre
         )
     )
     for i_label, (N_infected, N_inhabitants, my_intervention_type) in it:
-        if (N_infected / N_inhabitants) < threshold and my_intervention_type != 0:
+        if (N_infected / N_inhabitants) < threshold and my_intervention_type == 0:
 
             remove_intervention_at_label(my, g, intervention, i_label)
 
@@ -1544,6 +1645,62 @@ def test_if_intervention_on_labels_can_be_removed(my, g, intervention, day, thre
                 )
 
     return None
+
+@njit
+def test_if_intervention_on_labels_can_be_removed_multi(my, g, intervention, day, click,  threshold_info):
+
+    infected_per_label = np.zeros(intervention.N_labels, dtype=np.int32)
+    for agent, day_found in enumerate(intervention.day_found_infected):
+        if day_found > day - intervention.cfg.days_looking_back:
+            infected_per_label[intervention.labels[agent]] += 1
+
+    it = enumerate(
+        zip(
+            infected_per_label,
+            intervention.label_counter,
+            intervention.types,
+        )
+    )
+    for i_label, (N_infected, N_inhabitants, my_intervention_type) in it:
+        for ith_intervention in range(0, len(threshold_info)-1):
+            if N_infected / N_inhabitants < threshold_info[ith_intervention + 1][1]/100_000.0 and my_intervention_type == threshold_info[0][ith_intervention]:
+                intervention.clicks_when_restriction_stops[i_label] = click + my.cfg.intervention_removal_delay_in_clicks
+                
+
+    return None
+
+@njit
+def test_if_intervention_on_labels_can_be_removed_multi_old(my, g, intervention, day, threshold_info):
+
+    infected_per_label = np.zeros(intervention.N_labels, dtype=np.int32)
+    for agent, day_found in enumerate(intervention.day_found_infected):
+        if day_found > day - intervention.cfg.days_looking_back:
+            infected_per_label[intervention.labels[agent]] += 1
+
+    it = enumerate(
+        zip(
+            infected_per_label,
+            intervention.label_counter,
+            intervention.types,
+        )
+    )
+    for i_label, (N_infected, N_inhabitants, my_intervention_type) in it:
+        for ith_intervention in range(0, len(threshold_info)-1):
+            if N_infected / N_inhabitants < threshold_info[ith_intervention + 1][1]/100_000.0 and my_intervention_type == threshold_info[0][ith_intervention]:
+                remove_intervention_at_label(my, g, intervention, i_label)
+
+                intervention.types[i_label] = 0
+                intervention.started_as[i_label] = 0
+                if intervention.verbose:
+                    intervention_type_name = ["nothing","lockdown","masking"]
+                    print(
+                        *("remove ", intervention_type_name[threshold_info[0][ith_intervention]], " at num of infected", i_label),
+                        *("at day", day),
+                        *("the num of infected is", N_infected),
+                        *("/", N_inhabitants),
+                    )
+
+    return None    
 
 
 @njit
@@ -1566,6 +1723,7 @@ def loop_update_rates_of_contacts(
                 g.rates[contact][ith_contact_of_contact]
                 * rate_reduction[my.connections_type[contact][ith_contact_of_contact]]
             )
+            intervention.freedom_impact[contact] += rate_reduction[my.connections_type[contact][ith_contact_of_contact]]/2/my.number_of_contacts[contact]
             g.rates[contact][ith_contact_of_contact] -= c_rate
 
             # updates to gillespie sums, if contact is infectious and agent is susceptible
@@ -1587,6 +1745,8 @@ def cut_rates_of_agent(my, g, intervention, agent, rate_reduction):
         # update rates from agent to contact. Rate_reduction makes it depending on connection type
 
         rate = g.rates[agent][ith_contact] * rate_reduction[my.connections_type[agent][ith_contact]]
+        intervention.freedom_impact[contact] += rate_reduction[my.connections_type[agent][ith_contact]]/2/my.number_of_contacts[agent]
+
         g.rates[agent][ith_contact] -= rate
 
         agent_update_rate = loop_update_rates_of_contacts(
@@ -1625,7 +1785,7 @@ def reduce_frac_rates_of_agent(my, g, intervention, agent, rate_reduction):
             g.rates[agent][ith_contact]
             * act_rate_reduction[my.connections_type[agent][ith_contact]]
         )
-
+        intervention.freedom_impact[contact] += act_rate_reduction[my.connections_type[agent][ith_contact]]/2/my.number_of_contacts[agent]
         g.rates[agent][ith_contact] -= rate
 
         agent_update_rate = loop_update_rates_of_contacts(
@@ -1665,6 +1825,7 @@ def remove_and_reduce_rates_of_agent(my, g, intervention, agent, rate_reduction)
         )
 
         g.rates[agent][ith_contact] -= rate
+        intervention.freedom_impact[agent] += act_rate_reduction[my.connections_type[agent][ith_contact]]/2/my.number_of_contacts[agent]
 
         agent_update_rate = loop_update_rates_of_contacts(
             my,
@@ -1736,7 +1897,7 @@ def test_a_person(my, g, intervention, agent, click):
         and intervention.agent_has_been_tested(agent)
         and click > intervention.clicks_when_isolated[agent]
     ):
-        reset_rates_of_agent(my, g, agent, connection_type_weight=None)
+        reset_rates_of_agent(my, g, agent, intervention, connection_type_weight=None)
 
     intervention.clicks_when_tested[agent] = -1
     intervention.reason_for_test[agent] = -1
@@ -1778,18 +1939,32 @@ def apply_random_testing(my, intervention, click):
 
 
 @njit
-def apply_interventions_on_label(my, g, intervention, day, click):
-
+def apply_interventions_on_label(my, g, intervention, day, click, threshold_info = np.array([[1, 2], [200, 100], [20, 20]])):
+    
     if intervention.apply_random_testing:
         apply_random_testing(my, intervention, click)
 
-    test_if_label_needs_intervention(
+    test_if_intervention_on_labels_can_be_removed_multi(my, g, intervention, day, click, threshold_info)
+    for i_label, clicks_when_restriction_stops in enumerate(intervention.clicks_when_restriction_stops):
+        if clicks_when_restriction_stops == click:
+            remove_intervention_at_label(my, g, intervention, i_label)
+            intervention.clicks_when_restriction_stops[i_label] = -1
+            intervention_type_n = intervention.types[i_label]
+            intervention.types[i_label] = 0
+            intervention.started_as[i_label] = 0
+            if intervention.verbose:
+                intervention_type_name = ["nothing","lockdown","masking"]
+                print(
+                    *("remove ", intervention_type_name[intervention_type_n], " at num of infected", i_label),
+                    *("at day", day)
+                )
+
+    test_if_label_needs_intervention_multi(
         intervention,
         day,
-        intervention_type_to_init=1,
-        threshold=0.004,
+        threshold_info,
     )
-    test_if_intervention_on_labels_can_be_removed(my, g, intervention, day, threshold=0.001)
+    
 
     for ith_label, intervention_type in enumerate(intervention.types):
 
@@ -1806,6 +1981,18 @@ def apply_interventions_on_label(my, g, intervention, day, click):
                     label=ith_label,
                     rate_reduction=intervention.cfg.lockdown_rate_reduction,
                 )
+
+            apply_masking = intervention_type == 2
+            if apply_masking and intervention_has_not_been_applied:
+                intervention.started_as[ith_label] = 2
+                masking_on_label(
+                    my,
+                    g,
+                    intervention,
+                    label=ith_label,
+                    rate_reduction=intervention.cfg.masking_rate_reduction,
+                )
+
 
 
 @njit

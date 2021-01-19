@@ -19,6 +19,7 @@ lambda_I: 1.0  # I->R, Lambda(from I states)
 make_random_initial_infections: True # Infections around a single agent
 weighted_random_initial_infections: True # Infections weighted by the number of contacts
 make_initial_infections_at_kommune: False # Initiate infections at kommune basis
+make_restrictions_at_kommune_level: True # True makes interventions at labels=kommune, false
 day_max: 0 # 5 weeks. Sets the maximum number of days the algorithm runs
 clustering_connection_retries: 0 # number of times to try and reconnect two agents
 work_other_ratio: 0.5 # 0.2 = 20% work, 80% other
@@ -34,7 +35,10 @@ event_weekend_multiplier: 2.0 # ratio of how many more events are happening in w
 
 # Lockdown-related variables
 
-do_interventions: False # bool, whether or not to apply any interventions, lockdowns or similar
+do_interventions: True # bool, whether or not to apply any interventions, lockdowns or similar
+
+# [[kind of interventions], [start, stop intervention 0],[start, stop intervention 1] etc ]
+threshold_info: [[1,2], [200, 50], [15, 15]]
 
 # 1: Lockdown (jobs and schools)
 # 2: Cover (with face masks)
@@ -43,12 +47,14 @@ do_interventions: False # bool, whether or not to apply any interventions, lockd
 # 5: Isolate
 # 6: Random Testing
 # 0: Do nothing
-interventions_to_apply: [1, 4, 6]
+
+interventions_to_apply: [1, 2, 3, 4, 5, 6]
 
 f_daily_tests: 0.01 # Daily tests as fraction of full population
 
 test_delay_in_clicks: [0, 0, 25] #clicks until test. [symptoms, random_test, tracing]
 results_delay_in_clicks: [5, 10, 5] #clicks from test until results. [symptoms, random_test, tracing]
+intervention_removal_delay_in_clicks: 0
 chance_of_finding_infected: [0.0, 0.15, 0.15, 0.15, 0.0] # chance of being detected in test in I_th state
 days_looking_back: 7 # When looking for local outbreaks, how many days are we looking back, e.g. number of people infected within the last 7 days
 

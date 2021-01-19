@@ -264,7 +264,10 @@ class Simulation:
         if self.verbose:
             print("\nRUN SIMULATION")
 
-        labels = self.df_coordinates["idx"].values
+        if self.cfg.make_restrictions_at_kommune_level:
+            labels = self.df_coordinates["idx"].values
+        else:
+            labels = self.df_coordinates["idx"].values * 0
 
         if verbose_interventions is None:
             verbose_interventions = self.verbose
@@ -274,7 +277,7 @@ class Simulation:
             labels=labels,
             verbose=verbose_interventions,
         )
-
+        
         res = nb_simulation.run_simulation(
             self.my,
             self.g,
@@ -342,6 +345,9 @@ class Simulation:
             f.create_dataset("day_found_infected", data=self.intervention.day_found_infected)
             # import ast; ast.literal_eval(str(cfg))
             f.create_dataset("cfg_str", data=str(self.cfg))
+            f.create_dataset("R_true", data=self.intervention.R_true_list)
+            f.create_dataset("freedom_impact", data=self.intervention.freedom_impact_list)
+            f.create_dataset("pandemic_control", data=self.intervention.pandemic_control_list)
             f.create_dataset("df", data=utils.dataframe_to_hdf5_format(self.df))
             f.create_dataset(
                 "df_coordinates",
@@ -510,7 +516,8 @@ if debugging:
             "event_weekend_multiplier": 2.0,
             # lockdown / intervention
             "do_interventions": True,
-            "interventions_to_apply": [3, 4, 5, 6],
+            "threshold_info": [[1,2], [200, 50], [15, 15]],
+            "interventions_to_apply": [1, 2,3, 4, 5, 6],
             "f_daily_tests": 0.01,
             "test_delay_in_clicks": [0, 0, 25],
             "results_delay_in_clicks": [10, 10, 10],

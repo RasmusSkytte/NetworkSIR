@@ -82,12 +82,10 @@ def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_lis
         #print("n_inf", np.sum([1 for day in day_found_infected if day >=0]), "mean", np.mean(day_found_infected))
         #axes[0].hist(day_found_infected[day_found_infected>=0], bins = range(100))
         axes[0].plot(R_true[1:], lw=4, c="k", label=label)
-        axes[0].plot(freedom_impact[1:], lw=4, c="b", label=label)
-        axes[0].plot(pandemic_control[1:], lw=4, c="r", label=label)
         axes[1].plot(t, df["I"],lw=4, c="k", label=label)
         fi_list.append(np.mean(freedom_impact[1:]))
         pc_list.append(np.mean(pandemic_control2))
-        print("filename", "R_mean", np.mean(R_true[1:]), "freedom_impact", np.mean(freedom_impact[1:]),"pandemic_control", np.mean(pandemic_control[1:]),"pandemic_control2",np.mean(pandemic_control2))
+        print("filename", "R_mean", np.mean(R_true[1:]),"pandemic_control", np.mean(pandemic_control[1:]),"pandemic_control2",np.mean(pandemic_control2))
 
         if i in range(9,15):
                 name = str(cfg.threshold_info[1]) + str(cfg.threshold_info[2])
@@ -101,8 +99,9 @@ def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_lis
         # popt, _ = fit_exponential(t[l:], df["I1"][l:]/2)
         # RS.append(popt[1])
         # axes[0].plot(t, exponential(t, *popt), label="shorter Fitted Curve") #same as line above \/
-        # title = "contact number" + str(popt[1])
-        # axes[0].set_title(title)
+        r_naive = 4/cfg.lambda_I *cfg.beta*cfg.mu
+        title = "r naive: " + str(r_naive)
+        axes[0].set_title(title)
 
         # axes[1].plot(t[30:-30-80],simple_ratio_with_symmetric_smoothing(df["I1"]/2,30,80),label="simple 3 day smoothing, real")
         # axes[1].plot(range(1,93),simple_ratio_with_symmetric_smoothing(np.bincount(day_found_infected[day_found_infected>=0]),1,8),label="simple 1 day smoothing, tested")
@@ -152,133 +151,3 @@ with PdfPages(pdf_name) as pdf:
 
 
 
-
-        x=x
-        fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
-        fig.subplots_adjust(top=0.8)
-        
-        for i in range(9,31):      
-            if i in range(15):
-                color = 'b' 
-            elif i in range(15,19):
-                color = 'g'
-            elif i in range(19,23):
-                color = 'r'
-            elif i in range(23,27):
-                color = 'm'
-            elif i in range(27,31):
-                color = 'k'
-            axes.scatter(fi_list[i],pc_list[i], c =color, label=name_list[i])
-            axes.text(fi_list[i]*1.01,pc_list[i]*1.01,name_list[i],fontsize=12)
-        #axes.legend()
-        pdf.savefig(fig, dpi=100)
-        plt.close("all")
-
-        fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
-        fig.subplots_adjust(top=0.8)
-        
-        for i in range(31,67):      
-            if i in range(31,40):
-                color = 'g'
-            elif i in range(40,49):
-                color = 'r'
-            elif i in range(49,58):
-                color = 'm'
-            elif i in range(58,66):
-                color = 'k'
-            if i!=57 and i!=66:    
-                axes.scatter(fi_list[i],pc_list[i], c = color)
-                axes.text(fi_list[i]*1.01,pc_list[i]*1.01, str(i - 31),fontsize=12)
-        
-        #axes.legend()
-        pdf.savefig(fig, dpi=100)
-        plt.close("all")
-        fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
-        fig.subplots_adjust(top=0.8)
-        
-        for j in range(67,103): 
-            i = j - 36    
-            if i in range(31,40):
-                color = 'g'
-            elif i in range(40,49):
-                color = 'r'
-            elif i in range(49,58):
-                color = 'm'
-            elif i in range(58,66):
-                color = 'k'
-            if i!=57 and i!=66:       
-                axes.scatter(fi_list[j],pc_list[j], c = color)
-                axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-        
-        #axes.legend()
-        pdf.savefig(fig, dpi=100)
-        plt.close("all")
-
-        fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
-        fig.subplots_adjust(top=0.8)
-        
-        for j in range(103,len(fi_list)):      
-            i = j - 72
-            if i in range(31,40):
-                color = 'g'
-            elif i in range(40,49):
-                color = 'r'
-            elif i in range(49,58):
-                color = 'm'
-            elif i in range(58,66):
-                color = 'k'
-            if i!=57 and i!=66:  
-                axes.scatter(fi_list[j],pc_list[j], c = color)
-                axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-        
-        #axes.legend()
-        pdf.savefig(fig, dpi=100)
-        plt.close("all")
-
-
-        #one fig
-        fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
-        fig.subplots_adjust(top=0.8)
-
-        for i in range(31,67):      
-            
-            color = 'g'
-            
-            if i!=57 and i!=66:    
-                axes.scatter(fi_list[i],pc_list[i], c = color)
-                #axes.text(fi_list[i]*1.01,pc_list[i]*1.01, str(i - 31),fontsize=12)
-        
-       
-        
-        for j in range(67,103): 
-            i = j - 36    
-            color = 'b'
-            if i!=57 and i!=66:       
-                axes.scatter(fi_list[j],pc_list[j], c = color)
-                #axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-        
-        
-        for j in range(103,139):      
-            i = j - 72
-            
-            color = 'm'
-            
-            if i!=57 and i!=66:  
-                axes.scatter(fi_list[j],pc_list[j], c = color)
-                #axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-
-        for j in range(139, len(fi_list)):      
-            i = j - 108            
-            color = 'r'
-            
-            axes.scatter(fi_list[j],pc_list[j], c = color)
-                #axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-        
-        #axes.legend()
-        pdf.savefig(fig, dpi=100)
-        plt.close("all")
-
-
-
-
-  

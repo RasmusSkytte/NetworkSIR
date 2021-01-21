@@ -733,6 +733,93 @@ def place_and_connect_families(
 
     return mu_counter, counter_ages, agents_in_age_group
 
+@njit
+def place_and_connect_families_kommune_specific(
+    my, people_in_household, age_distribution_per_people_in_household, coordinates_raw, df_coordinates
+):
+    """ Place agents into household, including assigning coordinates and making connections. First step in making the network. 
+        Parameters: 
+            my (class): Class of parameters describing the system
+            people_in_household (list): distribution of number of people in households. Input data from file - source: danish statistics
+            age_distribution_per_people_in_household (list): Age distribution of households as a function of number of people in household. Input data from file - source: danish statistics 
+            coordinates_raw: list of coordinates drawn from population density distribution. Households are placed at these coordinates
+        returns: 
+            mu_counter (int): How many connections are made in households
+            counter_ages(list): Number of agents in each age group
+            agents_in_age_group(nested list): Which agents are in each age group
+
+    """
+    N_tot = my.cfg.N_tot
+
+    #Shuffle indicies
+    all_indices = np.arange(N_tot, dtype=np.uint32)
+    np.random.shuffle(all_indices)
+
+    N_ages = len(age_distribution_per_person_in_house_per_kommune.iloc[0].loc[1])-1
+    people_index_to_value = np.arange(1, N_dim_people_in_household + 1)
+
+    #initialize lists to keep track of number of agents in each age group
+    counter_ages = np.zeros(N_ages, dtype=np.uint16)
+    agents_in_age_group = utils.initialize_nested_lists(N_ages, dtype=np.uint32)
+
+    mu_counter = 0
+    agent = 0
+    do_continue = True
+    while do_continue:
+
+        agent0 = agent
+
+        house_index = all_indices[agent]
+        coordinates = coordinates_raw[house_index]
+        kommune = df_coordinates["idx"][coordinates]
+
+        #Draw size of household form distribution
+        people_in_household = np.array(people_in_household.loc[kommune])
+        N_people_in_house_index = utils.rand_choice_nb(people_in_household)
+        N_people_in_house = people_index_to_value[N_people_in_house_index]
+
+        # if N_in_house would increase agent to over N_tot,
+        # set N_people_in_house such that it fits and break loop
+        if agent + N_people_in_house >= N_tot:
+            N_people_in_house = N_tot - agent
+            do_continue = False
+
+        # Initilaze the agents and assign them to households
+        for _ in range(N_people_in_house):
+            age_index = utils.rand_choice_nb(
+                age_distribution_per_people_in_household.loc[kommune][N_people_in_house_index][1:]
+            )
+
+            #set age for agent
+            age = age_index  # just use age index as substitute for age
+            my.age[agent] = age
+            counter_ages[age_index] += 1
+            agents_in_age_group[age_index].append(np.uint32(agent))
+
+            #set coordinate for agent
+            my.coordinates[agent] = coordinates_raw[house_index]
+
+            # set weights determining extro/introvert and supersheader
+            set_connection_weight(my, agent)
+            set_infection_weight(my, agent)
+
+            agent += 1
+
+        # add agents to each others networks (connections). All people in a household know eachother
+        for agent1 in range(agent0, agent0 + N_people_in_house):
+            for agent2 in range(agent1, agent0 + N_people_in_house):
+                if agent1 != agent2:
+                    my.connections[agent1].append(np.uint32(agent2))
+                    my.connections[agent2].append(np.uint32(agent1))
+                    my.connections_type[agent1].append(np.uint8(0))
+                    my.connections_type[agent2].append(np.uint8(0))
+                    my.number_of_contacts[agent1] += 1
+                    my.number_of_contacts[agent2] += 1
+                    mu_counter += 1
+
+    agents_in_age_group = utils.nested_lists_to_list_of_array(agents_in_age_group)
+
+    return mu_counter, counter_ages, agents_in_age_group
 
 @njit
 def run_algo_work(my, agents_in_age_group, age1, age2, rho_tmp):

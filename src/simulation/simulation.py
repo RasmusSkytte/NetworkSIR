@@ -82,7 +82,8 @@ class Simulation:
                 people_in_household,
                 age_distribution_per_people_in_household,
             ) = utils.load_household_data()
-            N_ages = age_distribution_per_people_in_household.shape[1]
+            household_size_dist_per_kommune, age_distribution_per_person_in_house_per_kommune = utils.load_household_data_kommune_specific()
+            N_ages = len(age_distribution_per_person_in_house_per_kommune.iloc[0].loc[1])-1
 
             if self.verbose:
                 print("Connect Household") #was household and families are used interchangebly. Most places it is changed to house(hold) since it just is people living at the same adress. 
@@ -91,11 +92,12 @@ class Simulation:
                 mu_counter,
                 counter_ages,
                 agents_in_age_group,
-            ) = nb_simulation.place_and_connect_families(
+            ) = nb_simulation.place_and_connect_families2(
                 self.my,
-                people_in_household,
-                age_distribution_per_people_in_household,
+                household_size_dist_per_kommune,
+                age_distribution_per_person_in_house_per_kommune,
                 coordinates_raw,
+                self.df_coordinates,
             )
 
 

@@ -1774,6 +1774,10 @@ def load_household_data():
     )
     return people_in_household, age_distribution_per_people_in_household
 
+def load_household_data_kommune_specific()
+    household_dist = pd.read_csv("Data/household_dist.csv")
+    age_dist = pd.read_csv("Data/household_dist.csv")
+    return household_dist, age_dist
 
 @njit
 def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=False):

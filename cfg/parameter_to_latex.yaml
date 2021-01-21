@@ -15,6 +15,7 @@
 
   make_random_initial_infections: \mathrm{rand.inf.}
   weighted_random_initial_infections: \mathrm{w.rand.inf.}
+  make_restrictions_at_kommune_level: \mathrm{local_int}
   make_initial_infections_at_kommune: \mathrm{rand.inf.kom.}
   clustering_connection_retries: N_\mathrm{retries}^\mathrm{connect}
   work_other_ratio: f_\mathrm{work/other}
@@ -47,6 +48,8 @@
   isolation_rate_reduction: \mathrm{rate.red.}_\mathrm{iso.}
   tracking_rates: \mathrm{tracking}_\mathrm{rates}
   tracking_delay: \mathrm{tracking}_\mathrm{delay}
+  threshold_info: \mathrm{threshold_info}
+  intervention_removal_delay_in_clicks: \mathrm{int_rem_delay}
 
   hash: \mathrm{hash}
 

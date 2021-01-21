@@ -66,15 +66,18 @@ class Simulation:
                 raise AssertionError("interventions not yet implemented for version 1")
 
     def _initialize_network(self):
+        """ Initializing the network for the simulation
+        """
 
+        # generate coordinates based on population density
         self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.ID)
         coordinates_raw = utils.df_coordinates_to_coordinates(self.df_coordinates)
 
         if self.verbose:
             print(f"\nINITIALIZE VERSION {self.cfg.version} NETWORK")
 
+        #Version 1 do not have [house, work, other], from version 2 this is implemented. 
         if self.cfg.version >= 2:
-
             (
                 people_in_household,
                 age_distribution_per_people_in_household,
@@ -82,7 +85,7 @@ class Simulation:
             N_ages = age_distribution_per_people_in_household.shape[1]
 
             if self.verbose:
-                print("Connect Families")
+                print("Connect Household") #was household and families are used interchangebly. Most places it is changed to house(hold) since it just is people living at the same adress. 
 
             (
                 mu_counter,
@@ -95,6 +98,9 @@ class Simulation:
                 coordinates_raw,
             )
 
+
+            #make connectivity matrices, right now they are uniform.
+            # TODO: take real input to get better matrices. 
             if self.verbose:
                 print("Using uniform work and other matrices")
 
@@ -115,7 +121,6 @@ class Simulation:
                 self.my,
                 N_ages,
                 mu_counter,
-                # work_other_ratio,
                 matrix_work,
                 matrix_other,
                 agents_in_age_group,
@@ -132,7 +137,6 @@ class Simulation:
                 print("CONNECT NODES")
             nb_simulation.v1_connect_nodes(self.my)
 
-            # counter_ages = np.array([cfg.N_tot], dtype=np.uint16)
             agents_in_age_group = List()
             agents_in_age_group.append(np.arange(self.cfg.N_tot, dtype=np.uint32))
 

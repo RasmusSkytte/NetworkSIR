@@ -1583,8 +1583,9 @@ def run_simulation(
 
 @njit
 def compute_my_cluster_coefficient(my):
-    """calculates my cluster cooefficent
-    (np.mean of the first output gives cluster coeff for whole network )
+    """calculates cluster cooefficent
+    (np.mean of the first output gives cluster coeff for whole network ). 
+    This function is somewhat slow, since it loops over all connections. Could just random sample, but here we get the exact distribution. 
     """
 
     cluster_coefficient = np.zeros(my.cfg.N_tot, dtype=np.float32)

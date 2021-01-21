@@ -49,6 +49,17 @@ def get_all_ABM_filenames(base_dir="Data/ABM", filetype="hdf5"):
         key=os.path.getmtime,
     )
 
+def load_Network_file( filename):
+    with h5py.File(filename, "r") as f:
+        print(list(f.keys()))
+        print(filename, f)
+        day_found_infected = pd.DataFrame(f["day_found_infected"][()])
+        R_true = pd.DataFrame(f["R_true"][()])
+        freedom_impact = pd.DataFrame(f["freedom_impact"][()])
+        pandemic_control = pd.DataFrame(f["pandemic_control"][()])
+        my_state = pd.DataFrame(f["my_state"][()])
+
+    return day_found_infected, R_true, freedom_impact, pandemic_control, my_state
 
 def get_all_ABM_folders(filenames):
     folders = list()

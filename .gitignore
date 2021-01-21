@@ -4,6 +4,8 @@
 Data/*
 !Data/contact_matrices/
 
+/Data2/
+
 *.zip
 /Data_SK_P1_UK/
 /Data_animation/

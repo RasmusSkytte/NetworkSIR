@@ -88,7 +88,7 @@ class Simulation:
             for val in self.df_coordinates["kommune"].values:
                 kommune_ids.append(kommune_id.get_loc(val))
             kommune_ids = np.array(kommune_ids)   
-            print(typeof(kommune_ids),typeof(household_size_dist_per_kommune), typeof(age_distribution_per_person_in_house_per_kommune))
+
             self.N_ages = N_ages
             if self.verbose:
                 print("Connect Household") #was household and families are used interchangebly. Most places it is changed to house(hold) since it just is people living at the same adress. 
@@ -119,7 +119,7 @@ class Simulation:
             matrix_other = np.ones((N_ages, N_ages))
             matrix_other = matrix_other * counter_ages * counter_ages.reshape((-1, 1))
             matrix_other = matrix_other / matrix_other.sum()
-
+            print(counter_ages)
             # work_other_ratio = 0.5  # 20% work, 80% other
 
             if self.verbose:

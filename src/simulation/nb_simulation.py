@@ -757,7 +757,7 @@ def place_and_connect_families_kommune_specific(
     people_index_to_value = np.arange(1, 7) # household are between 1-6 people
 
     #initialize lists to keep track of number of agents in each age group
-    counter_ages = np.zeros(N_ages, dtype=np.uint16)
+    counter_ages = np.zeros(N_ages, dtype=np.uint32)
     agents_in_age_group = utils.initialize_nested_lists(N_ages, dtype=np.uint32)
 
     mu_counter = 0
@@ -775,7 +775,6 @@ def place_and_connect_families_kommune_specific(
         people_in_household_kom = people_in_household[kommune,:]
         N_people_in_house_index = utils.rand_choice_nb(people_in_household_kom)
         N_people_in_house = people_index_to_value[N_people_in_house_index]
-
         # if N_in_house would increase agent to over N_tot,
         # set N_people_in_house such that it fits and break loop
         if agent + N_people_in_house >= N_tot:
@@ -783,8 +782,8 @@ def place_and_connect_families_kommune_specific(
             do_continue = False
 
         # Initilaze the agents and assign them to households
-        for _ in range(N_people_in_house):
-            age_dist = age_distribution_per_people_in_household[kommune, N_people_in_house_index,:]
+        age_dist = age_distribution_per_people_in_household[kommune, N_people_in_house_index,:]
+        for _ in range(N_people_in_house):            
             age_index = utils.rand_choice_nb(
                 age_dist
             )

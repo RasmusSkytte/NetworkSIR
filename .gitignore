@@ -50,3 +50,4 @@ GPS_coordinates.npy
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
+db_old.json

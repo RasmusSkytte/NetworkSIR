@@ -26,7 +26,7 @@ verbose = True
 
 if utils.is_local_computer():
 
-    all_simulation_parameters = [
+    all_simulation_parameters2 = [
         {
 
              "N_tot": 580_000*2,
@@ -118,7 +118,61 @@ if utils.is_local_computer():
             # "event_size_max": 50,
         },
     ]
+    all_simulation_parameters = [
+        {
 
+             "N_tot": 580_00,
+            #"N_tot": 6_000,
+            # "make_random_initial_infections": True,
+            # "weighted_random_initial_infections": True,
+            # "test_delay_in_clicks": [0, 0, 25],
+            #"results_delay_in_clicks": [20, 20, 20],
+            #"tracking_delay": [0],
+             "weighted_random_initial_infections": True,
+             "lambda_I": 0.5,
+            # "tracking_delay": 15
+            # "N_contacts_max": 100,
+            # "work_other_ratio": 0.5,0.6These
+            # "N_init": [100, 1000]
+            # "rho": 0.1,
+             "beta": [0.007],
+             #"make_initial_infections_at_kommune": False,
+            # "interventions_to_apply": [[1, 2, 3, 4, 5, 6]],
+             "intervention_removal_delay_in_clicks": [20],
+             "make_restrictions_at_kommune_level": [True],
+            # "N_tot": [58_000],
+            # "make_random_initial_infections": True,
+            # "weighted_random_initial_infections": True,
+            # "test_delay_in_clicks": [0, 0, 25],
+            # "results_delay_in_clicks": [[20, 20, 20]],
+            # "tracking_delay": [0, 5, 10, 15, 20, 25, 30],
+            # "weighted_random_initial_infections": True,
+            # "do_interventions": True,
+            # "interventions_to_apply": [[3, 4, 5, 6]],
+            # "results_delay_in_clicks": [20, 20, 20],
+            # "tracking_delay": 15
+            # "N_contacts_max": 100,
+            # "work_other_ratio": 0.5,
+            "N_init": [4000],
+            # "N_init": [1000],
+            "N_init_UK": [50],
+            "work_other_ratio": 0.95,  # "algo 1"
+            # "rho": 0.1,
+            # "beta": [0.004],
+            "beta": [0.010],
+            # "beta": [0.016, 0.018],
+            "beta_UK_multiplier": [1.7],
+            # "outbreak_position_UK": ["københavn", "nordjylland"],
+            "outbreak_position_UK": ["københavn"],
+            "N_daily_vaccinations": [0, int(10_000 / 5.8e6 * 580_000)],
+            # "N_events": 1000,
+            # "mu": 20,
+            #"tracking_rates": [1.0, 0.5,0.1]            
+            "tracking_delay": [10],
+             "day_max": 183,
+            # "event_size_max": 50,
+        },
+    ]
 else:
     all_simulation_parameters = utils.get_simulation_parameters()
 

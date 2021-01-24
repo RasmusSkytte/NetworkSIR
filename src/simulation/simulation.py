@@ -82,9 +82,14 @@ class Simulation:
                 people_in_household,
                 age_distribution_per_people_in_household,
             ) = utils.load_household_data()
-            household_size_dist_per_kommune, age_distribution_per_person_in_house_per_kommune = utils.load_household_data_kommune_specific()
-            N_ages = len(age_distribution_per_person_in_house_per_kommune.iloc[0].loc[1])-1
-
+            household_size_dist_per_kommune, age_distribution_per_person_in_house_per_kommune, kommune_id = utils.load_household_data_kommune_specific()           
+            N_ages = len(age_distribution_per_person_in_house_per_kommune[0,0])            
+            kommune_ids = []
+            for val in self.df_coordinates["kommune"].values:
+                kommune_ids.append(kommune_id.get_loc(val))
+            kommune_ids = np.array(kommune_ids)   
+            print(typeof(kommune_ids),typeof(household_size_dist_per_kommune), typeof(age_distribution_per_person_in_house_per_kommune))
+            self.N_ages = N_ages
             if self.verbose:
                 print("Connect Household") #was household and families are used interchangebly. Most places it is changed to house(hold) since it just is people living at the same adress. 
 
@@ -92,12 +97,13 @@ class Simulation:
                 mu_counter,
                 counter_ages,
                 agents_in_age_group,
-            ) = nb_simulation.place_and_connect_families2(
+            ) = nb_simulation.place_and_connect_families_kommune_specific(
                 self.my,
                 household_size_dist_per_kommune,
                 age_distribution_per_person_in_house_per_kommune,
                 coordinates_raw,
-                self.df_coordinates,
+                kommune_ids,
+                self.N_ages
             )
 
 
@@ -143,7 +149,7 @@ class Simulation:
             agents_in_age_group.append(np.arange(self.cfg.N_tot, dtype=np.uint32))
 
         self.agents_in_age_group = agents_in_age_group
-        self.N_ages = len(self.agents_in_age_group)
+        
         return None
 
     def _save_initialized_network(self, filename):

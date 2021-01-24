@@ -1774,10 +1774,25 @@ def load_household_data():
     )
     return people_in_household, age_distribution_per_people_in_household
 
-def load_household_data_kommune_specific()
-    household_dist = pd.read_csv("Data/household_dist.csv")
-    age_dist = pd.read_csv("Data/household_dist.csv")
-    return household_dist, age_dist
+def load_household_data_kommune_specific():
+    household_dist_raw = pd.read_csv("Data/household_dist.csv")
+    household_dist_raw = household_dist_raw.set_index('0')
+    kommune_id = household_dist_raw.index
+    age_dist_raw = pd.read_csv("Data/age_dist.csv")
+    age_dist_raw = age_dist_raw.set_index('0')
+    age_dist_raw = np.array(age_dist_raw)
+    age_dist = np.ones((age_dist_raw.shape[0],age_dist_raw.shape[1],len(eval(age_dist_raw[0,0]))),dtype=float) 
+    for i in range(age_dist_raw.shape[0]):
+        for j in range(age_dist_raw.shape[1]):
+            nrs = eval(age_dist_raw[i,j])
+            age_dist[i,j,:] = np.array(nrs)
+
+    household_dist_raw = np.array(household_dist_raw)
+    household_dist = np.ones((household_dist_raw.shape[0],household_dist_raw.shape[1]), dtype=float)
+    for i in range(household_dist_raw.shape[0]):
+        for j in range(household_dist_raw.shape[1]):            
+            household_dist[i,j] = eval(household_dist_raw[i,j])[0]
+    return household_dist, age_dist, kommune_id
 
 @njit
 def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=False):

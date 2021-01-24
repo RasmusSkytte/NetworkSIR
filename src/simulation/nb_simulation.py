@@ -735,7 +735,7 @@ def place_and_connect_families(
 
 @njit
 def place_and_connect_families_kommune_specific(
-    my, people_in_household, age_distribution_per_people_in_household, coordinates_raw, df_coordinates
+    my, people_in_household, age_distribution_per_people_in_household, coordinates_raw, Kommune_ids, N_ages
 ):
     """ Place agents into household, including assigning coordinates and making connections. First step in making the network. 
         Parameters: 
@@ -754,9 +754,7 @@ def place_and_connect_families_kommune_specific(
     #Shuffle indicies
     all_indices = np.arange(N_tot, dtype=np.uint32)
     np.random.shuffle(all_indices)
-
-    N_ages = len(age_distribution_per_person_in_house_per_kommune.iloc[0].loc[1])-1
-    people_index_to_value = np.arange(1, N_dim_people_in_household + 1)
+    people_index_to_value = np.arange(1, 7) # household are between 1-6 people
 
     #initialize lists to keep track of number of agents in each age group
     counter_ages = np.zeros(N_ages, dtype=np.uint16)
@@ -771,11 +769,11 @@ def place_and_connect_families_kommune_specific(
 
         house_index = all_indices[agent]
         coordinates = coordinates_raw[house_index]
-        kommune = df_coordinates["idx"][coordinates]
+        kommune = Kommune_ids[house_index]
 
         #Draw size of household form distribution
-        people_in_household = np.array(people_in_household.loc[kommune])
-        N_people_in_house_index = utils.rand_choice_nb(people_in_household)
+        people_in_household_kom = people_in_household[kommune,:]
+        N_people_in_house_index = utils.rand_choice_nb(people_in_household_kom)
         N_people_in_house = people_index_to_value[N_people_in_house_index]
 
         # if N_in_house would increase agent to over N_tot,
@@ -786,8 +784,9 @@ def place_and_connect_families_kommune_specific(
 
         # Initilaze the agents and assign them to households
         for _ in range(N_people_in_house):
+            age_dist = age_distribution_per_people_in_household[kommune, N_people_in_house_index,:]
             age_index = utils.rand_choice_nb(
-                age_distribution_per_people_in_household.loc[kommune][N_people_in_house_index][1:]
+                age_dist
             )
 
             #set age for agent

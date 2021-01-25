@@ -65,6 +65,14 @@ class Simulation:
             if self.cfg.do_interventions:
                 raise AssertionError("interventions not yet implemented for version 1")
 
+        # Load the projected vaccination schedule
+        if self.cfg.vaccinations :
+            self.cfg.vaccinations_per_age_group, _, self.cfg.vaccination_schedule = utils.load_vaccination_schedule()
+
+            # Convert vaccination_schedule to integer day counter
+            # TODO: Use a better convertion method. --- Currently simluations start on 2020-12-28
+            self.cfg.vaccination_schedule = np.arange(len(self.cfg.vaccination_schedule)) + 10
+
     def _initialize_network(self):
         """ Initializing the network for the simulation
         """
@@ -112,13 +120,12 @@ class Simulation:
             if self.verbose:
                 print("Using uniform work and other matrices")
 
-            matrix_work = np.ones((N_ages, N_ages))
-            matrix_work = matrix_work * counter_ages * counter_ages.reshape((-1, 1))
-            matrix_work = matrix_work / matrix_work.sum()
+            matrix_work, matrix_other, work_other_ratio, age_groups_contact_matrices = utils.load_contact_matrices()
 
-            matrix_other = np.ones((N_ages, N_ages))
-            matrix_other = matrix_other * counter_ages * counter_ages.reshape((-1, 1))
-            matrix_other = matrix_other / matrix_other.sum()
+            # Overwrite the value for the work_other_ratio based on the loaded matrices
+            self.my.cfg.work_other_ratio = work_other_ratio
+
+           
             print(counter_ages)
             # work_other_ratio = 0.5  # 20% work, 80% other
 
@@ -285,9 +292,22 @@ class Simulation:
         if verbose_interventions is None:
             verbose_interventions = self.verbose
 
+         # Load the projected vaccination schedule    
+        vaccinations_per_age_group, _, vaccination_schedule = utils.load_vaccination_schedule()
+
+        # Convert vaccination_schedule to integer day counter
+        # TODO: Use a better convertion method. --- Currently simluations start on 2020-12-28
+        #print(vaccinations_per_age_group, vaccination_schedule)
+        vaccinations_per_age_group=vaccinations_per_age_group.astype(np.int64)
+        print(typeof(vaccinations_per_age_group))
+
+        vaccination_schedule = np.arange(len(vaccination_schedule),dtype=np.int64) + 10
+        print(typeof(vaccination_schedule))
         self.intervention = nb_simulation.Intervention(
             self.my.cfg,
-            labels=labels,
+            labels = labels,
+            vaccinations_per_age_group = vaccinations_per_age_group,
+            vaccination_schedule = vaccination_schedule,
             verbose=verbose_interventions,
         )
         

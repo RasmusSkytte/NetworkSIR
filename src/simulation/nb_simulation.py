@@ -59,7 +59,7 @@ spec_cfg = {
     "N_contacts_max": nb.uint16,
     "beta_UK_multiplier": nb.float32,
     "outbreak_position_UK": nb.types.unicode_type,
-    "N_daily_vaccinations": nb.uint16,
+    "vaccinations": nb.boolean,
     # events
     "N_events": nb.uint16,
     "event_size_max": nb.uint16,
@@ -116,8 +116,10 @@ class Config(object):
         self.work_other_ratio = 0.5
         self.N_contacts_max = 0
         self.beta_UK_multiplier = 1.0
-        self.N_daily_vaccinations = 0
-
+        self.vaccinations = True
+        #self.N_daily_vaccinations = 0
+        #self.vaccinations_per_age_group  =  np.array([0.2, 1.0, 1.0])
+        #self.vaccination_schedule = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.8]])
         # events
         self.N_events = 0
         self.event_size_max = 0
@@ -323,6 +325,9 @@ spec_intervention = {
     "clicks_when_restriction_stops": nb.int32[:],
     "types": nb.uint8[:],
     "started_as": nb.uint8[:],
+    "vaccinations_per_age_group": nb.int64[:, :],
+    "vaccination_schedule": nb.int64[:],
+    
     "verbose": nb.boolean,
 }
 
@@ -366,6 +371,8 @@ class Intervention(object):
         self,
         nb_cfg,
         labels,
+        vaccinations_per_age_group,
+        vaccination_schedule,
         verbose=False,
     ):
 
@@ -386,6 +393,8 @@ class Intervention(object):
         self.clicks_when_restriction_stops = np.full(self.N_labels, fill_value=-1, dtype=np.int32)
         self.types = np.zeros(self.N_labels, dtype=np.uint8)
         self.started_as = np.zeros(self.N_labels, dtype=np.uint8)
+        self.vaccinations_per_age_group = vaccinations_per_age_group
+        self.vaccination_schedule = vaccination_schedule
 
         self.verbose = verbose
 
@@ -1616,7 +1625,7 @@ def run_simulation(
                     print("freedom_impact", intervention.freedom_impact_list[-1])
                     print("pandemic_control_list", intervention.pandemic_control_list[-1])
 
-                if my.cfg.N_daily_vaccinations > 0:
+                if my.cfg.vaccinations:
                     # print("Starting to vaccinate, day", day)
 
                     # try to vaccinate everyone, but only do vaccinate susceptable agents
@@ -1625,24 +1634,40 @@ def run_simulation(
 
                     R_state = g.N_states - 1  # 8
 
-                    for i in range(my.cfg.N_daily_vaccinations):
+                    # TODO: Exctract number to vaccinate from the schedule
+                    # Steps: What is the current date?
+                    #       --- Currently, day 0 is assumed to be 2020-12-28
 
-                        # find possible agent that gets vaccinated
-                        agent = single_random_choice(possible_agents_to_vaccinate)
+                    # Check if any vaccines are effective yet:
+                    if day >= intervention.vaccination_schedule[0] :
 
-                        # pick agent if it is susceptible (in S state)
-                        if my.agent_is_susceptable(agent):
-                            # "vaccinate agent"
-                            my.vaccination_type[agent] = 1
+                        # Get the number of new effective vaccines
+                        N = intervention.vaccinations_per_age_group[day - intervention.vaccination_schedule[0]]
 
-                            # set agent to recovered, instantly
-                            my.state[agent] = R_state
+                        # Scale the number of vaccines
+                        N = N * my.cfg.N_tot / 5837213
 
-                            agents_in_state[R_state].append(np.uint32(agent))
-                            state_total_counts[R_state] += 1
+                        # Distribute the effective vaccines among the population
+                        for i in range(int(np.sum(N))):
 
-                            # remove rates into agent from its infectios contacts
-                            update_infection_list_for_newly_infected_agent(my, g, agent)
+                            # TODO: Select according to age group
+
+                            # find possible agent that gets vaccinated
+                            agent = single_random_choice(possible_agents_to_vaccinate)
+
+                            # pick agent if it is susceptible (in S state)
+                            if my.agent_is_susceptable(agent):
+                                # "vaccinate agent"
+                                my.vaccination_type[agent] = 1
+
+                                # set agent to recovered, instantly
+                                my.state[agent] = R_state
+
+                                agents_in_state[R_state].append(np.uint32(agent))
+                                state_total_counts[R_state] += 1
+
+                                # remove rates into agent from its infectios contacts
+                                update_infection_list_for_newly_infected_agent(my, g, agent)
 
             if intervention.apply_interventions:
                 test_tagged_agents(my, g, intervention, day, click)

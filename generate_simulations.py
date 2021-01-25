@@ -114,14 +114,14 @@ if utils.is_local_computer():
             # "mu": 20,
             #"tracking_rates": [1.0, 0.5,0.1]            
             "tracking_delay": [10,30],
-             "day_max": 183,
+            "day_max": 183,
             # "event_size_max": 50,
         },
     ]
     all_simulation_parameters = [
         {
 
-             "N_tot": 580_001,
+             "N_tot": 580_0,
             #"N_tot": 6_000,
             # "make_random_initial_infections": True,
             # "weighted_random_initial_infections": True,
@@ -132,7 +132,7 @@ if utils.is_local_computer():
              "lambda_I": 0.5,
             # "tracking_delay": 15
             # "N_contacts_max": 100,
-            # "work_other_ratio": 0.5,0.6These
+            # "work_other_ratio": 0.5, 0.6
             # "N_init": [100, 1000]
             # "rho": 0.1,
              "beta": [0.007],
@@ -164,7 +164,7 @@ if utils.is_local_computer():
             "beta_UK_multiplier": [1.45],
             # "outbreak_position_UK": ["københavn", "nordjylland"],
             "outbreak_position_UK": ["københavn"],
-            "N_daily_vaccinations": [0],
+            #"N_daily_vaccinations": [0],
             # "N_events": 1000,
             # "mu": 20,
             #"tracking_rates": [1.0, 0.5,0.1]            
@@ -172,6 +172,7 @@ if utils.is_local_computer():
              "day_max": 183,
              #"verbose":True,
             # "event_size_max": 50,
+            "vaccinations": True
         },
     ]
 else:

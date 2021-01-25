@@ -65,6 +65,14 @@ class Simulation:
             if self.cfg.do_interventions:
                 raise AssertionError("interventions not yet implemented for version 1")
 
+        # Load the projected vaccination schedule
+        if self.cfg.vaccinations :
+            self.cfg.vaccinations_per_age_group, _, self.cfg.vaccination_schedule = utils.load_vaccination_schedule()
+
+            # Convert vaccination_schedule to integer day counter
+            # TODO: Use a better convertion method. --- Currently simluations start on 2020-12-28
+            self.cfg.vaccination_schedule = np.arange(len(self.cfg.vaccination_schedule)) + 10
+
     def _initialize_network(self):
         """ Initializing the network for the simulation
         """
@@ -82,8 +90,14 @@ class Simulation:
                 people_in_household,
                 age_distribution_per_people_in_household,
             ) = utils.load_household_data()
-            N_ages = age_distribution_per_people_in_household.shape[1]
+            household_size_dist_per_kommune, age_distribution_per_person_in_house_per_kommune, kommune_id = utils.load_household_data_kommune_specific()           
+            N_ages = len(age_distribution_per_person_in_house_per_kommune[0,0])            
+            kommune_ids = []
+            for val in self.df_coordinates["kommune"].values:
+                kommune_ids.append(kommune_id.get_loc(val))
+            kommune_ids = np.array(kommune_ids)   
 
+            self.N_ages = N_ages
             if self.verbose:
                 print("Connect Household") #was household and families are used interchangebly. Most places it is changed to house(hold) since it just is people living at the same adress. 
 
@@ -91,11 +105,13 @@ class Simulation:
                 mu_counter,
                 counter_ages,
                 agents_in_age_group,
-            ) = nb_simulation.place_and_connect_families(
+            ) = nb_simulation.place_and_connect_families_kommune_specific(
                 self.my,
-                people_in_household,
-                age_distribution_per_people_in_household,
+                household_size_dist_per_kommune,
+                age_distribution_per_person_in_house_per_kommune,
                 coordinates_raw,
+                kommune_ids,
+                self.N_ages
             )
 
 
@@ -104,14 +120,13 @@ class Simulation:
             if self.verbose:
                 print("Using uniform work and other matrices")
 
-            matrix_work = np.ones((N_ages, N_ages))
-            matrix_work = matrix_work * counter_ages * counter_ages.reshape((-1, 1))
-            matrix_work = matrix_work / matrix_work.sum()
+            matrix_work, matrix_other, work_other_ratio, age_groups_contact_matrices = utils.load_contact_matrices()
 
-            matrix_other = np.ones((N_ages, N_ages))
-            matrix_other = matrix_other * counter_ages * counter_ages.reshape((-1, 1))
-            matrix_other = matrix_other / matrix_other.sum()
+            # Overwrite the value for the work_other_ratio based on the loaded matrices
+            self.my.cfg.work_other_ratio = work_other_ratio
 
+           
+            print(counter_ages)
             # work_other_ratio = 0.5  # 20% work, 80% other
 
             if self.verbose:
@@ -141,7 +156,7 @@ class Simulation:
             agents_in_age_group.append(np.arange(self.cfg.N_tot, dtype=np.uint32))
 
         self.agents_in_age_group = agents_in_age_group
-        self.N_ages = len(self.agents_in_age_group)
+        
         return None
 
     def _save_initialized_network(self, filename):
@@ -277,9 +292,22 @@ class Simulation:
         if verbose_interventions is None:
             verbose_interventions = self.verbose
 
+         # Load the projected vaccination schedule    
+        vaccinations_per_age_group, _, vaccination_schedule = utils.load_vaccination_schedule()
+
+        # Convert vaccination_schedule to integer day counter
+        # TODO: Use a better convertion method. --- Currently simluations start on 2020-12-28
+        #print(vaccinations_per_age_group, vaccination_schedule)
+        vaccinations_per_age_group=vaccinations_per_age_group.astype(np.int64)
+        print(typeof(vaccinations_per_age_group))
+
+        vaccination_schedule = np.arange(len(vaccination_schedule),dtype=np.int64) + 10
+        print(typeof(vaccination_schedule))
         self.intervention = nb_simulation.Intervention(
             self.my.cfg,
-            labels=labels,
+            labels = labels,
+            vaccinations_per_age_group = vaccinations_per_age_group,
+            vaccination_schedule = vaccination_schedule,
             verbose=verbose_interventions,
         )
         

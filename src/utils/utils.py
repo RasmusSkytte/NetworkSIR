@@ -1774,6 +1774,79 @@ def load_household_data():
     )
     return people_in_household, age_distribution_per_people_in_household
 
+def load_household_data_kommune_specific():
+    household_dist_raw = pd.read_csv("Data/household_dist.csv")
+    household_dist_raw = household_dist_raw.set_index('0')
+    kommune_id = household_dist_raw.index
+    age_dist_raw = pd.read_csv("Data/age_dist.csv")
+    age_dist_raw = age_dist_raw.set_index('0')
+    age_dist_raw = np.array(age_dist_raw)
+    age_dist = np.ones((age_dist_raw.shape[0],age_dist_raw.shape[1],len(eval(age_dist_raw[0,0]))),dtype=float) 
+    for i in range(age_dist_raw.shape[0]):
+        for j in range(age_dist_raw.shape[1]):
+            nrs = eval(age_dist_raw[i,j])
+            age_dist[i,j,:] = np.array(nrs)
+
+    household_dist_raw = np.array(household_dist_raw)
+    household_dist = np.ones((household_dist_raw.shape[0],household_dist_raw.shape[1]), dtype=float)
+    for i in range(household_dist_raw.shape[0]):
+        for j in range(household_dist_raw.shape[1]):            
+            household_dist[i,j] = eval(household_dist_raw[i,j])[0]
+    return household_dist, age_dist, kommune_id
+
+def load_age_stratified_file(file) :
+    """ Loads and parses the contact matrix from the .csv file specifed
+        Parameters:
+            file (string): path the the .csv file
+    """
+
+    # Load using pandas
+    data = pd.read_csv(file, index_col=0)
+
+    # Get the age groups from the dataframe
+    age_groups = list(data)
+
+    # Extract the lowest age from the age group intervals
+    lower_breaks = [int(age_group.split('-')[0]) for age_group in age_groups]
+
+    # Get the row_names
+    row_names = data.index.values
+
+    return (data.to_numpy(), lower_breaks, row_names)
+
+def load_contact_matrices(scenario = 'reference') :
+    """ Loads and parses the contact matrices corresponding to the chosen scenario.
+        The function first determines what the relationship between work activites and other activites are
+        After the work_other_ratio has been calculated, the function returns the normalized contact matrices
+        Parameters:
+            scenario (string): Name for the scenario to load
+    """
+    # Load the contact matrices
+    matrix_work,  age_groups_work,  _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
+    matrix_other, age_groups_other, _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
+    # TODO: Load the school contact matrix
+
+    # Assert the age_groups are the same
+    if not age_groups_work == age_groups_other :
+        raise ValueError('Age groups for work contact matrix and other contact matrix not equal')
+
+    # Determine the work-to-other ratio
+    work_other_ratio = matrix_work.sum() / matrix_other.sum()
+
+    # Normalize the contact matrices after this ratio has been determined
+    return (matrix_work / matrix_work.sum(), matrix_other / matrix_other.sum(), work_other_ratio, age_groups_work)
+
+
+def load_vaccination_schedule(scenario = 'reference') :
+    """ Loads and parses the vaccination schedule corresponding to the chosen scenario.
+        Parameters:
+            scenario (string): Name for the scenario to load
+    """
+    # Load the contact matrices
+    vaccine_counts, age_groups, schedule  = load_age_stratified_file('Data/vaccination_schedule/' + scenario + '.csv')
+
+    # Normalize the contact matrices after this ratio has been determined
+    return (vaccine_counts, age_groups, schedule)
 
 @njit
 def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=False):

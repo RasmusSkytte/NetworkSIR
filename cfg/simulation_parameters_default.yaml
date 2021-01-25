@@ -31,7 +31,8 @@ beta_UK_multiplier: 1.7
 outbreak_position_UK: random
 
 # vaccinations
-N_daily_vaccinations: 0
+#N_daily_vaccinations: 0
+vaccinations: True
 
 # event-related variables
 N_events: 0 # number of daily events

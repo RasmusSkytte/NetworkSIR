@@ -1791,7 +1791,7 @@ def load_household_data_kommune_specific():
     household_dist = np.ones((household_dist_raw.shape[0],household_dist_raw.shape[1]), dtype=float)
     for i in range(household_dist_raw.shape[0]):
         for j in range(household_dist_raw.shape[1]):            
-            household_dist[i,j] = eval(household_dist_raw[i,j])[0]
+            household_dist[i,j] = eval(household_dist_raw[i,j])[0]/(j+1)
     return household_dist, age_dist, kommune_id
 
 def load_age_stratified_file(file) :

@@ -299,10 +299,8 @@ class Simulation:
         # TODO: Use a better convertion method. --- Currently simluations start on 2020-12-28
         #print(vaccinations_per_age_group, vaccination_schedule)
         vaccinations_per_age_group=vaccinations_per_age_group.astype(np.int64)
-        print(typeof(vaccinations_per_age_group))
-
         vaccination_schedule = np.arange(len(vaccination_schedule),dtype=np.int64) + 10
-        print(typeof(vaccination_schedule))
+
         self.intervention = nb_simulation.Intervention(
             self.my.cfg,
             labels = labels,

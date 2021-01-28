@@ -1966,7 +1966,7 @@ def test_if_label_needs_intervention_multi(
             elif my_intervention_type == 1:
                 possible_interventions = [9001] # random integer that doesn't mean anything, 
             elif my_intervention_type == 2:
-                possible_interventions = [1]    
+                possible_interventions = [1,7]    
             elif my_intervention_type == 7:
                 possible_interventions = [9001] # random integer that doesn't mean anything,    
                 
@@ -2286,11 +2286,12 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent):
            
             mr_single = mr[my.age[agent], my.age[contact]]
             mi_single = mi[my.age[agent], my.age[contact]]
-            assert mr_single < mi_single
+            text = str(my.connections_type[agent][ith_contact]) + str(my.age[agent]) + str(my.age[contact])
+            assert mr_single < mi_single, text
 
             p = 1 - np.sqrt(4 - 4 * (1 - min(mr_single / mi_single, 1))) / 2
             #print(p, my.connections_type[agent][ith_contact],my.age[agent], my.age[contact])
-            assert p < 0.2 
+
             if np.random.rand() < p:
                 act_rate_reduction = np.array([0.0, 1.0, 1.0], dtype=np.float64)
 

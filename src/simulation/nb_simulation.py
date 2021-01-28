@@ -60,6 +60,7 @@ spec_cfg = {
     "beta_UK_multiplier": nb.float32,
     "outbreak_position_UK": nb.types.unicode_type,
     "vaccinations": nb.boolean,
+    "burn_in": nb.int64,
     # events
     "N_events": nb.uint16,
     "event_size_max": nb.uint16,
@@ -117,6 +118,7 @@ class Config(object):
         self.N_contacts_max = 0
         self.beta_UK_multiplier = 1.0
         self.vaccinations = True
+        self.burn_in = 20 # burn in period, -int how many days the sim shall run before 
         #self.N_daily_vaccinations = 0
         #self.vaccinations_per_age_group  =  np.array([0.2, 1.0, 1.0])
         #self.vaccination_schedule = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.8]])
@@ -130,7 +132,7 @@ class Config(object):
         self.do_interventions = True
         # self.interventions_to_apply = {1, 4, 6}
         self.threshold_info = np.array([[1,2], [200, 50], [15, 15]])
-        self.interventions_to_apply = List([1 , 2, 3, 4, 5, 6])
+        self.interventions_to_apply = List([1, 2, 3, 4, 5, 6, 7])
         self.f_daily_tests = 0.05
         self.test_delay_in_clicks = np.array([0, 0, 25])
         self.results_delay_in_clicks = np.array([5, 10, 5])
@@ -327,6 +329,10 @@ spec_intervention = {
     "started_as": nb.uint8[:],
     "vaccinations_per_age_group": nb.int64[:, :],
     "vaccination_schedule": nb.int64[:],
+    "work_matrix_init": nb.float64[:, :],
+    "work_matrix_restrict": nb.float64[:, :],
+    "other_matrix_init": nb.float64[:, :],
+    "other_matrix_restrict": nb.float64[:, :],
     
     "verbose": nb.boolean,
 }
@@ -373,6 +379,10 @@ class Intervention(object):
         labels,
         vaccinations_per_age_group,
         vaccination_schedule,
+        work_matrix_init,
+        work_matrix_restrict,
+        other_matrix_init,
+        other_matrix_restrict,
         verbose=False,
     ):
 
@@ -395,6 +405,10 @@ class Intervention(object):
         self.started_as = np.zeros(self.N_labels, dtype=np.uint8)
         self.vaccinations_per_age_group = vaccinations_per_age_group
         self.vaccination_schedule = vaccination_schedule
+        self.work_matrix_init = work_matrix_init
+        self.work_matrix_restrict = work_matrix_restrict
+        self.other_matrix_init = other_matrix_init
+        self.other_matrix_restrict = other_matrix_restrict
 
         self.verbose = verbose
 
@@ -437,6 +451,10 @@ class Intervention(object):
     @property
     def apply_random_testing(self):
         return 6 in self.cfg.interventions_to_apply
+
+    @property
+    def apply_matrix_restriction(self):
+        return 7 in self.cfg.interventions_to_apply
 
 
 #%%
@@ -929,17 +947,18 @@ def connect_work_and_others(
     progress_delta_print = 0.1  # 10 percent
     progress_counter = 1
 
-    
+    matrix_work  = matrix_work / matrix_work.sum()
+    matrix_other  = matrix_other / matrix_other.sum()
     mu_tot = my.cfg.mu / 2 * my.cfg.N_tot # total number of connections in the network, when done
     while mu_counter < mu_tot: # continue until all connections are made
 
         # determining if next connections is work or other. 
         ra_work_other = np.random.rand() 
         if ra_work_other < my.cfg.work_other_ratio:
-            matrix = matrix_work
+            matrix = matrix_work 
             run_algo = run_algo_work
         else:
-            matrix = matrix_other
+            matrix = matrix_other 
             run_algo = run_algo_other
 
         #draw ages from connectivity matrix
@@ -1109,7 +1128,7 @@ def compute_initial_agents_to_infect(my, possible_agents):
         initial_agents_to_infect = List()
         initial_agents_to_infect.append(outbreak_agent)
 
-        while len(initial_agents_to_infect) < my.cfg.N_init:
+        while len(initial_agents_to_infect) < (my.cfg.N_init + my.cfg.N_init_UK):
             proposed_agent = single_random_choice(possible_agents)
 
             if my.dist_accepted(outbreak_agent, proposed_agent, rho_init_local_outbreak):
@@ -1225,6 +1244,10 @@ def make_initial_infections(
         states = np.arange(N_states - 1, dtype=np.int8)
         new_state = nb_random_choice(states, weights)[0]  # E1-E4 or I1-I4, uniformly distributed
         my.state[agent] = new_state
+        if np.random.rand() < my.cfg.N_init_UK/(my.cfg.N_init_UK+ my.cfg.N_init):
+            my.corona_type[agent] = 1  # IMPORTANT LINE!
+
+
 
         agents_in_state[new_state].append(np.uint32(agent))
         state_total_counts[new_state] += 1
@@ -1243,7 +1266,8 @@ def make_initial_infections(
 
     # English Corona Type TODO
 
-    if my.cfg.N_init_UK > 0:
+    #if my.cfg.N_init_UK > 0: init uk, as outbreak
+    if False:
 
         rho_init_local_outbreak = 0.1
 
@@ -1297,7 +1321,9 @@ def make_initial_infections(
 
         ##  Now make initial UK infections
         for _, agent in enumerate(initial_agents_to_infect_UK):
-            new_state = np.random.randint(N_states - 1)  # E1-E4 or I1-I4, uniformly distributed
+            weights = calc_E_I_dist(my, 1)
+            states = np.arange(N_states - 1, dtype=np.int8)
+            new_state = nb_random_choice(states, weights)[0]
             my.state[agent] = new_state
             my.corona_type[agent] = 1  # IMPORTANT LINE!
 
@@ -1525,6 +1551,7 @@ def run_simulation(
     out_my_state = List()
 
     daily_counter = 0
+    #day = -1 * my.cfg.burn_in
     day = 0
     click = 0
     step_number = 0
@@ -1582,7 +1609,7 @@ def run_simulation(
 
             accept = True
 
-            if intervention.apply_interventions and intervention.apply_symptom_testing:
+            if intervention.apply_interventions and intervention.apply_symptom_testing and day >= 0:
                 apply_symptom_testing(my, intervention, agent, click)
 
             # Moves TO infectious State from non-infectious
@@ -1671,13 +1698,13 @@ def run_simulation(
             # if nts * click < real_time:
 
             daily_counter += 1
-            if (len(out_time) == 0) or (real_time != out_time[-1]):
+            if (len(out_time) == 0) or (real_time != out_time[-1]) and day >= 0:
                 out_time.append(real_time)
                 out_state_counts.append(state_total_counts.copy())
 
             if daily_counter >= 10:
 
-                if intervention.apply_interventions and intervention.apply_interventions_on_label:
+                if intervention.apply_interventions and intervention.apply_interventions_on_label and day >= 0:
                     apply_interventions_on_label(my, g, intervention, day, click, my.cfg.threshold_info)
 
                 if my.cfg.N_events > 0:
@@ -1693,7 +1720,8 @@ def run_simulation(
 
                 daily_counter = 0
                 day += 1
-                out_my_state.append(my.state.copy())
+                if day >= 0:
+                    out_my_state.append(my.state.copy())
                 if verbose:
                     print("day", day, "n_inf", np.sum(where_infections_happened_counter) )
                     print("R_true", intervention.R_true_list[-1])
@@ -1721,14 +1749,11 @@ def run_simulation(
 
                         # Scale the number of vaccines
                         N = N * my.cfg.N_tot / 5837213
+                        probabilities = np.array([N[my.age[agent]] for agent in possible_agents_to_vaccinate])
 
                         # Distribute the effective vaccines among the population
-                        for i in range(int(np.sum(N))):
-
-                            # TODO: Select according to age group
-
-                            # find possible agent that gets vaccinated
-                            agent = single_random_choice(possible_agents_to_vaccinate)
+                        agents = nb_random_choice(possible_agents_to_vaccinate, probabilities, size = int(np.sum(N)))
+                        for agent in agents:
 
                             # pick agent if it is susceptible (in S state)
                             if my.agent_is_susceptable(agent):
@@ -1746,10 +1771,10 @@ def run_simulation(
 
             if intervention.apply_interventions:
                 test_tagged_agents(my, g, intervention, day, click)
-            
-            intervention.R_true_list.append(calculate_R_True(my, g))
-            intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
-            intervention.pandemic_control_list.append(calculate_pandemic_control(my, intervention))
+            if day >=0:
+                intervention.R_true_list.append(calculate_R_True(my, g))
+                intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
+                intervention.pandemic_control_list.append(calculate_pandemic_control(my, intervention))
             
             
             click += 1
@@ -1781,9 +1806,9 @@ def run_simulation(
         for agent in range(my.cfg.N_tot):
             n_con = my.number_of_contacts[agent]
             frac_inf[1,n_con] +=1
-            if my.state[agent]>=0:
+            if my.state[agent]>=0 and my.state[agent] < 8:
                 frac_inf[0,n_con] +=1
-        print(frac_inf[0,:]/frac_inf[1,:])
+        #print(frac_inf[0,:]/frac_inf[1,:])
         # print("N_daily_tests", intervention.N_daily_tests)
         # print("N_positive_tested", N_positive_tested)
 
@@ -1926,6 +1951,7 @@ def test_if_label_needs_intervention_multi(
         if day_found > max(0, day - intervention.cfg.days_looking_back):
             infected_per_label[intervention.labels[agent]] += 1
 
+
     it = enumerate(
         zip(
             infected_per_label,
@@ -1936,15 +1962,17 @@ def test_if_label_needs_intervention_multi(
     for i_label, (N_infected, N_inhabitants, my_intervention_type) in it:
         for ith_intervention in range(0, len(threshold_info) + 1):
             if my_intervention_type == 0:
-                possible_interventions = [1, 2]
+                possible_interventions = [1, 2, 7]
             elif my_intervention_type == 1:
-                possible_interventions = [7] # random integer that doesn't mean anything, 
+                possible_interventions = [9001] # random integer that doesn't mean anything, 
             elif my_intervention_type == 2:
                 possible_interventions = [1]    
+            elif my_intervention_type == 7:
+                possible_interventions = [9001] # random integer that doesn't mean anything,    
                 
             if N_infected / N_inhabitants > threshold_info[ith_intervention+1][0]/100_000.0 and threshold_info[0][ith_intervention] in possible_interventions:
                 if intervention.verbose:
-                    intervention_type_name = ["nothing","lockdown","masking"]
+                    intervention_type_name = ["nothing","lockdown","masking","error","error","error","error","matrix_based"]
                     print(
                         *(intervention_type_name[threshold_info[0][ith_intervention]]," at label", i_label),
                         *("at day", day),
@@ -2239,6 +2267,55 @@ def remove_and_reduce_rates_of_agent(my, g, intervention, agent, rate_reduction)
     g.update_rates(my, -agent_update_rate, agent)
     return None
 
+@njit
+def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent):
+    # rate reduction is 2 3-vectors. is used for lockdown interventions
+    agent_update_rate = 0.0
+    act_rate_reduction = np.array([0.0, 0.0, 0.0], dtype=np.float64)
+    # step 1 loop over all of an agents contact
+    for ith_contact, contact in enumerate(my.connections[agent]):
+        act_rate_reduction = np.array([0.0, 0.0, 0.0], dtype=np.float64)
+
+        if not my.connections_type[agent][ith_contact] == 0:
+            if my.connections_type[agent][ith_contact] == 1:
+                mr = intervention.work_matrix_restrict
+                mi = intervention.work_matrix_init
+            elif my.connections_type[agent][ith_contact] == 2:
+                mr = intervention.other_matrix_restrict
+                mi = intervention.other_matrix_init
+           
+            mr_single = mr[my.age[agent], my.age[contact]]
+            mi_single = mi[my.age[agent], my.age[contact]]
+            assert mr_single < mi_single
+
+            p = 1 - np.sqrt(4 - 4 * (1 - min(mr_single / mi_single, 1))) / 2
+            #print(p, my.connections_type[agent][ith_contact],my.age[agent], my.age[contact])
+            assert p < 0.2 
+            if np.random.rand() < p:
+                act_rate_reduction = np.array([0.0, 1.0, 1.0], dtype=np.float64)
+
+        rate = (
+            g.rates[agent][ith_contact]
+            * act_rate_reduction[my.connections_type[agent][ith_contact]]
+        )
+
+        g.rates[agent][ith_contact] -= rate
+        intervention.freedom_impact[agent] += act_rate_reduction[my.connections_type[agent][ith_contact]]/2/my.number_of_contacts[agent]
+
+        agent_update_rate = loop_update_rates_of_contacts(
+            my,
+            g,
+            intervention,
+            agent,
+            contact,
+            rate,
+            agent_update_rate,
+            rate_reduction=act_rate_reduction,
+        )
+
+    # actually updates to gillespie sums
+    g.update_rates(my, -agent_update_rate, agent)
+    return None
 
 @njit
 def lockdown_on_label(my, g, intervention, label, rate_reduction):
@@ -2260,6 +2337,16 @@ def masking_on_label(my, g, intervention, label, rate_reduction):
     for agent in range(my.cfg.N_tot):
         if intervention.labels[agent] == label:
             reduce_frac_rates_of_agent(my, g, intervention, agent, rate_reduction)
+
+@njit
+def matrix_restriction_on_label(my, g, intervention, label):
+    # masking on all agent with a certain label (tent or municipality, or whatever else you define). Rate reduction is two vectors of length 3. First is the fraction of [home, job, others] rates to be effected by masks.
+    # second is the fraction of reduction of the those [home, job, others] rates.
+    # ie: [[0,0.2,0.2],[0,0.8,0.8]] means that your wear mask when around 20% of job and other contacts, and your rates to those is reduced by 80%
+    # loop over all agents
+    for agent in range(my.cfg.N_tot):
+        if intervention.labels[agent] == label:
+            remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent)
 
 
 @njit
@@ -2341,54 +2428,79 @@ def apply_interventions_on_label(my, g, intervention, day, click, threshold_info
     if intervention.apply_random_testing:
         apply_random_testing(my, intervention, click)
 
-    test_if_intervention_on_labels_can_be_removed_multi(my, g, intervention, day, click, threshold_info)
-    for i_label, clicks_when_restriction_stops in enumerate(intervention.clicks_when_restriction_stops):
-        if clicks_when_restriction_stops == click:
-            remove_intervention_at_label(my, g, intervention, i_label)
-            intervention.clicks_when_restriction_stops[i_label] = -1
-            intervention_type_n = intervention.types[i_label]
-            intervention.types[i_label] = 0
-            intervention.started_as[i_label] = 0
-            if intervention.verbose:
-                intervention_type_name = ["nothing","lockdown","masking"]
-                print(
-                    *("remove ", intervention_type_name[intervention_type_n], " at num of infected", i_label),
-                    *("at day", day)
-                )
+    if not intervention.apply_matrix_restriction:
+        test_if_intervention_on_labels_can_be_removed_multi(my, g, intervention, day, click, threshold_info)
+        for i_label, clicks_when_restriction_stops in enumerate(intervention.clicks_when_restriction_stops):
+            if clicks_when_restriction_stops == click:
+                remove_intervention_at_label(my, g, intervention, i_label)
+                intervention.clicks_when_restriction_stops[i_label] = -1
+                intervention_type_n = intervention.types[i_label]
+                intervention.types[i_label] = 0
+                intervention.started_as[i_label] = 0
+                if intervention.verbose:
+                    intervention_type_name = ["nothing","lockdown","masking","error","error","error","error","matrix_based"]
+                    print(
+                        *("remove ", intervention_type_name[intervention_type_n], " at num of infected", i_label),
+                        *("at day", day)
+                    )
 
-    test_if_label_needs_intervention_multi(
-        intervention,
-        day,
-        threshold_info,
-    )
+        test_if_label_needs_intervention_multi(
+            intervention,
+            day,
+            threshold_info,
+        )
     
 
-    for ith_label, intervention_type in enumerate(intervention.types):
+        for ith_label, intervention_type in enumerate(intervention.types):
 
-        if intervention_type in intervention.cfg.interventions_to_apply:
-            intervention_has_not_been_applied = intervention.started_as[ith_label] == 0
+            if intervention_type in intervention.cfg.interventions_to_apply:
+                intervention_has_not_been_applied = intervention.started_as[ith_label] == 0
 
-            apply_lockdown = intervention_type == 1
-            if apply_lockdown and intervention_has_not_been_applied:
-                intervention.started_as[ith_label] = 1
-                lockdown_on_label(
-                    my,
-                    g,
-                    intervention,
-                    label=ith_label,
-                    rate_reduction=intervention.cfg.lockdown_rate_reduction,
-                )
+                apply_lockdown = intervention_type == 1
+                if apply_lockdown and intervention_has_not_been_applied:
+                    intervention.started_as[ith_label] = 1
+                    lockdown_on_label(
+                        my,
+                        g,
+                        intervention,
+                        label=ith_label,
+                        rate_reduction=intervention.cfg.lockdown_rate_reduction,
+                    )
 
-            apply_masking = intervention_type == 2
-            if apply_masking and intervention_has_not_been_applied:
-                intervention.started_as[ith_label] = 2
-                masking_on_label(
-                    my,
-                    g,
-                    intervention,
-                    label=ith_label,
-                    rate_reduction=intervention.cfg.masking_rate_reduction,
-                )
+                apply_masking = intervention_type == 2
+                if apply_masking and intervention_has_not_been_applied:
+                    intervention.started_as[ith_label] = 2
+                    masking_on_label(
+                        my,
+                        g,
+                        intervention,
+                        label=ith_label,
+                        rate_reduction=intervention.cfg.masking_rate_reduction,
+                    )
+
+                apply_matrix_restriction = intervention_type == 7
+                if apply_matrix_restriction and intervention_has_not_been_applied:
+                    intervention.started_as[ith_label] = 7
+                    matrix_restriction_on_label(
+                        my,
+                        g,
+                        intervention,
+                        label=ith_label,
+
+                    )   
+    elif day == 1:
+        for ith_label, intervention_type in enumerate(intervention.types):
+            matrix_restriction_on_label(
+                my,
+                g,
+                intervention,
+                label=ith_label,
+            )
+    elif day == 35:
+        for i_label, intervention_type in enumerate(intervention.types):
+            remove_intervention_at_label(my, g, intervention, i_label)
+        
+
 
 
 

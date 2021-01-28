@@ -65,7 +65,7 @@ def pandemic_control_calc(N_infected):
     #return (1.0/(1+np.exp(-b*(N_infected-I_crit))))
     return (1.0/(1.0+np.exp(-b*(N_infected-I_crit)))-(1/(1+tal)))*((tal+1)/tal)
 
-def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_list, name_list ):
+def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_list, name_list,vaccinations_per_age_group, vaccination_schedule ):
     filenames = abm_files.cfg_to_filenames(cfg)
     network_filenames = network_files.cfg_to_filenames(cfg)
 
@@ -85,8 +85,10 @@ def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_lis
         axes[0].plot(freedom_impact[1:], lw=4, c="b", label=label)
         axes[0].plot(pandemic_control[1:], lw=4, c="r", label=label)
         axes[1].plot(t, df["I"],lw=4, c="k", label=label)
-        fi_list.append(np.mean(freedom_impact[1:]))
-        pc_list.append(np.mean(pandemic_control2))
+        vac_array = [np.sum(vaccinations_per_age_group[int(ts) - vaccination_schedule[0]])*N_tot/5_800_000  if ts > 10 else 0 for ts in t ]
+        axes[1].plot(t, vac_array)
+        #fi_list.append(np.mean(freedom_impact[1:]))
+        #pc_list.append(np.mean(pandemic_control2))
         print("filename", "R_mean", np.mean(R_true[1:]), "freedom_impact", np.mean(freedom_impact[1:]),"pandemic_control", np.mean(pandemic_control[1:]),"pandemic_control2",np.mean(pandemic_control2))
 
         if i in range(9,15):
@@ -128,6 +130,9 @@ reload(file_loaders)
 
 abm_files = file_loaders.ABM_simulations(verbose=True)
 network_files = file_loaders.ABM_simulations(base_dir="Data/network", filetype="hdf5")
+vaccinations_per_age_group, _, vaccination_schedule = utils.load_vaccination_schedule()
+vaccinations_per_age_group=vaccinations_per_age_group.astype(np.int64)
+vaccination_schedule = np.arange(len(vaccination_schedule),dtype=np.int64) + 10
 pdf_name = Path(f"Figures/data_anal.pdf")
 utils.make_sure_folder_exist(pdf_name)
 with PdfPages(pdf_name) as pdf:
@@ -144,7 +149,7 @@ with PdfPages(pdf_name) as pdf:
             # break
 
 
-            fig, _, fi_list, pc_list, name_list = analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_list, name_list)
+            fig, _, fi_list, pc_list, name_list = analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_list, name_list, vaccinations_per_age_group, vaccination_schedule)
 
 
             pdf.savefig(fig, dpi=100)

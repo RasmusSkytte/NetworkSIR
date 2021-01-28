@@ -120,13 +120,12 @@ class Simulation:
             if self.verbose:
                 print("Using uniform work and other matrices")
 
-            matrix_work, matrix_other, work_other_ratio, age_groups_contact_matrices = utils.load_contact_matrices()
+            matrix_work, matrix_other, work_other_ratio, age_groups_contact_matrices = utils.load_contact_matrices(scenario = '2021_fase1_sce1')
 
             # Overwrite the value for the work_other_ratio based on the loaded matrices
             self.my.cfg.work_other_ratio = work_other_ratio
 
            
-            print(counter_ages)
             # work_other_ratio = 0.5  # 20% work, 80% other
 
             if self.verbose:
@@ -296,6 +295,11 @@ class Simulation:
         vaccinations_per_age_group, _, vaccination_schedule = utils.load_vaccination_schedule()
 
         # Convert vaccination_schedule to integer day counter
+        work_matrix_init, other_matrix_init, _, _= utils.load_contact_matrices(scenario="2021_fase1_sce1")
+        work_matrix_restrict, other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario="basis")
+        work_matrix_restrict = work_matrix_restrict * 0.8 
+        other_matrix_restrict = other_matrix_restrict * 0.8
+
         # TODO: Use a better convertion method. --- Currently simluations start on 2020-12-28
         #print(vaccinations_per_age_group, vaccination_schedule)
         vaccinations_per_age_group=vaccinations_per_age_group.astype(np.int64)
@@ -306,6 +310,10 @@ class Simulation:
             labels = labels,
             vaccinations_per_age_group = vaccinations_per_age_group,
             vaccination_schedule = vaccination_schedule,
+            work_matrix_init = work_matrix_init,
+            work_matrix_restrict = work_matrix_restrict,
+            other_matrix_init = other_matrix_init,
+            other_matrix_restrict = other_matrix_restrict,
             verbose=verbose_interventions,
         )
         

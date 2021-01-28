@@ -1823,18 +1823,19 @@ def load_contact_matrices(scenario = 'reference') :
     """
     # Load the contact matrices
     matrix_work,  age_groups_work,  _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
+    matrix_school,  age_groups_school,  _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_school.csv')
     matrix_other, age_groups_other, _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
     # TODO: Load the school contact matrix
 
     # Assert the age_groups are the same
     if not age_groups_work == age_groups_other :
         raise ValueError('Age groups for work contact matrix and other contact matrix not equal')
-
+    matrix_work = matrix_work + matrix_school    
     # Determine the work-to-other ratio
-    work_other_ratio = matrix_work.sum() / matrix_other.sum()
+    work_other_ratio = matrix_work.sum() / (matrix_other.sum() + matrix_work.sum())
 
     # Normalize the contact matrices after this ratio has been determined
-    return (matrix_work / matrix_work.sum(), matrix_other / matrix_other.sum(), work_other_ratio, age_groups_work)
+    return (matrix_work , matrix_other , work_other_ratio, age_groups_work)
 
 
 def load_vaccination_schedule(scenario = 'reference') :

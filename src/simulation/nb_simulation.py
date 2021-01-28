@@ -2274,6 +2274,7 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent):
     act_rate_reduction = np.array([0.0, 0.0, 0.0], dtype=np.float64)
     # step 1 loop over all of an agents contact
     for ith_contact, contact in enumerate(my.connections[agent]):
+        act_rate_reduction = np.array([0.0, 0.0, 0.0], dtype=np.float64)
 
         if not my.connections_type[agent][ith_contact] == 0:
             if my.connections_type[agent][ith_contact] == 1:
@@ -2487,7 +2488,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, threshold_info
                         label=ith_label,
 
                     )   
-    elif day == 5:
+    elif day == 1:
         for ith_label, intervention_type in enumerate(intervention.types):
             matrix_restriction_on_label(
                 my,

@@ -36,7 +36,7 @@ dependencies:
   - flake8
   - pylint
   - attrdict
-  - sigfig
+  # - sigfig
   # - datashader
   - pip:
     - mpl-scatter-density

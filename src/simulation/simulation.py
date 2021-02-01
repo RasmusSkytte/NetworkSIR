@@ -71,7 +71,7 @@ class Simulation:
 
             # Convert vaccination_schedule to integer day counter
             # TODO: Use a better convertion method. --- Currently simluations start on 2020-12-28
-            self.cfg.vaccination_schedule = np.arange(len(self.cfg.vaccination_schedule)) + 10
+            self.cfg.vaccination_schedule = np.arange(len(self.cfg.vaccination_schedule)) + 14
 
     def _initialize_network(self):
         """ Initializing the network for the simulation
@@ -296,9 +296,9 @@ class Simulation:
 
         # Convert vaccination_schedule to integer day counter
         work_matrix_init, other_matrix_init, _, _= utils.load_contact_matrices(scenario="2021_fase1_sce1")
-        work_matrix_restrict, other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario="basis")
-        work_matrix_restrict = work_matrix_restrict * 0.8 
-        other_matrix_restrict = other_matrix_restrict * 0.8
+        work_matrix_restrict, other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario="ned2021jan")
+        #work_matrix_restrict = work_matrix_restrict * 0.8 
+        #other_matrix_restrict = other_matrix_restrict * 0.8
 
         # TODO: Use a better convertion method. --- Currently simluations start on 2020-12-28
         #print(vaccinations_per_age_group, vaccination_schedule)

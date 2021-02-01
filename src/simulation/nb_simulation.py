@@ -61,6 +61,7 @@ spec_cfg = {
     "outbreak_position_UK": nb.types.unicode_type,
     "vaccinations": nb.boolean,
     "burn_in": nb.int64,
+    "days_of_vacci_start": nb.int64,
     # events
     "N_events": nb.uint16,
     "event_size_max": nb.uint16,
@@ -188,6 +189,7 @@ spec_my = {
     "infectious_states": ListType(nb.int64),
     "corona_type": nb.uint8[:],
     "vaccination_type": nb.uint8[:],
+    "restricted_status": nb.uint8[:],
     "cfg": nb_cfg_type,
 }
 
@@ -213,6 +215,7 @@ class My(object):
         self.infectious_states = List([4, 5, 6, 7])
         self.corona_type = np.zeros(N_tot, dtype=np.uint8)
         self.vaccination_type = np.zeros(N_tot, dtype=np.uint8)
+        self.restricted_status = np.zeros(N_tot, dtype=np.uint8)
         self.cfg = nb_cfg
 
     def dist(self, agent1, agent2):
@@ -317,7 +320,7 @@ spec_intervention = {
     "freedom_impact": nb.float64[:],
     "freedom_impact_list": ListType(nb.float64),
     "R_true_list": ListType(nb.float64),
-    "pandemic_control_list": ListType(nb.float64),
+    "R_true_list_brit": ListType(nb.float64),
     "day_found_infected": nb.int32[:],
     "reason_for_test": nb.int8[:],
     "positive_test_counter": nb.uint32[:],
@@ -394,7 +397,7 @@ class Intervention(object):
         self.freedom_impact = np.full(self.cfg.N_tot, fill_value=0.0, dtype=np.float64)
         self.freedom_impact_list = List([0.0])
         self.R_true_list = List([0.0])
-        self.pandemic_control_list = List([0.0])
+        self.R_true_list_brit = List([0.0])
         self.reason_for_test = np.full(self.cfg.N_tot, fill_value=-1, dtype=np.int8)
         self.positive_test_counter = np.zeros(3, dtype=np.uint32)
         self.clicks_when_tested = np.full(self.cfg.N_tot, fill_value=-1, dtype=np.int32)
@@ -1247,8 +1250,6 @@ def make_initial_infections(
         if np.random.rand() < my.cfg.N_init_UK/(my.cfg.N_init_UK+ my.cfg.N_init):
             my.corona_type[agent] = 1  # IMPORTANT LINE!
 
-
-
         agents_in_state[new_state].append(np.uint32(agent))
         state_total_counts[new_state] += 1
 
@@ -1560,6 +1561,8 @@ def run_simulation(
     s_counter = np.zeros(4)
     where_infections_happened_counter = np.zeros(4)
     
+    days_of_vacci_start = my.cfg.days_of_vacci_start
+ 
 
     # Run the simulation ################################
     continue_run = True
@@ -1703,7 +1706,7 @@ def run_simulation(
                 out_state_counts.append(state_total_counts.copy())
 
             if daily_counter >= 10:
-
+                day += 1
                 if intervention.apply_interventions and intervention.apply_interventions_on_label and day >= 0:
                     apply_interventions_on_label(my, g, intervention, day, click, my.cfg.threshold_info)
 
@@ -1719,62 +1722,30 @@ def run_simulation(
                     )
 
                 daily_counter = 0
-                day += 1
+                
                 if day >= 0:
                     out_my_state.append(my.state.copy())
                 if verbose:
                     print("day", day, "n_inf", np.sum(where_infections_happened_counter) )
                     print("R_true", intervention.R_true_list[-1])
                     print("freedom_impact", intervention.freedom_impact_list[-1])
-                    print("pandemic_control_list", intervention.pandemic_control_list[-1])
+                    print("R_true_list_brit", intervention.R_true_list_brit[-1])
 
                 if my.cfg.vaccinations:
-                    # print("Starting to vaccinate, day", day)
+                    if days_of_vacci_start > 0:
+                        for day in range(days_of_vacci_start):
+                            vaccinate(my, g, intervention, day)
+                        intervention.vaccination_schedule - days_of_vacci_start
+                        days_of_vacci_start = 0 
 
-                    # try to vaccinate everyone, but only do vaccinate susceptable agents
-                    possible_agents_to_vaccinate = np.arange(my.cfg.N_tot, dtype=np.uint32)
-                    # agent = utils.numba_random_choice_list(agents_in_state[state_now])
-
-                    R_state = g.N_states - 1  # 8
-
-                    # TODO: Exctract number to vaccinate from the schedule
-                    # Steps: What is the current date?
-                    #       --- Currently, day 0 is assumed to be 2020-12-28
-
-                    # Check if any vaccines are effective yet:
-                    if day >= intervention.vaccination_schedule[0] :
-
-                        # Get the number of new effective vaccines
-                        N = intervention.vaccinations_per_age_group[day - intervention.vaccination_schedule[0]]
-
-                        # Scale the number of vaccines
-                        N = N * my.cfg.N_tot / 5837213
-                        probabilities = np.array([N[my.age[agent]] for agent in possible_agents_to_vaccinate])
-
-                        # Distribute the effective vaccines among the population
-                        agents = nb_random_choice(possible_agents_to_vaccinate, probabilities, size = int(np.sum(N)))
-                        for agent in agents:
-
-                            # pick agent if it is susceptible (in S state)
-                            if my.agent_is_susceptable(agent):
-                                # "vaccinate agent"
-                                my.vaccination_type[agent] = 1
-
-                                # set agent to recovered, instantly
-                                my.state[agent] = R_state
-
-                                agents_in_state[R_state].append(np.uint32(agent))
-                                state_total_counts[R_state] += 1
-
-                                # remove rates into agent from its infectios contacts
-                                update_infection_list_for_newly_infected_agent(my, g, agent)
+                    vaccinate(my, g, intervention, day)
 
             if intervention.apply_interventions:
                 test_tagged_agents(my, g, intervention, day, click)
-            if day >=0:
+            if day >= 0:
                 intervention.R_true_list.append(calculate_R_True(my, g))
                 intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
-                intervention.pandemic_control_list.append(calculate_pandemic_control(my, intervention))
+                intervention.R_true_list_brit.append(calculate_R_True_brit(my, g))
             
             
             click += 1
@@ -1825,6 +1796,43 @@ def run_simulation(
 #%%
 
 @njit
+def vaccinate(my, g, intervention, day):
+    
+    # try to vaccinate everyone, but only do vaccinate susceptable agents
+    possible_agents_to_vaccinate = np.arange(my.cfg.N_tot, dtype=np.uint32)
+    # agent = utils.numba_random_choice_list(agents_in_state[state_now])
+
+    R_state = g.N_states - 1  # 8
+
+    # Check if any vaccines are effective yet:
+    if day >= intervention.vaccination_schedule[0] :
+
+        # Get the number of new effective vaccines
+        N = intervention.vaccinations_per_age_group[day - intervention.vaccination_schedule[0]]
+
+        # Scale the number of vaccines
+        N = N * my.cfg.N_tot / 5837213
+        probabilities = np.array([N[my.age[agent]] for agent in possible_agents_to_vaccinate])
+
+        # Distribute the effective vaccines among the population
+        agents = nb_random_choice(possible_agents_to_vaccinate, probabilities, size = int(np.sum(N)))
+        for agent in agents:
+
+            # pick agent if it is susceptible (in S state)
+            if my.agent_is_susceptable(agent):
+                # "vaccinate agent"
+                my.vaccination_type[agent] = 1
+
+                # set agent to recovered, instantly
+                my.state[agent] = R_state
+
+                agents_in_state[R_state].append(np.uint32(agent))
+                state_total_counts[R_state] += 1
+
+                # remove rates into agent from its infectios contacts
+                update_infection_list_for_newly_infected_agent(my, g, agent)
+
+@njit
 def calculate_R_True(my, g):
     lambda_I = my.cfg.lambda_I
     rate_sum = g.total_sum_infections
@@ -1833,6 +1841,17 @@ def calculate_R_True(my, g):
         if my.agent_is_infectious(agent):
             N_infected += 1
     return rate_sum / lambda_I / np.maximum(N_infected,1.0) * 4
+
+@njit
+def calculate_R_True_brit(my, g):
+    lambda_I = my.cfg.lambda_I
+    rate_sum = 0
+    N_infected = 0
+    for agent in range(my.cfg.N_tot):
+        if my.agent_is_infectious(agent) and my.corona_type[1]:
+            N_infected += 1
+            rate_sum += g.rate_sum[agent]
+    return rate_sum / lambda_I / np.maximum(N_infected,1.0) * 4    
 
 @njit 
 def calculate_population_freedom_impact(intervention):
@@ -2034,8 +2053,9 @@ def reset_rates_of_agent(my, g, agent, intervention, connection_type_weight=None
 @njit
 def remove_intervention_at_label(my, g, intervention, ith_label):
     for agent in range(my.cfg.N_tot):
-        if intervention.labels[agent] == ith_label:
+        if intervention.labels[agent] == ith_label and my.restricted_status[agent] == 1:
             reset_rates_of_agent(my, g, agent, intervention, connection_type_weight=None)
+            my.restricted_status[agent] = 0
     return None
 
 
@@ -2326,6 +2346,7 @@ def lockdown_on_label(my, g, intervention, label, rate_reduction):
     # loop over all agents
     for agent in range(my.cfg.N_tot):
         if intervention.labels[agent] == label:
+            my.restricted_status[agent] = 1
             remove_and_reduce_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
 
@@ -2337,6 +2358,7 @@ def masking_on_label(my, g, intervention, label, rate_reduction):
     # loop over all agents
     for agent in range(my.cfg.N_tot):
         if intervention.labels[agent] == label:
+            my.restricted_status[agent] = 1
             reduce_frac_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
 @njit
@@ -2347,6 +2369,7 @@ def matrix_restriction_on_label(my, g, intervention, label):
     # loop over all agents
     for agent in range(my.cfg.N_tot):
         if intervention.labels[agent] == label:
+            my.restricted_status[agent] = 1
             remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent)
 
 

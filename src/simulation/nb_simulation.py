@@ -1551,11 +1551,11 @@ def run_simulation(
     out_my_state = List()
 
     daily_counter = 0
-    #day = -1 * my.cfg.burn_in
-    day = 0
-    click = 0
+    day = -1 * my.cfg.burn_in
+    #day = 0
+    click = nts * day
     step_number = 0
-    real_time = 0.0
+    real_time = 1.0 * day
 
     s_counter = np.zeros(4)
     where_infections_happened_counter = np.zeros(4)
@@ -1802,12 +1802,13 @@ def run_simulation(
         print("Where", where_infections_happened_counter)
         print("positive_test_counter", intervention.positive_test_counter)
         print("n_found", np.sum(np.array([1 for day_found in intervention.day_found_infected if day_found>=0])))
-        frac_inf = np.zeros((2,200))
-        for agent in range(my.cfg.N_tot):
-            n_con = my.number_of_contacts[agent]
-            frac_inf[1,n_con] +=1
-            if my.state[agent]>=0 and my.state[agent] < 8:
-                frac_inf[0,n_con] +=1
+        print(list(calc_contact_dist(my,2)))
+        # frac_inf = np.zeros((2,200))
+        # for agent in range(my.cfg.N_tot):
+        #     n_con = my.number_of_contacts[agent]
+        #     frac_inf[1,n_con] +=1
+        #     if my.state[agent]>=0 and my.state[agent] < 8:
+        #         frac_inf[0,n_con] +=1
         #print(frac_inf[0,:]/frac_inf[1,:])
         # print("N_daily_tests", intervention.N_daily_tests)
         # print("N_positive_tested", N_positive_tested)
@@ -1823,6 +1824,18 @@ def run_simulation(
 # ██      ██ ██   ██ ██   ██    ██    ██ ██   ████    ██
 #
 #%%
+@njit
+def calc_contact_dist(my, contact_type):
+    contact_dist = np.zeros(100)
+    for agent in range(my.cfg.N_tot):
+        agent_sum = 0
+        for ith_contact in range(len(my.connections[agent])):           
+            if my.connections_type[agent][ith_contact] == contact_type:
+                agent_sum += 1
+        contact_dist[agent_sum] += 1
+    return contact_dist
+
+
 
 @njit
 def calculate_R_True(my, g):
@@ -2286,11 +2299,15 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent):
            
             mr_single = mr[my.age[agent], my.age[contact]]
             mi_single = mi[my.age[agent], my.age[contact]]
-            assert mr_single < mi_single
+            
+            if mr_single > mi_single:
+                print(my.age[agent]) 
+                print(my.age[contact]) 
+                print(my.connections_type[agent][ith_contact])   
+                assert mr_single < mi_single  
 
             p = 1 - np.sqrt(4 - 4 * (1 - min(mr_single / mi_single, 1))) / 2
             #print(p, my.connections_type[agent][ith_contact],my.age[agent], my.age[contact])
-            assert p < 0.2 
             if np.random.rand() < p:
                 act_rate_reduction = np.array([0.0, 1.0, 1.0], dtype=np.float64)
 

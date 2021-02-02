@@ -1,32 +1,32 @@
-from re import X
+# from re import X TODO: Delete line
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+# import pandas as pd TODO: Delete line
+# import matplotlib.pyplot as plt TODO: Delete line
 from pathlib import Path
-import multiprocessing as mp
+# import multiprocessing as mp TODO: Delete line
 import h5py
-from resource import getrusage, RUSAGE_SELF
+# from resource import getrusage, RUSAGE_SELF TODO: Delete line
 import warnings
-from importlib import reload
+# from importlib import reload TODO: Delete line
 import os
 from IPython.display import display
 from contexttimer import Timer
-import yaml
+# import yaml TODO: Delete line
 
 # conda install -c numba/label/dev numba
-import numba as nb
-from numba import njit, prange, objmode, typeof
-from numba.typed import List, Dict
-import uuid
+# import numba as nb TODO: Delete line
+# from numba import njit, prange, objmode, typeof TODO: Delete line
+from numba.typed import List, Dict # TODO: Delete "Dict"
+# import uuid TODO: Delete line
 import datetime
 from numba.core.errors import (
     NumbaTypeSafetyWarning,
     NumbaExperimentalFeatureWarning,
-    NumbaPendingDeprecationWarning,
+    NumbaPendingDeprecationWarning, # TODO: Delete line
 )
 
-import awkward as awkward0  # conda install awkward0, conda install -c conda-forge pyarrow
-import awkward1 as ak  # pip install awkward1
+# import awkward as awkward0  # conda install awkward0, conda install -c conda-forge pyarrow    TODO: Delete line
+# import awkward1 as ak  # pip install awkward1 TODO: Delete line
 
 debugging = False
 while True:
@@ -84,22 +84,22 @@ class Simulation:
         if self.verbose:
             print(f"\nINITIALIZE VERSION {self.cfg.version} NETWORK")
 
-        #Version 1 do not have [house, work, other], from version 2 this is implemented. 
+        #Version 1 do not have [house, work, other], from version 2 this is implemented.
         if self.cfg.version >= 2:
             (
                 people_in_household,
                 age_distribution_per_people_in_household,
             ) = utils.load_household_data()
-            household_size_dist_per_kommune, age_distribution_per_person_in_house_per_kommune, kommune_id = utils.load_household_data_kommune_specific()           
-            N_ages = len(age_distribution_per_person_in_house_per_kommune[0,0])            
+            household_size_dist_per_kommune, age_distribution_per_person_in_house_per_kommune, kommune_id = utils.load_household_data_kommune_specific()
+            N_ages = len(age_distribution_per_person_in_house_per_kommune[0,0])
             kommune_ids = []
             for val in self.df_coordinates["kommune"].values:
                 kommune_ids.append(kommune_id.get_loc(val))
-            kommune_ids = np.array(kommune_ids)   
+            kommune_ids = np.array(kommune_ids)
 
             self.N_ages = N_ages
             if self.verbose:
-                print("Connect Household") #was household and families are used interchangebly. Most places it is changed to house(hold) since it just is people living at the same adress. 
+                print("Connect Household") #was household and families are used interchangebly. Most places it is changed to house(hold) since it just is people living at the same adress.
 
             (
                 mu_counter,
@@ -116,7 +116,7 @@ class Simulation:
 
 
             #make connectivity matrices, right now they are uniform.
-            # TODO: take real input to get better matrices. 
+            # TODO: take real input to get better matrices.
             if self.verbose:
                 print("Using uniform work and other matrices")
 
@@ -125,7 +125,7 @@ class Simulation:
             # Overwrite the value for the work_other_ratio based on the loaded matrices
             self.my.cfg.work_other_ratio = work_other_ratio
 
-           
+
             # work_other_ratio = 0.5  # 20% work, 80% other
 
             if self.verbose:
@@ -155,7 +155,7 @@ class Simulation:
             agents_in_age_group.append(np.arange(self.cfg.N_tot, dtype=np.uint32))
 
         self.agents_in_age_group = agents_in_age_group
-        
+
         return None
 
     def _save_initialized_network(self, filename):
@@ -291,13 +291,13 @@ class Simulation:
         if verbose_interventions is None:
             verbose_interventions = self.verbose
 
-         # Load the projected vaccination schedule    
+         # Load the projected vaccination schedule
         vaccinations_per_age_group, _, vaccination_schedule = utils.load_vaccination_schedule()
 
         # Convert vaccination_schedule to integer day counter
         work_matrix_init, other_matrix_init, _, _= utils.load_contact_matrices(scenario="2021_fase1_sce1")
         work_matrix_restrict, other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario="ned2021jan")
-        #work_matrix_restrict = work_matrix_restrict * 0.8 
+        #work_matrix_restrict = work_matrix_restrict * 0.8
         #other_matrix_restrict = other_matrix_restrict * 0.8
 
         # TODO: Use a better convertion method. --- Currently simluations start on 2020-12-28
@@ -316,7 +316,7 @@ class Simulation:
             other_matrix_restrict = other_matrix_restrict,
             verbose=verbose_interventions,
         )
-        
+
         res = nb_simulation.run_simulation(
             self.my,
             self.g,

@@ -388,7 +388,7 @@ class Simulation:
             f.create_dataset("cfg_str", data=str(self.cfg))
             f.create_dataset("R_true", data=self.intervention.R_true_list)
             f.create_dataset("freedom_impact", data=self.intervention.freedom_impact_list)
-            f.create_dataset("pandemic_control", data=self.intervention.pandemic_control_list)
+            f.create_dataset("R_true_brit", data=self.intervention.R_true_list_brit)
             f.create_dataset("df", data=utils.dataframe_to_hdf5_format(self.df))
             # f.create_dataset(
             #     "df_coordinates",

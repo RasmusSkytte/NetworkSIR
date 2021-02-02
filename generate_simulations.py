@@ -27,7 +27,7 @@ if utils.is_local_computer():
     all_simulation_parameters = [
         {
 
-            "N_tot": 5_000,
+            "N_tot": 580000*2,
             #"N_tot": 6_000,
             # "make_random_initial_infections": True,
             # "weighted_random_initial_infections": True,
@@ -62,15 +62,15 @@ if utils.is_local_computer():
             # "tracking_delay": 15
             # "N_contacts_max": 100,
             # "work_other_ratio": 0.5,
-            "N_init": [40],
+            "N_init": [1800,2000],
             # "N_init": [1000],
-            "N_init_UK": [5],
+            "N_init_UK": [100],
             #"work_other_ratio": 0.95,  # "algo 1"
             # "rho": 0.1,
             # "beta": [0.004],
-            "beta": 0.02,
+            "beta": [0.0125],
             # "beta": [0.016, 0.018],
-            "beta_UK_multiplier": [1.4],
+            "beta_UK_multiplier": [1.5],
             # "outbreak_position_UK": ["københavn", "nordjylland"],
             "outbreak_position_UK": ["københavn"],
             # "N_daily_vaccinations": [0],
@@ -79,10 +79,11 @@ if utils.is_local_computer():
             # "tracking_rates": [1.0, 0.5,0.1]
             "tracking_delay": [10],
             "day_max": 100,
+            "days_of_vacci_start": 0 # number of days after vaccinations calender start. 31 = 1-st of feb.
+
             #"verbose":True,
             # "event_size_max": 50,
             #"vaccinations": True,
-            "burn_in":0,
         },
     ]
 else:

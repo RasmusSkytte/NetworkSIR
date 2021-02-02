@@ -1247,7 +1247,7 @@ def make_initial_infections(
         states = np.arange(N_states - 1, dtype=np.int8)
         new_state = nb_random_choice(states, weights)[0]  # E1-E4 or I1-I4, uniformly distributed
         my.state[agent] = new_state
-        if np.random.rand() < my.cfg.N_init_UK/(my.cfg.N_init_UK+ my.cfg.N_init):
+        if np.random.rand() < my.cfg.N_init_UK/(my.cfg.N_init_UK + my.cfg.N_init):
             my.corona_type[agent] = 1  # IMPORTANT LINE!
 
         agents_in_state[new_state].append(np.uint32(agent))
@@ -1557,6 +1557,7 @@ def run_simulation(
     click = nts * day
     step_number = 0
     real_time = 1.0 * day
+    print(day, click, real_time)
 
     s_counter = np.zeros(4)
     where_infections_happened_counter = np.zeros(4)
@@ -1697,17 +1698,18 @@ def run_simulation(
 
         ################
 
-        while nts * click < real_time:
+        while nts * click + abs(2*my.cfg.burn_in) < real_time + abs(2*my.cfg.burn_in):
             # if nts * click < real_time:
 
             daily_counter += 1
-            if (len(out_time) == 0) or (real_time != out_time[-1]) and day >= 0:
+            if ((len(out_time) == 0) or (real_time != out_time[-1])) and day >= 0:
                 out_time.append(real_time)
                 out_state_counts.append(state_total_counts.copy())
 
             if daily_counter >= 10:
                 day += 1
                 if intervention.apply_interventions and intervention.apply_interventions_on_label and day >= 0:
+
                     apply_interventions_on_label(my, g, intervention, day, click, my.cfg.threshold_info)
 
                 if my.cfg.N_events > 0:
@@ -1734,11 +1736,11 @@ def run_simulation(
                 if my.cfg.vaccinations:
                     if days_of_vacci_start > 0:
                         for day in range(days_of_vacci_start):
-                            vaccinate(my, g, intervention, day)
+                            vaccinate(my, g, intervention, agents_in_state, day)
                         intervention.vaccination_schedule - days_of_vacci_start
                         days_of_vacci_start = 0 
 
-                    vaccinate(my, g, intervention, day)
+                    vaccinate(my, g, intervention, agents_in_state, day)
 
             if intervention.apply_interventions:
                 test_tagged_agents(my, g, intervention, day, click)
@@ -1773,7 +1775,7 @@ def run_simulation(
         print("Where", where_infections_happened_counter)
         print("positive_test_counter", intervention.positive_test_counter)
         print("n_found", np.sum(np.array([1 for day_found in intervention.day_found_infected if day_found>=0])))
-        print(list(calc_contact_dist(my,2)))
+        #print(list(calc_contact_dist(my,2)))
         # frac_inf = np.zeros((2,200))
         # for agent in range(my.cfg.N_tot):
         #     n_con = my.number_of_contacts[agent]
@@ -1809,7 +1811,7 @@ def calc_contact_dist(my, contact_type):
 
 
 @njit
-def vaccinate(my, g, intervention, day):
+def vaccinate(my, g, intervention, agents_in_state, day):
     
     # try to vaccinate everyone, but only do vaccinate susceptable agents
     possible_agents_to_vaccinate = np.arange(my.cfg.N_tot, dtype=np.uint32)
@@ -1861,9 +1863,9 @@ def calculate_R_True_brit(my, g):
     rate_sum = 0
     N_infected = 0
     for agent in range(my.cfg.N_tot):
-        if my.agent_is_infectious(agent) and my.corona_type[1]:
+        if my.agent_is_infectious(agent) and my.corona_type[agent]==1:
             N_infected += 1
-            rate_sum += g.rate_sum[agent]
+            rate_sum += g.sum_of_rates[agent]
     return rate_sum / lambda_I / np.maximum(N_infected,1.0) * 4    
 
 @njit 
@@ -2529,14 +2531,16 @@ def apply_interventions_on_label(my, g, intervention, day, click, threshold_info
                     )   
     elif day == 1:
         for ith_label, intervention_type in enumerate(intervention.types):
+            print("intervention")
             matrix_restriction_on_label(
                 my,
                 g,
                 intervention,
                 label=ith_label,
             )
-    elif day == 35:
+    elif day == 39:
         for i_label, intervention_type in enumerate(intervention.types):
+            print("intervention")
             remove_intervention_at_label(my, g, intervention, i_label)
         
 

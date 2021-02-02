@@ -50,6 +50,8 @@
   tracking_delay: \mathrm{tracking}_\mathrm{delay}
   threshold_info: \mathrm{threshold_info}
   intervention_removal_delay_in_clicks: \mathrm{int_rem_delay}
+  burn_in: \mathrm{burn in}
+  days_of_vacci_start: \mathrm{days of vacci}
 
   hash: \mathrm{hash}
 

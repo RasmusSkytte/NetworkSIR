@@ -75,24 +75,31 @@ def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_lis
     i = 0
     for  filename, network_filename in zip(filenames, network_filenames):
         df = file_loaders.pandas_load_file(filename)
-        day_found_infected, R_true, freedom_impact, pandemic_control, my_state = file_loaders.load_Network_file(network_filename)
+        day_found_infected, R_true, freedom_impact, R_true_brit, my_state = file_loaders.load_Network_file(network_filename)
         t = df["time"].values
         pandemic_control2 = pandemic_control_calc(df["I"])
         label = r"ABM" if i == 0 else None
         #print("n_inf", np.sum([1 for day in day_found_infected if day >=0]), "mean", np.mean(day_found_infected))
         #axes[0].hist(day_found_infected[day_found_infected>=0], bins = range(100))
         axes[0].plot(R_true[1:], lw=4, c="k", label=label)
-        axes[0].plot(freedom_impact[1:], lw=4, c="b", label=label)
-        axes[0].plot(pandemic_control[1:], lw=4, c="r", label=label)
-        axes[1].plot(t, df["I"],lw=4, c="k", label=label)
-        vac_array = [np.sum(vaccinations_per_age_group[int(ts) - vaccination_schedule[0]])*N_tot/5_800_000  if ts > 10 else 0 for ts in t ]
-        axes[1].plot(t, vac_array)
+        axes[0].plot(R_true_brit[1:], lw=4, c="r", label=label)
+        #axes[0].plot(freedom_impact[1:], lw=4, c="b", label=label)
+        #axes[0].plot(pandemic_control[1:], lw=4, c="r", label=label)
+        axes[1].plot(t, np.array(df["I"])/N_tot*5_800_000/2,lw=4, c="k", label=label)
+        ids = np.array([int(ts) - vaccination_schedule[0] + 21 for ts in t])
+        ids[ids < 0] == 0
+        ids[ids > 140] == 0
+        #vac_array = [np.sum(vaccinations_per_age_group[i])*N_tot/5_800_000 if i < 130 else _ for i in ids ]
+        #if len(ids) > len(vac_array):
+        #    axes[1].plot(ids[:len(vac_array)], vac_array)
+        #else:
+        #    axes[1].plot(ids, vac_array)
         #fi_list.append(np.mean(freedom_impact[1:]))
         #pc_list.append(np.mean(pandemic_control2))
-        print("filename", "R_mean", np.mean(R_true[1:]), "freedom_impact", np.mean(freedom_impact[1:]),"pandemic_control", np.mean(pandemic_control[1:]),"pandemic_control2",np.mean(pandemic_control2))
+        print("filename", "R_mean", np.mean(R_true[1:]), "freedom_impact", np.mean(freedom_impact[1:]),"R_true_brit", np.mean(R_true_brit[1:]),"pandemic_control2",np.mean(pandemic_control2))
 
         if i in range(9,15):
-                name = str(cfg.threshold_info[1]) + str(cfg.threshold_info[2])
+                name = str(cfg.N_init) + str(c)
         else:
             name = str(cfg.tracking_delay)# + " " + str(cfg.tracking_rates) 
         name_list.append(name)      
@@ -105,7 +112,14 @@ def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_lis
         # axes[0].plot(t, exponential(t, *popt), label="shorter Fitted Curve") #same as line above \/
         # title = "contact number" + str(popt[1])
         # axes[0].set_title(title)
-
+        n_pos = [724, 886, 760, 773, 879, 754, 625, 652, 592, 668, 456, 431, 377, 488]
+        dates = np.arange(19,33)
+        axes[1].scatter(dates, n_pos)
+        axes[1].set_xlim(19, 100)
+        axes[0].set_xlim(19, 100)
+        axes[1].set_ylim(0, 2500)
+        axes[1].set_ylabel("N infected")
+        axes[1].set_xlabel("days into 2021")
         # axes[1].plot(t[30:-30-80],simple_ratio_with_symmetric_smoothing(df["I1"]/2,30,80),label="simple 3 day smoothing, real")
         # axes[1].plot(range(1,93),simple_ratio_with_symmetric_smoothing(np.bincount(day_found_infected[day_found_infected>=0]),1,8),label="simple 1 day smoothing, tested")
         # axes[1].plot(range(3,91),simple_ratio_with_symmetric_smoothing(np.bincount(day_found_infected[day_found_infected>=0]),3,8),label="simple 3 day smoothing, tested")

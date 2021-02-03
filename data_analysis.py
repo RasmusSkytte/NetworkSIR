@@ -146,7 +146,7 @@ abm_files = file_loaders.ABM_simulations(verbose=True)
 network_files = file_loaders.ABM_simulations(base_dir="Data/network", filetype="hdf5")
 vaccinations_per_age_group, _, vaccination_schedule = utils.load_vaccination_schedule()
 vaccinations_per_age_group=vaccinations_per_age_group.astype(np.int64)
-vaccination_schedule = np.arange(len(vaccination_schedule),dtype=np.int64) + 10
+vaccination_schedule = np.arange(len(vaccination_schedule),dtype=np.int64) + 14
 pdf_name = Path(f"Figures/data_analysis.pdf")
 utils.make_sure_folder_exist(pdf_name)
 with PdfPages(pdf_name) as pdf:

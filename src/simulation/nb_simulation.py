@@ -59,7 +59,6 @@ spec_cfg = {
     "N_contacts_max": nb.uint16,
     "beta_UK_multiplier": nb.float32,
     "outbreak_position_UK": nb.types.unicode_type,
-    "vaccinations": nb.boolean,
     "burn_in": nb.int64,
     "days_of_vacci_start": nb.int64,
     # events
@@ -70,16 +69,18 @@ spec_cfg = {
     "event_weekend_multiplier": nb.float32,
     # lockdown-related / interventions
     "do_interventions": nb.boolean,
-    # "interventions_to_apply": nb.types.Set(nb.int64),
-    "threshold_info": nb.int64[:, ::1],
-    "interventions_to_apply": ListType(nb.int64),
+    "threshold_type": nb.int8, # which thing set off restrictions: 0: certain date. 1: "real" incidens rate 2: measured incidens rate
+    "restriction_thresholds": nb.int64[:], # len == 2*nr of different thresholds, on the form [start stop start stop etc.]
+    "threshold_interventions_to_apply": ListType(nb.int64),
+    "list_of_threshold_interventions_effects": nb.float64[:, :, :],
+    "continuous_interventions_to_apply": ListType(nb.int64),
     "f_daily_tests": nb.float32,
     "test_delay_in_clicks": nb.int64[:],
     "results_delay_in_clicks": nb.int64[:],
     "chance_of_finding_infected": nb.float64[:],
     "days_looking_back": nb.int64,
-    "masking_rate_reduction": nb.float64[:, ::1],  # to make the type C instead if A
-    "lockdown_rate_reduction": nb.float64[:, ::1],  # to make the type C instead if A
+    #"masking_rate_reduction": nb.float64[:, ::1],  # to make the type C instead if A
+    #"lockdown_rate_reduction": nb.float64[:, ::1],  # to make the type C instead if A
     "isolation_rate_reduction": nb.float64[:],
     "tracking_rates": nb.float64[:],
     "tracking_delay": nb.int64,
@@ -118,11 +119,8 @@ class Config(object):
         self.work_other_ratio = 0.5
         self.N_contacts_max = 0
         self.beta_UK_multiplier = 1.0
-        self.vaccinations = True
         self.burn_in = 20 # burn in period, -int how many days the sim shall run before
-        #self.N_daily_vaccinations = 0
-        #self.vaccinations_per_age_group  =  np.array([0.2, 1.0, 1.0])
-        #self.vaccination_schedule = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.8]])
+
         # events
         self.N_events = 0
         self.event_size_max = 0
@@ -132,15 +130,18 @@ class Config(object):
         # Interventions / Lockdown
         self.do_interventions = True
         # self.interventions_to_apply = {1, 4, 6}
-        self.threshold_info = np.array([[1,2], [200, 50], [15, 15]])
-        self.interventions_to_apply = List([1, 2, 3, 4, 5, 6, 7])
+        self.threshold_type = 0
+        self.restriction_thresholds = np.array([150,50,10,10])
+        self.threshold_interventions_to_apply = List([1,2,3])
+        self.continuous_interventions_to_apply = List([1,2,3,4,5])
         self.f_daily_tests = 0.05
         self.test_delay_in_clicks = np.array([0, 0, 25])
         self.results_delay_in_clicks = np.array([5, 10, 5])
         self.chance_of_finding_infected = np.array([0.0, 0.15, 0.15, 0.15, 0.0])
         self.days_looking_back = 7
-        self.masking_rate_reduction = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.8]])
-        self.lockdown_rate_reduction = np.array([[0.0, 0.6, 0.6], [0.0, 0.6, 0.6]])
+        self.list_of_threshold_interventions_effects = np.array([[[0.0, 0.0, 0.0], [0.0, 0.0, 0.8]],[[0.0, 0.6, 0.6], [0.0, 0.6, 0.6]]])
+        #self.masking_rate_reduction = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.8]])
+        #self.lockdown_rate_reduction = np.array([[0.0, 0.6, 0.6], [0.0, 0.6, 0.6]])
         self.isolation_rate_reduction = np.array([0.2, 1.0, 1.0])
         self.tracking_rates = np.array([1.0, 0.8, 0.2])
         self.tracking_delay = 10
@@ -364,11 +365,19 @@ class Intervention(object):
 
     - clicks_when_isolated: when you were told to go in isolation and be tested
 
-    - types: array to keep count of which intervention are at place at which label
+    - threshold_interventions: array to keep count of which intervention are at place at which label
         0: Do nothing
-        1: lockdown (jobs and schools)
-        2: Track (infected and their connections),
-        3: Cover (with face masks)
+        1: lockdown (cut some contacts and reduce the rest),
+        2: Masking (reduce some contacts),
+        3: Matrix based (used loaded contact matrices. )
+
+    - continuous_interventions: array to keep count of which intervention are at place at which label
+        # 0: Do nothing
+        # 1: Tracking (infected and their connections)
+        # 2: Test people with symptoms
+        # 3: Isolate
+        # 4: Random Testing
+        # 5: vaccinations
 
     - started_as: describes whether or not an intervention has been applied. If 0, no intervention has been applied.
 
@@ -434,31 +443,46 @@ class Intervention(object):
     @property
     def apply_interventions_on_label(self):
         return (
-            (1 in self.cfg.interventions_to_apply)
-            or (2 in self.cfg.interventions_to_apply)
-            or (6 in self.cfg.interventions_to_apply)
+            (1 in self.cfg.threshold_interventions_to_apply)
+            or (2 in self.cfg.threshold_interventions_to_apply)
+            or (3 in self.cfg.threshold_interventions_to_apply)
         )
 
     @property
     def apply_tracking(self):
-        return 3 in self.cfg.interventions_to_apply
+        return 1 in self.cfg.continuous_interventions_to_apply
 
     @property
     def apply_symptom_testing(self):
-        return 4 in self.cfg.interventions_to_apply
+        return 2 in self.cfg.continuous_interventions_to_apply
 
     @property
     def apply_isolation(self):
-        return 5 in self.cfg.interventions_to_apply
+        return 3 in self.cfg.continuous_interventions_to_apply
 
     @property
     def apply_random_testing(self):
-        return 6 in self.cfg.interventions_to_apply
+        return 4 in self.cfg.continuous_interventions_to_apply
 
     @property
     def apply_matrix_restriction(self):
-        return 7 in self.cfg.interventions_to_apply
+        return 3 in self.cfg.threshold_interventions_to_apply
 
+    @property
+    def apply_vaccinations(self):
+        return 5 in self.cfg.continuous_interventions_to_apply
+
+    @property
+    def start_interventions_by_day(self):
+        return self.cfg.threshold_type == 0
+
+    @property
+    def start_interventions_by_real_incidens_rate(self):
+        return self.cfg.threshold_type == 1
+
+    @property
+    def start_interventions_by_meassured_incidens_rate(self):
+        return self.cfg.threshold_type == 2
 
 #%%
 # ██    ██ ███████ ██████  ███████ ██  ██████  ███    ██      ██
@@ -1709,8 +1733,10 @@ def run_simulation(
             if daily_counter >= 10:
                 day += 1
                 if intervention.apply_interventions and intervention.apply_interventions_on_label and day >= 0:
+                    apply_interventions_on_label(my, g, intervention, day, click)
 
-                    apply_interventions_on_label(my, g, intervention, day, click, my.cfg.threshold_info)
+                if intervention.apply_random_testing:
+                    apply_random_testing(my, intervention, click)
 
                 if my.cfg.N_events > 0:
                     add_daily_events(
@@ -1733,14 +1759,14 @@ def run_simulation(
                     print("freedom_impact", intervention.freedom_impact_list[-1])
                     print("R_true_list_brit", intervention.R_true_list_brit[-1])
 
-                if my.cfg.vaccinations:
+                if intervention.apply_vaccinations:
                     if days_of_vacci_start > 0:
                         for day in range(days_of_vacci_start):
-                            vaccinate(my, g, intervention, agents_in_state, day)
+                            vaccinate(my, g, intervention, agents_in_state, state_total_counts, day)
                         intervention.vaccination_schedule - days_of_vacci_start
                         days_of_vacci_start = 0
 
-                    vaccinate(my, g, intervention, agents_in_state, day)
+                    vaccinate(my, g, intervention, agents_in_state,state_total_counts, day)
 
             if intervention.apply_interventions:
                 test_tagged_agents(my, g, intervention, day, click)
@@ -1811,7 +1837,7 @@ def calc_contact_dist(my, contact_type):
 
 
 @njit
-def vaccinate(my, g, intervention, agents_in_state, day):
+def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day):
 
     # try to vaccinate everyone, but only do vaccinate susceptable agents
     possible_agents_to_vaccinate = np.arange(my.cfg.N_tot, dtype=np.uint32)
@@ -2464,12 +2490,9 @@ def apply_random_testing(my, intervention, click):
 
 
 @njit
-def apply_interventions_on_label(my, g, intervention, day, click, threshold_info = np.array([[1, 2], [200, 100], [20, 20]])):
-
-    if intervention.apply_random_testing:
-        apply_random_testing(my, intervention, click)
-
-    if not intervention.apply_matrix_restriction:
+def apply_interventions_on_label(my, g, intervention, day, click):
+    if intervention.start_interventions_by_real_incidens_rate or intervention.start_interventions_by_meassured_incidens_rate:
+        threshold_info = np.array([[1, 2], [200, 100], [20, 20]]) #TODO: remove
         test_if_intervention_on_labels_can_be_removed_multi(my, g, intervention, day, click, threshold_info)
         for i_label, clicks_when_restriction_stops in enumerate(intervention.clicks_when_restriction_stops):
             if clicks_when_restriction_stops == click:
@@ -2493,8 +2516,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, threshold_info
 
 
         for ith_label, intervention_type in enumerate(intervention.types):
-
-            if intervention_type in intervention.cfg.interventions_to_apply:
+            if intervention_type in intervention.cfg.threshold_interventions_to_apply:
                 intervention_has_not_been_applied = intervention.started_as[ith_label] == 0
 
                 apply_lockdown = intervention_type == 1
@@ -2505,7 +2527,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, threshold_info
                         g,
                         intervention,
                         label=ith_label,
-                        rate_reduction=intervention.cfg.lockdown_rate_reduction,
+                        rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[0],
                     )
 
                 apply_masking = intervention_type == 2
@@ -2516,7 +2538,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, threshold_info
                         g,
                         intervention,
                         label=ith_label,
-                        rate_reduction=intervention.cfg.masking_rate_reduction,
+                        rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[0],
                     )
 
                 apply_matrix_restriction = intervention_type == 7
@@ -2527,21 +2549,49 @@ def apply_interventions_on_label(my, g, intervention, day, click, threshold_info
                         g,
                         intervention,
                         label=ith_label,
-
                     )
-    elif day == 1:
-        for ith_label, intervention_type in enumerate(intervention.types):
-            print("intervention")
-            matrix_restriction_on_label(
-                my,
-                g,
-                intervention,
-                label=ith_label,
-            )
-    elif day == 39:
-        for i_label, intervention_type in enumerate(intervention.types):
-            print("intervention")
-            remove_intervention_at_label(my, g, intervention, i_label)
+
+    elif intervention.start_interventions_by_day:
+        if day in intervention.cfg.restriction_thresholds:
+            for i, intervention_date in enumerate(intervention.cfg.restriction_thresholds):
+                if day == intervention_date:
+                    if i % 2 == 0:
+                        # just looping over all labels. intervention type is not necesary with intervention by day
+                        for ith_label, intervention_type in enumerate(intervention.types):
+
+                            # if lockdown
+                            if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 1:
+                                print("lockdown")
+                                lockdown_on_label(
+                                    my,
+                                    g,
+                                    intervention,
+                                    label=ith_label,
+                                    rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[int(i/2)]
+                                )
+                            # if masking
+                            if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 2:
+                                print("masks")
+                                masking_on_label(
+                                    my,
+                                    g,
+                                    intervention,
+                                    label=ith_label,
+                                    rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[int(i/2)]
+                                )
+                            # if matrix restriction
+                            if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3:
+                                print("matrix restriction ")
+                                matrix_restriction_on_label(
+                                    my,
+                                    g,
+                                    intervention,
+                                    label=ith_label,
+                                )
+                    else:
+                        for i_label, intervention_type in enumerate(intervention.types):
+                            print("intervention removed")
+                            remove_intervention_at_label(my, g, intervention, i_label)
 
 
 

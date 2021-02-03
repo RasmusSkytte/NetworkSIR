@@ -1781,7 +1781,7 @@ def load_household_data_kommune_specific():
     age_dist_raw = pd.read_csv("Data/age_dist.csv")
     age_dist_raw = age_dist_raw.set_index('0')
     age_dist_raw = np.array(age_dist_raw)
-    age_dist = np.ones((age_dist_raw.shape[0],age_dist_raw.shape[1],len(eval(age_dist_raw[0,0]))),dtype=float) 
+    age_dist = np.ones((age_dist_raw.shape[0],age_dist_raw.shape[1],len(eval(age_dist_raw[0,0]))),dtype=float)
     for i in range(age_dist_raw.shape[0]):
         for j in range(age_dist_raw.shape[1]):
             nrs = eval(age_dist_raw[i,j])
@@ -1790,7 +1790,7 @@ def load_household_data_kommune_specific():
     household_dist_raw = np.array(household_dist_raw)
     household_dist = np.ones((household_dist_raw.shape[0],household_dist_raw.shape[1]), dtype=float)
     for i in range(household_dist_raw.shape[0]):
-        for j in range(household_dist_raw.shape[1]):            
+        for j in range(household_dist_raw.shape[1]):
             household_dist[i,j] = eval(household_dist_raw[i,j])[0]/(j+1)
     return household_dist, age_dist, kommune_id
 
@@ -1830,7 +1830,7 @@ def load_contact_matrices(scenario = 'reference') :
     # Assert the age_groups are the same
     if not age_groups_work == age_groups_other :
         raise ValueError('Age groups for work contact matrix and other contact matrix not equal')
-    matrix_work = matrix_work + matrix_school    
+    matrix_work = matrix_work + matrix_school
     # Determine the work-to-other ratio
     work_other_ratio = matrix_work.sum() / (matrix_other.sum() + matrix_work.sum())
 

@@ -71,7 +71,7 @@ spec_cfg = {
     # lockdown-related / interventions
     "do_interventions": nb.boolean,
     # "interventions_to_apply": nb.types.Set(nb.int64),
-    "threshold_info": nb.int64[:, ::1], 
+    "threshold_info": nb.int64[:, ::1],
     "interventions_to_apply": ListType(nb.int64),
     "f_daily_tests": nb.float32,
     "test_delay_in_clicks": nb.int64[:],
@@ -119,7 +119,7 @@ class Config(object):
         self.N_contacts_max = 0
         self.beta_UK_multiplier = 1.0
         self.vaccinations = True
-        self.burn_in = 20 # burn in period, -int how many days the sim shall run before 
+        self.burn_in = 20 # burn in period, -int how many days the sim shall run before
         #self.N_daily_vaccinations = 0
         #self.vaccinations_per_age_group  =  np.array([0.2, 1.0, 1.0])
         #self.vaccination_schedule = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.8]])
@@ -144,11 +144,11 @@ class Config(object):
         self.isolation_rate_reduction = np.array([0.2, 1.0, 1.0])
         self.tracking_rates = np.array([1.0, 0.8, 0.2])
         self.tracking_delay = 10
-        self.intervention_removal_delay_in_clicks = 30 
+        self.intervention_removal_delay_in_clicks = 30
 
         self.ID = 0
 
-   
+
 
 
 def initialize_nb_cfg(cfg):
@@ -336,7 +336,7 @@ spec_intervention = {
     "work_matrix_restrict": nb.float64[:, :],
     "other_matrix_init": nb.float64[:, :],
     "other_matrix_restrict": nb.float64[:, :],
-    
+
     "verbose": nb.boolean,
 }
 
@@ -548,7 +548,7 @@ def v1_connect_nodes(my):
 @njit
 def set_connection_weight(my, agent):
     """ How introvert / extrovert you are. How likely you are at having many contacts in your network.
-        Function is used determine the distribution of number of contacts. A larger my.cfg.sigma_mu gives a larger variance in number of contacts. 
+        Function is used determine the distribution of number of contacts. A larger my.cfg.sigma_mu gives a larger variance in number of contacts.
         Parameters:
             my (class): Class of parameters describing the system
             agent (int): ID of agent
@@ -563,11 +563,11 @@ def set_connection_weight(my, agent):
 def set_infection_weight(my, agent):
     """ How much of a super sheader are you?
         Function is used determine the distribution of number of contacts. A larger my.cfg.sigma_beta gives a larger variance individual betas
-        if my.cfg.sigma_beta == 0 everybody is equally infectious. 
+        if my.cfg.sigma_beta == 0 everybody is equally infectious.
         Parameters:
             my (class): Class of parameters describing the system
             agent (int): ID of agent
-    """        
+    """
     if np.random.rand() < my.cfg.sigma_beta:
         my.infection_weight[agent] = -np.log(np.random.rand()) * my.cfg.beta
     else:
@@ -576,14 +576,14 @@ def set_infection_weight(my, agent):
 
 @njit
 def computer_number_of_cluster_retries(my, agent1, agent2):
-    """ Number of times to (re)try to connect two agents. Function is used to cluster the network more. 
-        A higher my.cfg.clustering_connection_retries gives higher cluster coefficient. 
-        Parameters: 
+    """ Number of times to (re)try to connect two agents. Function is used to cluster the network more.
+        A higher my.cfg.clustering_connection_retries gives higher cluster coefficient.
+        Parameters:
             my (class): Class of parameters describing the system
             agent1 (int): ID of first agent
             agent2 (int): ID of second agent
-        returns: 
-           connectivity_factor (int): Number of tries to connect to agents. 
+        returns:
+           connectivity_factor (int): Number of tries to connect to agents.
     """
     connectivity_factor = 1
     for contact in my.connections[agent1]:
@@ -595,14 +595,14 @@ def computer_number_of_cluster_retries(my, agent1, agent2):
 @njit
 def cluster_retry_succesfull(my, agent1, agent2, rho_tmp):
     """" (Re)Try to connect two agents. Returns True if succesful, else False.
-        Parameters: 
+        Parameters:
             my (class): Class of parameters describing the system
             agent1 (int): ID of first agent
             agent2 (int): ID of second agent
-            rho_tmp (float): Characteristic distance of connections 
-        returns: 
+            rho_tmp (float): Characteristic distance of connections
+        returns:
            Bool: Is any on the (re)tries succesfull
-    
+
     """
     if my.cfg.clustering_connection_retries == 0:
         return False
@@ -623,13 +623,13 @@ def update_node_connections(
     code_version=2,
 ):
     """ Returns True if two agents should be connected, else False
-        Parameters: 
+        Parameters:
             my (class): Class of parameters describing the system
             agent1 (int): ID of first agent
             agent2 (int): ID of second agent
-            rho_tmp (float): Characteristic distance of connections 
+            rho_tmp (float): Characteristic distance of connections
             connection_type (int): ID for connection type ([House, work, other])
-            
+
     """
 
     # checks if the two agents are the same, if they are, they can not be connected
@@ -644,7 +644,7 @@ def update_node_connections(
         # try and reconnect to increase clustering effect
         if not cluster_retry_succesfull(my, agent1, agent2, rho_tmp):
             return False
-    
+
     # checks if the two agents are already connected
     already_added = agent1 in my.connections[agent2] or agent2 in my.connections[agent1]
     if already_added:
@@ -680,13 +680,13 @@ def update_node_connections(
 def place_and_connect_families(
     my, people_in_household, age_distribution_per_people_in_household, coordinates_raw
 ):
-    """ Place agents into household, including assigning coordinates and making connections. First step in making the network. 
-        Parameters: 
+    """ Place agents into household, including assigning coordinates and making connections. First step in making the network.
+        Parameters:
             my (class): Class of parameters describing the system
             people_in_household (list): distribution of number of people in households. Input data from file - source: danish statistics
-            age_distribution_per_people_in_household (list): Age distribution of households as a function of number of people in household. Input data from file - source: danish statistics 
+            age_distribution_per_people_in_household (list): Age distribution of households as a function of number of people in household. Input data from file - source: danish statistics
             coordinates_raw: list of coordinates drawn from population density distribution. Households are placed at these coordinates
-        returns: 
+        returns:
             mu_counter (int): How many connections are made in households
             counter_ages(list): Number of agents in each age group
             agents_in_age_group(nested list): Which agents are in each age group
@@ -767,13 +767,13 @@ def place_and_connect_families(
 def place_and_connect_families_kommune_specific(
     my, people_in_household, age_distribution_per_people_in_household, coordinates_raw, Kommune_ids, N_ages
 ):
-    """ Place agents into household, including assigning coordinates and making connections. First step in making the network. 
-        Parameters: 
+    """ Place agents into household, including assigning coordinates and making connections. First step in making the network.
+        Parameters:
             my (class): Class of parameters describing the system
             people_in_household (list): distribution of number of people in households. Input data from file - source: danish statistics
-            age_distribution_per_people_in_household (list): Age distribution of households as a function of number of people in household. Input data from file - source: danish statistics 
+            age_distribution_per_people_in_household (list): Age distribution of households as a function of number of people in household. Input data from file - source: danish statistics
             coordinates_raw: list of coordinates drawn from population density distribution. Households are placed at these coordinates
-        returns: 
+        returns:
             mu_counter (int): How many connections are made in households
             counter_ages(list): Number of agents in each age group
             agents_in_age_group(nested list): Which agents are in each age group
@@ -789,7 +789,7 @@ def place_and_connect_families_kommune_specific(
     #initialize lists to keep track of number of agents in each age group
     counter_ages = np.zeros(N_ages, dtype=np.uint32)
     agents_in_age_group = utils.initialize_nested_lists(N_ages, dtype=np.uint32)
-    house_sizes = np.zeros(len(people_index_to_value), dtype=np.int64)    
+    house_sizes = np.zeros(len(people_index_to_value), dtype=np.int64)
     mu_counter = 0
     agent = 0
     do_continue = True
@@ -813,7 +813,7 @@ def place_and_connect_families_kommune_specific(
 
         # Initilaze the agents and assign them to households
         age_dist = age_distribution_per_people_in_household[kommune, N_people_in_house_index,:]
-        for _ in range(N_people_in_house):            
+        for _ in range(N_people_in_house):
             age_index = utils.rand_choice_nb(
                 age_dist
             )
@@ -846,17 +846,17 @@ def place_and_connect_families_kommune_specific(
                     mu_counter += 1
 
     agents_in_age_group = utils.nested_lists_to_list_of_array(agents_in_age_group)
-    print(house_sizes)            
+    print(house_sizes)
     return mu_counter, counter_ages, agents_in_age_group
 
 @njit
 def run_algo_work(my, agents_in_age_group, age1, age2, rho_tmp):
-    """ Make connection of work type. Algo locks choice of agent1, and then tries different agent2's until one is accepted. 
+    """ Make connection of work type. Algo locks choice of agent1, and then tries different agent2's until one is accepted.
         This algorithm gives an equal number of connections independent of local population density.
-        The sssumption here is that the size of peoples workplaces is independent on where they live. 
-        Parameters: 
+        The sssumption here is that the size of peoples workplaces is independent on where they live.
+        Parameters:
             my (class): Class of parameters describing the system
-            agents_in_age_group (nested list): list of which agents are in which age groups. 
+            agents_in_age_group (nested list): list of which agents are in which age groups.
             age1 (int): Which age group should agent1 be drawn from.
             age2 (int): Which age group should agent2 be drawn from.
             rho_tmp(float): characteristic distance parameter
@@ -867,7 +867,7 @@ def run_algo_work(my, agents_in_age_group, age1, age2, rho_tmp):
 
     while True:
         agent2 = np.random.choice(agents_in_age_group[age2])
-        rho_tmp *= 0.9995 # lowers the threshold for accepting for each try, primarily used to make sure small simulations terminate. 
+        rho_tmp *= 0.9995 # lowers the threshold for accepting for each try, primarily used to make sure small simulations terminate.
         do_stop = update_node_connections(
             my,
             rho_tmp,
@@ -884,11 +884,11 @@ def run_algo_work(my, agents_in_age_group, age1, age2, rho_tmp):
 @njit
 def run_algo_other(my, agents_in_age_group, age1, age2, rho_tmp):
     """ Make connection of other type. Algo tries different combinations of agent1 and agent2 until one combination is accepted.
-        This algorithm gives more connections to people living in high populations densitity areas. This is the main driver of outbreaks being stronger in cities. 
-        Assumption is that you meet more people if you live in densely populated areas. 
-        Parameters: 
+        This algorithm gives more connections to people living in high populations densitity areas. This is the main driver of outbreaks being stronger in cities.
+        Assumption is that you meet more people if you live in densely populated areas.
+        Parameters:
             my (class): Class of parameters describing the system
-            agents_in_age_group (nested list): list of which agents are in which age groups. 
+            agents_in_age_group (nested list): list of which agents are in which age groups.
             age1 (int): Which age group should agent1 be drawn from.
             age2 (int): Which age group should agent2 be drawn from.
             rho_tmp(float): characteristic distance parameter
@@ -912,10 +912,10 @@ def run_algo_other(my, agents_in_age_group, age1, age2, rho_tmp):
 
 @njit
 def find_two_age_groups(N_ages, matrix):
-    """ Find two ages from an age connections matrix. 
-        Parameters: 
+    """ Find two ages from an age connections matrix.
+        Parameters:
             N_ages(int): Number of age groups, default 9 (TODO: Should this be 10?)
-            matrix: Connection matrix, how often does different age group interact. 
+            matrix: Connection matrix, how often does different age group interact.
     """
     a = 0
     ra = np.random.rand()
@@ -938,14 +938,14 @@ def connect_work_and_others(
     agents_in_age_group,
     verbose=True,
 ):
-    """ Overall loop to make all non household connections.  
-        Parameters: 
+    """ Overall loop to make all non household connections.
+        Parameters:
             my (class): Class of parameters describing the system
             N_ages(int): Number of age groups, default 9 (TODO: Should this be 10?)
-            matrix_work: Connection matrix, how often does different age group interact at workplaces. Combination of school and work. 
-            matrix_other: Connection matrix, how often does different age group interact in other section. 
+            matrix_work: Connection matrix, how often does different age group interact at workplaces. Combination of school and work.
+            matrix_other: Connection matrix, how often does different age group interact in other section.
             agents_in_age_group(nested list): list of which agents are in which age groups
-            verbose: prints to terminal, how far the process of connecting the network is. 
+            verbose: prints to terminal, how far the process of connecting the network is.
     """
     progress_delta_print = 0.1  # 10 percent
     progress_counter = 1
@@ -955,13 +955,13 @@ def connect_work_and_others(
     mu_tot = my.cfg.mu / 2 * my.cfg.N_tot # total number of connections in the network, when done
     while mu_counter < mu_tot: # continue until all connections are made
 
-        # determining if next connections is work or other. 
-        ra_work_other = np.random.rand() 
+        # determining if next connections is work or other.
+        ra_work_other = np.random.rand()
         if ra_work_other < my.cfg.work_other_ratio:
-            matrix = matrix_work 
+            matrix = matrix_work
             run_algo = run_algo_work
         else:
-            matrix = matrix_other 
+            matrix = matrix_other
             run_algo = run_algo_other
 
         #draw ages from connectivity matrix
@@ -1041,11 +1041,11 @@ def nb_random_choice(arr, prob, size=1, replace=False):
 
 @njit
 def exp_func(x, a, b, c):
-  
+
     return a * np.exp(b * x) + c
 @njit
 def make_random_initial_infections(my, possible_agents):
-    if my.cfg.weighted_random_initial_infections:       
+    if my.cfg.weighted_random_initial_infections:
         probs =np.array([7.09189651e+00, 7.21828639e+00, 7.35063322e+00, 7.48921778e+00,
            7.63433406e+00, 7.78628991e+00, 7.94540769e+00, 8.11202496e+00,
            8.28649517e+00, 8.46918845e+00, 8.66049237e+00, 8.86081276e+00,
@@ -1096,7 +1096,7 @@ def make_random_initial_infections(my, possible_agents):
            1.54442143e+04, 1.61719178e+04, 1.69339191e+04, 1.77318349e+04,
            1.85673577e+04, 1.94422602e+04, 2.03583982e+04, 2.13177153e+04,
            2.23222466e+04, 2.33741232e+04, 2.44755764e+04, 2.56289429e+04])
-        
+
         proba = np.zeros(my.cfg.N_tot,dtype=np.float64)
         for agent in range(my.cfg.N_tot):
             proba[agent] = probs[my.number_of_contacts[agent]]
@@ -1209,8 +1209,8 @@ def calc_E_I_dist(my, r_guess):
         E_I_weight_list[i:] = E_I_weight_list[i:]* r_guess**(1/my.cfg.lambda_I/(p_E*p_I))
     for i in range(4,8):
         E_I_weight_list[i:] = E_I_weight_list[i:]* r_guess**(1/my.cfg.lambda_E/(p_E*p_I))
-    E_I_weight_list = E_I_weight_list[::-1]    
-    return E_I_weight_list     
+    E_I_weight_list = E_I_weight_list[::-1]
+    return E_I_weight_list
 
 
 
@@ -1546,7 +1546,7 @@ def run_simulation(
     verbose,
 ):
     print("apply intervention", intervention.apply_interventions)
-    
+
     out_time = List()
     out_state_counts = List()
     out_my_state = List()
@@ -1561,9 +1561,9 @@ def run_simulation(
 
     s_counter = np.zeros(4)
     where_infections_happened_counter = np.zeros(4)
-    
+
     days_of_vacci_start = my.cfg.days_of_vacci_start
- 
+
 
     # Run the simulation ################################
     continue_run = True
@@ -1724,7 +1724,7 @@ def run_simulation(
                     )
 
                 daily_counter = 0
-                
+
                 if day >= 0:
                     out_my_state.append(my.state.copy())
                 if verbose:
@@ -1738,7 +1738,7 @@ def run_simulation(
                         for day in range(days_of_vacci_start):
                             vaccinate(my, g, intervention, agents_in_state, day)
                         intervention.vaccination_schedule - days_of_vacci_start
-                        days_of_vacci_start = 0 
+                        days_of_vacci_start = 0
 
                     vaccinate(my, g, intervention, agents_in_state, day)
 
@@ -1748,8 +1748,8 @@ def run_simulation(
                 intervention.R_true_list.append(calculate_R_True(my, g))
                 intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
                 intervention.R_true_list_brit.append(calculate_R_True_brit(my, g))
-            
-            
+
+
             click += 1
 
         continue_run = do_bug_check(
@@ -1802,7 +1802,7 @@ def calc_contact_dist(my, contact_type):
     contact_dist = np.zeros(100)
     for agent in range(my.cfg.N_tot):
         agent_sum = 0
-        for ith_contact in range(len(my.connections[agent])):           
+        for ith_contact in range(len(my.connections[agent])):
             if my.connections_type[agent][ith_contact] == contact_type:
                 agent_sum += 1
         contact_dist[agent_sum] += 1
@@ -1812,7 +1812,7 @@ def calc_contact_dist(my, contact_type):
 
 @njit
 def vaccinate(my, g, intervention, agents_in_state, day):
-    
+
     # try to vaccinate everyone, but only do vaccinate susceptable agents
     possible_agents_to_vaccinate = np.arange(my.cfg.N_tot, dtype=np.uint32)
     # agent = utils.numba_random_choice_list(agents_in_state[state_now])
@@ -1866,13 +1866,13 @@ def calculate_R_True_brit(my, g):
         if my.agent_is_infectious(agent) and my.corona_type[agent]==1:
             N_infected += 1
             rate_sum += g.sum_of_rates[agent]
-    return rate_sum / lambda_I / np.maximum(N_infected,1.0) * 4    
+    return rate_sum / lambda_I / np.maximum(N_infected,1.0) * 4
 
-@njit 
+@njit
 def calculate_population_freedom_impact(intervention):
     return np.mean(intervention.freedom_impact)
 
-@njit 
+@njit
 def calculate_pandemic_control(my, intervention):
     I_crit = 2000.0*my.cfg.N_tot/5_800_000/my.cfg.lambda_I*4
     b = np.log(2)/I_crit
@@ -1888,8 +1888,8 @@ def calculate_pandemic_control(my, intervention):
 @njit
 def compute_my_cluster_coefficient(my):
     """calculates cluster cooefficent
-    (np.mean of the first output gives cluster coeff for whole network ). 
-    This function is somewhat slow, since it loops over all connections. Could just random sample, but here we get the exact distribution. 
+    (np.mean of the first output gives cluster coeff for whole network ).
+    This function is somewhat slow, since it loops over all connections. Could just random sample, but here we get the exact distribution.
     """
 
     cluster_coefficient = np.zeros(my.cfg.N_tot, dtype=np.float32)
@@ -1998,12 +1998,12 @@ def test_if_label_needs_intervention_multi(
             if my_intervention_type == 0:
                 possible_interventions = [1, 2, 7]
             elif my_intervention_type == 1:
-                possible_interventions = [9001] # random integer that doesn't mean anything, 
+                possible_interventions = [9001] # random integer that doesn't mean anything,
             elif my_intervention_type == 2:
-                possible_interventions = [1,7]    
+                possible_interventions = [1,7]
             elif my_intervention_type == 7:
-                possible_interventions = [9001] # random integer that doesn't mean anything,    
-                
+                possible_interventions = [9001] # random integer that doesn't mean anything,
+
             if N_infected / N_inhabitants > threshold_info[ith_intervention+1][0]/100_000.0 and threshold_info[0][ith_intervention] in possible_interventions:
                 if intervention.verbose:
                     intervention_type_name = ["nothing","lockdown","masking","error","error","error","error","matrix_based"]
@@ -2125,7 +2125,7 @@ def test_if_intervention_on_labels_can_be_removed_multi(my, g, intervention, day
         for ith_intervention in range(0, len(threshold_info)-1):
             if N_infected / N_inhabitants < threshold_info[ith_intervention + 1][1]/100_000.0 and my_intervention_type == threshold_info[0][ith_intervention]:
                 intervention.clicks_when_restriction_stops[i_label] = click + my.cfg.intervention_removal_delay_in_clicks
-                
+
 
     return None
 
@@ -2160,7 +2160,7 @@ def test_if_intervention_on_labels_can_be_removed_multi_old(my, g, intervention,
                         *("/", N_inhabitants),
                     )
 
-    return None    
+    return None
 
 
 @njit
@@ -2318,15 +2318,15 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent):
             elif my.connections_type[agent][ith_contact] == 2:
                 mr = intervention.other_matrix_restrict
                 mi = intervention.other_matrix_init
-           
+
             mr_single = mr[my.age[agent], my.age[contact]]
             mi_single = mi[my.age[agent], my.age[contact]]
-            
+
             if mr_single > mi_single:
-                print(my.age[agent]) 
-                print(my.age[contact]) 
-                print(my.connections_type[agent][ith_contact])   
-                assert mr_single < mi_single  
+                print(my.age[agent])
+                print(my.age[contact])
+                print(my.connections_type[agent][ith_contact])
+                assert mr_single < mi_single
 
             p = 1 - np.sqrt(4 - 4 * (1 - min(mr_single / mi_single, 1))) / 2
             if np.random.rand() < p:
@@ -2465,7 +2465,7 @@ def apply_random_testing(my, intervention, click):
 
 @njit
 def apply_interventions_on_label(my, g, intervention, day, click, threshold_info = np.array([[1, 2], [200, 100], [20, 20]])):
-    
+
     if intervention.apply_random_testing:
         apply_random_testing(my, intervention, click)
 
@@ -2490,7 +2490,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, threshold_info
             day,
             threshold_info,
         )
-    
+
 
         for ith_label, intervention_type in enumerate(intervention.types):
 
@@ -2528,7 +2528,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, threshold_info
                         intervention,
                         label=ith_label,
 
-                    )   
+                    )
     elif day == 1:
         for ith_label, intervention_type in enumerate(intervention.types):
             print("intervention")
@@ -2542,7 +2542,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, threshold_info
         for i_label, intervention_type in enumerate(intervention.types):
             print("intervention")
             remove_intervention_at_label(my, g, intervention, i_label)
-        
+
 
 
 

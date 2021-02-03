@@ -13,8 +13,8 @@ from contexttimer import Timer
 N_tot_max = False
 
 
-num_cores_max = 1
-N_runs = 1
+num_cores_max = 4
+N_runs = 8
 
 
 dry_run = False
@@ -122,7 +122,7 @@ if utils.is_local_computer():
     all_simulation_parameters = [
         {
 
-            "N_tot": 580000*2,
+            "N_tot": 580000*5,
             #"N_tot": 6_000,
             # "make_random_initial_infections": True,
             # "weighted_random_initial_infections": True,
@@ -157,9 +157,9 @@ if utils.is_local_computer():
             # "tracking_delay": 15
             # "N_contacts_max": 100,
             # "work_other_ratio": 0.5,
-            "N_init": [1800,2000],
+            "N_init": [4500,4600,4700],
             # "N_init": [1000],
-            "N_init_UK": [100],
+            "N_init_UK": [150],
             #"work_other_ratio": 0.95,  # "algo 1"
             # "rho": 0.1,
             # "beta": [0.004],
@@ -190,7 +190,7 @@ else:
 
 #%%
 
-N_runs = 1 if utils.is_local_computer() else N_runs
+N_runs = 8 if utils.is_local_computer() else N_runs
 
 N_files_total = 0
 

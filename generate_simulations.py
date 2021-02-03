@@ -13,8 +13,8 @@ from contexttimer import Timer
 N_tot_max = False
 
 
-num_cores_max = 4
-N_runs = 8
+num_cores_max = 1
+N_runs = 1
 
 
 dry_run = False
@@ -29,7 +29,7 @@ if utils.is_local_computer():
     all_simulation_parameters2 = [
         {
 
-             "N_tot": 58_000,
+             "N_tot": 5_000,
             #"N_tot": 6_000,
             # "make_random_initial_infections": True,
             # "weighted_random_initial_infections": True,
@@ -98,9 +98,9 @@ if utils.is_local_computer():
             # "tracking_delay": 15
             # "N_contacts_max": 100,
             # "work_other_ratio": 0.5,
-            "N_init": [4000],
+            "N_init": [40],
             # "N_init": [1000],
-            "N_init_UK": [50],
+            "N_init_UK": [5],
             "work_other_ratio": 0.95,  # "algo 1"
             # "rho": 0.1,
             # "beta": [0.004],
@@ -113,7 +113,7 @@ if utils.is_local_computer():
             "verbose": True,
             # "N_events": 1000,
             # "mu": 20,
-            #"tracking_rates": [1.0, 0.5,0.1]            
+            #"tracking_rates": [1.0, 0.5,0.1]
             "tracking_delay": [10,30],
             "day_max": 183,
             # "event_size_max": 50,
@@ -122,7 +122,7 @@ if utils.is_local_computer():
     all_simulation_parameters = [
         {
 
-            "N_tot": 580000*5,
+            "N_tot": 300_000,
             #"N_tot": 6_000,
             # "make_random_initial_infections": True,
             # "weighted_random_initial_infections": True,
@@ -131,13 +131,12 @@ if utils.is_local_computer():
             #"tracking_delay": [0],
              "weighted_random_initial_infections": True,
              "lambda_I": 4/2.52,
-             "lambda_E": 4/2.5, 
-             "threshold_info": [[[2,7], [150000, 150000], [200,200]]],
+             "lambda_E": 4/2.5,
             # "tracking_delay": 15
             # "N_contacts_max": 100,
             # "work_other_ratio": 0.5, 0.6
             # "N_init": [100, 1000]
-            "rho": 0.1,
+            "rho": 0.0,
             #"epsilon_rho": 1,
             # "make_initial_infections_at_kommune": False,
             # "interventions_to_apply": [[1, 2, 3, 4, 5, 6]],
@@ -157,9 +156,9 @@ if utils.is_local_computer():
             # "tracking_delay": 15
             # "N_contacts_max": 100,
             # "work_other_ratio": 0.5,
-            "N_init": [4500,4600,4700],
+            "N_init": [45],
             # "N_init": [1000],
-            "N_init_UK": [150],
+            "N_init_UK": [15],
             #"work_other_ratio": 0.95,  # "algo 1"
             # "rho": 0.1,
             # "beta": [0.004],
@@ -171,10 +170,11 @@ if utils.is_local_computer():
             # "N_daily_vaccinations": [0],
             # "N_events": 1000,
             # "mu": 20,
-            # "tracking_rates": [1.0, 0.5,0.1]            
+            # "tracking_rates": [1.0, 0.5,0.1]
+            "vaccinations" : False,
             "tracking_delay": [10],
-            "day_max": 100,
-            "days_of_vacci_start": 0 # number of days after vaccinations calender start. 31 = 1-st of feb. 
+            "day_max": 20,
+            "days_of_vacci_start": 0 # number of days after vaccinations calender start. 31 = 1-st of feb.
 
             #"verbose":True,
             # "event_size_max": 50,
@@ -190,7 +190,7 @@ else:
 
 #%%
 
-N_runs = 8 if utils.is_local_computer() else N_runs
+N_runs = 1 if utils.is_local_computer() else N_runs
 
 N_files_total = 0
 

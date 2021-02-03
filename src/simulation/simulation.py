@@ -66,7 +66,7 @@ class Simulation:
                 raise AssertionError("interventions not yet implemented for version 1")
 
         # Load the projected vaccination schedule
-        if self.cfg.vaccinations :
+        if True:
             self.cfg.vaccinations_per_age_group, _, self.cfg.vaccination_schedule = utils.load_vaccination_schedule()
 
             # Convert vaccination_schedule to integer day counter

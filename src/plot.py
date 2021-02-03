@@ -1127,7 +1127,7 @@ def plot_number_of_contacts(network_files, force_rerun=False):
 
 #%%
 
-import generate_animations
+#import generate_animations
 from matplotlib.lines import Line2D
 
 

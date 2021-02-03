@@ -39,7 +39,7 @@ dependencies:
   # - sigfig
   # - datashader
   - pip:
-    - mpl-scatter-density
+  #  - mpl-scatter-density
     - pygifsicle
     - contexttimer
     - awkward1>=0.2.32

@@ -13,8 +13,8 @@ from contexttimer import Timer
 N_tot_max = False
 
 
-num_cores_max = 4
-N_runs = 8
+num_cores_max = 1
+N_runs = 1
 
 
 dry_run = False
@@ -122,26 +122,13 @@ if utils.is_local_computer():
     all_simulation_parameters = [
         {
 
-            "N_tot": 580000*5,
-            #"N_tot": 6_000,
-            # "make_random_initial_infections": True,
-            # "weighted_random_initial_infections": True,
-            # "test_delay_in_clicks": [0, 0, 25],
-            #"results_delay_in_clicks": [20, 20, 20],
-            #"tracking_delay": [0],
-             "weighted_random_initial_infections": True,
-             "lambda_I": 4/2.52,
-             "lambda_E": 4/2.5, 
-             "threshold_info": [[[2,7], [150000, 150000], [200,200]]],
-            # "tracking_delay": 15
-            # "N_contacts_max": 100,
-            # "work_other_ratio": 0.5, 0.6
-            # "N_init": [100, 1000]
-            "rho": 0.1,
+            "N_tot": 58000,
+            "weighted_random_initial_infections": True,
+            "lambda_I": 4/2.52,
+            "lambda_E": 4/2.5, 
+            "rho": 0.0,
             #"epsilon_rho": 1,
-            # "make_initial_infections_at_kommune": False,
-            # "interventions_to_apply": [[1, 2, 3, 4, 5, 6]],
-            "intervention_removal_delay_in_clicks": [21],
+            "intervention_removal_delay_in_clicks": [20],
             "make_restrictions_at_kommune_level": [False],
             "burn_in": 0,
             # "N_tot": [58_000],
@@ -151,34 +138,32 @@ if utils.is_local_computer():
             # "results_delay_in_clicks": [[20, 20, 20]],
             # "tracking_delay": [0, 5, 10, 15, 20, 25, 30],
             # "weighted_random_initial_infections": True,
-            "do_interventions": True,
-            "interventions_to_apply": [[3, 4, 5, 6, 7]],
+            "do_interventions": True,            
+            "threshold_interventions_to_apply": [[3]],
+            "restriction_thresholds": [[1,5]],
+            "continuous_interventions_to_apply":  [[1,2,3,4,5]],
             # "results_delay_in_clicks": [20, 20, 20],
             # "tracking_delay": 15
             # "N_contacts_max": 100,
             # "work_other_ratio": 0.5,
-            "N_init": [4500,4600,4700],
+            "N_init": [45],
             # "N_init": [1000],
-            "N_init_UK": [150],
+            "N_init_UK": [15],
             #"work_other_ratio": 0.95,  # "algo 1"
             # "rho": 0.1,
             # "beta": [0.004],
             "beta": [0.0125],
             # "beta": [0.016, 0.018],
             "beta_UK_multiplier": [1.5],
-            # "outbreak_position_UK": ["københavn", "nordjylland"],
-            "outbreak_position_UK": ["københavn"],
             # "N_daily_vaccinations": [0],
             # "N_events": 1000,
             # "mu": 20,
             # "tracking_rates": [1.0, 0.5,0.1]            
             "tracking_delay": [10],
             "day_max": 100,
-            "days_of_vacci_start": 0 # number of days after vaccinations calender start. 31 = 1-st of feb. 
-
+            "days_of_vacci_start": 0, # number of days after vaccinations calender start. 31 = 1-st of feb. 
             #"verbose":True,
             # "event_size_max": 50,
-            #"vaccinations": True,
         },
     ]
 else:
@@ -190,7 +175,7 @@ else:
 
 #%%
 
-N_runs = 8 if utils.is_local_computer() else N_runs
+N_runs = 1 if utils.is_local_computer() else N_runs
 
 N_files_total = 0
 

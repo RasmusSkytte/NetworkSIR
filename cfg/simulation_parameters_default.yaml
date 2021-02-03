@@ -31,7 +31,6 @@ beta_UK_multiplier: 1.7
 outbreak_position_UK: random
 
 # vaccinations related variables. 
-vaccinations: True
 burn_in: 20
 days_of_vacci_start: 21 # number of days after vaccinations calender start. 31 = 1-st of feb. 
 
@@ -48,7 +47,7 @@ event_weekend_multiplier: 2.0 # ratio of how many more events are happening in w
 do_interventions: True # bool, whether or not to apply any interventions, lockdowns or similar
 
 # [[kind of interventions], [start, stop intervention 0],[start, stop intervention 1] etc ]
-threshold_info: [[1,2], [200, 50], [15, 15]]
+restriction_thresholds: [1,39]
 
 # 1: Lockdown (jobs and schools)
 # 2: Cover (with face masks)
@@ -60,7 +59,20 @@ threshold_info: [[1,2], [200, 50], [15, 15]]
 # 8: vaccinations
 # 0: Do nothing
 
-interventions_to_apply: [1, 2, 3, 4, 5, 6, 7, 8]
+threshold_interventions_to_apply: [3]
+  # 0: Do nothing
+  # 1: lockdown (cut some contacts and reduce the rest),
+  # 2: Masking (reduce some contacts),
+  # 3: Matrix based (used loaded contact matrices. )
+
+continuous_interventions_to_apply: [1,2,3,4,5]
+    # 0: Do nothing
+    # 1: Tracking (infected and their connections)
+    # 2: Test people with symptoms
+    # 3: Isolate
+    # 4: Random Testing
+    # 5: vaccinations  
+
 
 f_daily_tests: 0.01 # Daily tests as fraction of full population
 
@@ -72,8 +84,8 @@ days_looking_back: 7 # When looking for local outbreaks, how many days are we lo
 
 # Reductions.
 # The rate reductions are list of list, first and second entry are rate reductions for the groups [family, job, other]. The third entry is the chance of choosing the first set. As such you can have some follow the lockdown and some not or some one group being able to work from home and another isn't.
-masking_rate_reduction: [[0.0, 0.0, 0.3], [0.0, 0.0, 0.8]] # [family, job, other]
-lockdown_rate_reduction: [[0.0, 1.0, 0.6], [0.0, 0.6, 0.6]] # [family, job, other]
+# masking_rate_reduction: [[0.0, 0.0, 0.3], [0.0, 0.0, 0.8]] # [family, job, other]
+# lockdown_rate_reduction: [[0.0, 1.0, 0.6], [0.0, 0.6, 0.6]] # [family, job, other]
 isolation_rate_reduction: [0.2, 1.0, 1.0] # [family, job, other]
 tracking_rates: [1.0, 0.8, 0.0] # [family, job, other]
 tracking_delay: 10 #

@@ -4,9 +4,9 @@ from pathlib import Path
 import re
 import h5py
 import os
-from tqdm import tqdm
+# from tqdm import tqdm TODO: delete line
 from src.utils import utils
-from numba.typed import List, Dict
+from numba.typed import List, Dict  #TODO: delete Dict from line
 
 
 def pandas_load_file(filename):
@@ -83,7 +83,7 @@ def filename_to_cfg(filename):
 def folder_to_hash(folder):
     folder = str(folder)
     # split at "_" and "."
-    return folder.split("/")[-1]
+    return folder.split(os.sep)[-1]
 
 
 from tinydb import Query
@@ -125,7 +125,7 @@ def get_cfgs(all_folders):
 
 class ABM_simulations:
     def __init__(self, base_dir="Data/ABM", filetype="hdf5", verbose=False):
-        self.base_dir = Path(base_dir)
+        self.base_dir = utils.path(base_dir)
         self.filetype = filetype
         self.verbose = verbose
         if verbose:

@@ -1760,7 +1760,6 @@ def plot_corona_type(network_files, force_rerun=False, **kwargs):
         return None
 
     with PdfPages(pdf_name) as pdf:
-
         for cfg in tqdm(
             network_files.iter_cfgs(),
             desc="Plotting corona type infections",

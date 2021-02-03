@@ -1864,13 +1864,9 @@ def calculate_R_True_brit(my, g):
     N_infected = 0
     for agent in range(my.cfg.N_tot):
         if my.agent_is_infectious(agent) and my.corona_type[agent] == 1:
-            N_infected += 1 
+            N_infected += 1
             rate_sum += g.sum_of_rates[agent]
-<<<<<<< HEAD
-    return rate_sum / lambda_I / np.maximum(N_infected,1.0) * 4
-=======
-    return rate_sum / lambda_I / np.maximum(N_infected, 1.0) * 4    
->>>>>>> ESMartiny-master
+    return rate_sum / lambda_I / np.maximum(N_infected, 1.0) * 4
 
 @njit
 def calculate_population_freedom_impact(intervention):

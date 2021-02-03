@@ -83,7 +83,7 @@ def filename_to_cfg(filename):
 def folder_to_hash(folder):
     folder = str(folder)
     # split at "_" and "."
-    return folder.split("/")[-1]
+    return folder.split(os.sep)[-1]
 
 
 from tinydb import Query

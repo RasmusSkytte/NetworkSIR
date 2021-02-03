@@ -40,7 +40,7 @@ dependencies:
   # - datashader
   - pip:
     #- fast-histogram
-    - mpl-scatter-density
+    #- mpl-scatter-density
     - pygifsicle
     - contexttimer
     - awkward1>=0.2.32

@@ -1870,7 +1870,7 @@ def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=Fals
 
 #%%
 
-import geopandas as gpd  # conda install -c conda-forge geopandas
+#import geopandas as gpd  # conda install -c conda-forge geopandas
 
 # Shapefiles
 def load_kommune_shapefiles(shapefile_size, verbose=False):

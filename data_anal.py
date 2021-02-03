@@ -81,11 +81,11 @@ def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_lis
         label = r"ABM" if i == 0 else None
         #print("n_inf", np.sum([1 for day in day_found_infected if day >=0]), "mean", np.mean(day_found_infected))
         #axes[0].hist(day_found_infected[day_found_infected>=0], bins = range(100))
-        axes[0].plot(R_true[1:], lw=4, c="k", label=label)
-        axes[0].plot(R_true_brit[1:], lw=4, c="r", label=label)
+        #axes[0].plot(R_true[1:], lw=4, c="k", label=label)
+        #axes[0].plot(R_true_brit[1:], lw=4, c="r", label=label)
         #axes[0].plot(freedom_impact[1:], lw=4, c="b", label=label)
         #axes[0].plot(pandemic_control[1:], lw=4, c="r", label=label)
-        axes[1].plot(t, np.array(df["I"])/N_tot*5_800_000/2,lw=4, c="k", label=label)
+        axes[1].plot(t, np.array(df["I"])/N_tot*5_800_000,lw=4, c="k", label=label)
         ids = np.array([int(ts) - vaccination_schedule[0] + 21 for ts in t])
         ids[ids < 0] == 0
         ids[ids > 140] == 0
@@ -116,7 +116,7 @@ def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_lis
         dates = np.arange(19,33)
         axes[1].scatter(dates, n_pos)
         axes[1].set_xlim(19, 100)
-        axes[0].set_xlim(19, 100)
+        #axes[0].set_xlim(19, 100)
         axes[1].set_ylim(0, 2500)
         axes[1].set_ylabel("N infected")
         axes[1].set_xlabel("days into 2021")

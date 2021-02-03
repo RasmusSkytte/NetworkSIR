@@ -1,18 +1,20 @@
-# import numpy as np TODO: Delete line
-# from tqdm import tqdm TODO: Delete line
-# import multiprocessing as mp TODO: Delete line
-# from pathlib import Path TODO: Delete line
-# from importlib import reload TODO: Delete line
+import numpy as np
+from tqdm import tqdm
+import multiprocessing as mp
+from pathlib import Path
+from importlib import reload
 from src.utils import utils
 from src.simulation import simulation
-# from functools import partial TODO: Delete line
-# import yaml TODO: Delete line
+from functools import partial
+import yaml
 from contexttimer import Timer
+
 
 N_tot_max = False
 
-num_cores_max = 1
-N_runs = 1
+
+num_cores_max = 4
+N_runs = 8
 
 
 dry_run = False
@@ -24,10 +26,103 @@ verbose = True
 
 if utils.is_local_computer():
 
+    all_simulation_parameters2 = [
+        {
+
+             "N_tot": 58_000,
+            #"N_tot": 6_000,
+            # "make_random_initial_infections": True,
+            # "weighted_random_initial_infections": True,
+            # "test_delay_in_clicks": [0, 0, 25],
+            #"results_delay_in_clicks": [20, 20, 20],
+            #"tracking_delay": [0],
+             "weighted_random_initial_infections": True,
+             "lambda_I": 0.5,
+            # "masking_rate_reduction": [[0.0, 0.5, 0.6]] ,
+             "threshold_info": [[[1,2], [50, 30], [10, 10]],
+                                [[1,2], [100, 100], [10, 10]],
+                                [[1,2], [200, 200], [10, 10]],
+                                [[1,2], [200, 50], [10, 10]],
+                                [[1,2], [200, 100], [10, 10]],
+                                [[1,2], [400, 50], [10, 10]],
+                                [[1,2], [400, 200], [10, 10]],
+                                [[1,2], [400, 400], [10, 10]],
+                                [[1,2], [50, 30], [20, 20]],
+                                [[1,2], [100, 100], [20, 20]],
+                                [[1,2], [200, 200], [20, 20]],
+                                [[1,2], [200, 50], [20, 20]],
+                                [[1,2], [200, 100], [20, 20]],
+                                [[1,2], [400, 50], [20, 20]],
+                                [[1,2], [400, 200], [20, 20]],
+                                [[1,2], [400, 400], [20, 20]],
+                                [[1,2], [50, 30], [30, 30]],
+                                [[1,2], [100, 100], [30, 30]],
+                                [[1,2], [200, 200], [30, 30]],
+                                [[1,2], [200, 50], [30, 30]],
+                                [[1,2], [200, 100], [30, 30]],
+                                [[1,2], [400, 50], [30, 30]],
+                                [[1,2], [400, 200], [30, 30]],
+                                [[1,2], [400, 400], [30, 30]],
+                                [[1,2], [100, 100], [50, 50]],
+                                [[1,2], [200, 200], [50, 50]],
+                                [[1,2], [200, 50], [50, 50]],
+                                [[1,2], [200, 100], [50, 50]],
+                                [[1,2], [400, 50], [50, 50]],
+                                [[1,2], [400, 100], [50, 50]],
+                                [[1,2], [400, 200], [50, 50]],
+                                [[1,2], [400, 400], [50, 50]],
+                                ],
+            # "results_delay_in_clicks": [20, 20, 20],
+            # "tracking_delay": 15
+            # "N_contacts_max": 100,
+            # "work_other_ratio": 0.5,0.6These
+            # "N_init": [100, 1000]
+            # "rho": 0.1,
+             "beta": [0.007],
+             #"make_initial_infections_at_kommune": False,
+            # "interventions_to_apply": [[1, 2, 3, 4, 5, 6]],
+             "intervention_removal_delay_in_clicks": [20],
+             "make_restrictions_at_kommune_level": [False],
+             "burn_in": 0,
+
+            # "N_tot": [58_000],
+            # "make_random_initial_infections": True,
+            # "weighted_random_initial_infections": True,
+            # "test_delay_in_clicks": [0, 0, 25],
+            # "results_delay_in_clicks": [[20, 20, 20]],
+            # "tracking_delay": [0, 5, 10, 15, 20, 25, 30],
+            # "weighted_random_initial_infections": True,
+            # "do_interventions": True,
+            # "interventions_to_apply": [[3, 4, 5, 6]],
+            # "results_delay_in_clicks": [20, 20, 20],
+            # "tracking_delay": 15
+            # "N_contacts_max": 100,
+            # "work_other_ratio": 0.5,
+            "N_init": [4000],
+            # "N_init": [1000],
+            "N_init_UK": [50],
+            "work_other_ratio": 0.95,  # "algo 1"
+            # "rho": 0.1,
+            # "beta": [0.004],
+            "beta": [0.010],
+            # "beta": [0.016, 0.018],
+            "beta_UK_multiplier": [1.7],
+            # "outbreak_position_UK": ["københavn", "nordjylland"],
+            "outbreak_position_UK": ["københavn"],
+            "N_daily_vaccinations": [0, int(10_000 / 5.8e6 * 580_000)],
+            "verbose": True,
+            # "N_events": 1000,
+            # "mu": 20,
+            #"tracking_rates": [1.0, 0.5,0.1]            
+            "tracking_delay": [10,30],
+            "day_max": 183,
+            # "event_size_max": 50,
+        },
+    ]
     all_simulation_parameters = [
         {
 
-            "N_tot": 580000*2,
+            "N_tot": 580000*5,
             #"N_tot": 6_000,
             # "make_random_initial_infections": True,
             # "weighted_random_initial_infections": True,
@@ -36,13 +131,13 @@ if utils.is_local_computer():
             #"tracking_delay": [0],
              "weighted_random_initial_infections": True,
              "lambda_I": 4/2.52,
-             "lambda_E": 4/2.5,
+             "lambda_E": 4/2.5, 
              "threshold_info": [[[2,7], [150000, 150000], [200,200]]],
             # "tracking_delay": 15
             # "N_contacts_max": 100,
             # "work_other_ratio": 0.5, 0.6
             # "N_init": [100, 1000]
-            "rho": 0.0,
+            "rho": 0.1,
             #"epsilon_rho": 1,
             # "make_initial_infections_at_kommune": False,
             # "interventions_to_apply": [[1, 2, 3, 4, 5, 6]],
@@ -62,9 +157,9 @@ if utils.is_local_computer():
             # "tracking_delay": 15
             # "N_contacts_max": 100,
             # "work_other_ratio": 0.5,
-            "N_init": [1800,2000],
+            "N_init": [4500,4600,4700],
             # "N_init": [1000],
-            "N_init_UK": [100],
+            "N_init_UK": [150],
             #"work_other_ratio": 0.95,  # "algo 1"
             # "rho": 0.1,
             # "beta": [0.004],
@@ -76,10 +171,10 @@ if utils.is_local_computer():
             # "N_daily_vaccinations": [0],
             # "N_events": 1000,
             # "mu": 20,
-            # "tracking_rates": [1.0, 0.5,0.1]
+            # "tracking_rates": [1.0, 0.5,0.1]            
             "tracking_delay": [10],
             "day_max": 100,
-            "days_of_vacci_start": 0 # number of days after vaccinations calender start. 31 = 1-st of feb.
+            "days_of_vacci_start": 0 # number of days after vaccinations calender start. 31 = 1-st of feb. 
 
             #"verbose":True,
             # "event_size_max": 50,
@@ -95,7 +190,7 @@ else:
 
 #%%
 
-N_runs = 1 if utils.is_local_computer() else N_runs
+N_runs = 8 if utils.is_local_computer() else N_runs
 
 N_files_total = 0
 

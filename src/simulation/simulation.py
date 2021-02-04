@@ -49,6 +49,7 @@ np.set_printoptions(linewidth=200)
 
 
 class Simulation:
+
     def __init__(self, cfg, verbose=False):
 
         self.verbose = verbose
@@ -64,14 +65,6 @@ class Simulation:
         if self.cfg.version == 1:
             if self.cfg.do_interventions:
                 raise AssertionError("interventions not yet implemented for version 1")
-
-        # Load the projected vaccination schedule
-        if True:
-            self.cfg.vaccinations_per_age_group, _, self.cfg.vaccination_schedule = utils.load_vaccination_schedule()
-
-            # Convert vaccination_schedule to integer day counter
-            # TODO: Use a better convertion method. --- Currently simluations start on 2020-12-28
-            self.cfg.vaccination_schedule = np.arange(len(self.cfg.vaccination_schedule)) + 14
 
     def _initialize_network(self):
         """ Initializing the network for the simulation
@@ -171,17 +164,20 @@ class Simulation:
             f.create_dataset("N_ages", data=self.N_ages)
             self._add_cfg_to_hdf5_file(f)
 
-    # def _load_initialized_network(self, filename):
-    #     if self.verbose:
-    #         print(f"Loading previously initialized network, please wait", flush=True)
-    #     with h5py.File(filename, "r") as f:
-    #         self.agents_in_age_group = utils.NestedArray.from_hdf5(
-    #             f, "agents_in_age_group"
-    #         ).to_nested_numba_lists()
-    #         self.N_ages = f["N_ages"][()]
-    #         my_hdf5ready = nb_load_jitclass.load_jitclass_to_dict(f["my"])
-    #         self.my = nb_load_jitclass.load_My_from_dict(my_hdf5ready, self.cfg)
-    #     self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.ID)
+
+    def _load_initialized_network(self, filename):
+        if self.verbose:
+            print(f"Loading previously initialized network, please wait", flush=True)
+        with h5py.File(filename, "r") as f:
+            self.agents_in_age_group = utils.NestedArray.from_hdf5(
+                f, "agents_in_age_group"
+            ).to_nested_numba_lists()
+            self.N_ages = f["N_ages"][()]
+
+            my_hdf5ready = nb_load_jitclass.load_jitclass_to_dict(f["my"])
+            self.my = nb_load_jitclass.load_My_from_dict(my_hdf5ready, self.cfg)
+        self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.ID)
+
 
     def initialize_network(
         self, force_rerun=False, save_initial_network=True, force_load_initial_network=False
@@ -190,20 +186,18 @@ class Simulation:
         filename = "Output/initialized_network/"
         filename += f"initialized_network__{self.hash}__ID__{self.cfg.ID}.hdf5"
 
-        cfg_network_initialized = utils.get_cfg_network_initialized(self.cfg)
-
         if force_load_initial_network:
             initialize_network = False
             if self.verbose:
                 print("Force loading initialized network")
-        elif len(utils.query_cfg(cfg_network_initialized)) == 0:
-            initialize_network = True
-            if self.verbose:
-                print("Initializing network since it does not exist in database")
         elif not utils.file_exists(filename):
             initialize_network = True
             if self.verbose:
                 print("Initializing network since the hdf5-file does not exist")
+        #elif len(utils.query_cfg(utils.get_cfg_network_initialized(self.cfg))) == 0:
+        #    initialize_network = True
+        #    if self.verbose:
+        #        print("Initializing network since it does not exist in database")
         elif force_rerun:
             initialize_network = True
             if self.verbose:
@@ -293,16 +287,20 @@ class Simulation:
          # Load the projected vaccination schedule
         vaccinations_per_age_group, _, vaccination_schedule = utils.load_vaccination_schedule()
 
+         # Scale the number of vaccines
+        np.multiply(vaccinations_per_age_group, 0, out=vaccinations_per_age_group, casting='unsafe')
+        #np.multiply(vaccinations_per_age_group, self.cfg.N_tot / 5_800_000, out=vaccinations_per_age_group, casting='unsafe')
+
         # Convert vaccination_schedule to integer day counter
-        work_matrix_init, other_matrix_init, _, _= utils.load_contact_matrices(scenario="2021_fase1_sce1")
+        work_matrix_init,     other_matrix_init,     _, _ = utils.load_contact_matrices(scenario="2021_fase1_sce1")
         work_matrix_restrict, other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario="ned2021jan")
         #work_matrix_restrict = work_matrix_restrict * 0.8
         #other_matrix_restrict = other_matrix_restrict * 0.8
 
-        # TODO: Use a better convertion method. --- Currently simluations start on 2020-12-28
-        #print(vaccinations_per_age_group, vaccination_schedule)
-        vaccinations_per_age_group=vaccinations_per_age_group.astype(np.int64)
-        vaccination_schedule = np.arange(len(vaccination_schedule),dtype=np.int64) + 10
+        # TODO: If vaccinations are already started, make sure intialization accounts for it
+
+        vaccinations_per_age_group = vaccinations_per_age_group.T.astype(np.int64)
+        vaccination_schedule = self.cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + 10
 
         self.intervention = nb_simulation.Intervention(
             self.my.cfg,
@@ -462,6 +460,8 @@ def run_simulations(
     dry_run=False,
     **kwargs,
 ):
+
+    d_simulation_parameters = utils.format_simulation_paramters(d_simulation_parameters)
 
     db_cfg = utils.get_db_cfg()
     q = Query()

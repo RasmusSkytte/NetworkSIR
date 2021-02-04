@@ -60,6 +60,7 @@ spec_cfg = {
     "beta_UK_multiplier": nb.float32,
     "outbreak_position_UK": nb.types.unicode_type,
     "burn_in": nb.int64,
+    "start_date_offset" : nb.int64,
     "days_of_vacci_start": nb.int64,
     # events
     "N_events": nb.uint16,
@@ -1766,7 +1767,7 @@ def run_simulation(
                         intervention.vaccination_schedule - days_of_vacci_start
                         days_of_vacci_start = 0
 
-                    vaccinate(my, g, intervention, agents_in_state,state_total_counts, day)
+                    vaccinate(my, g, intervention, agents_in_state, state_total_counts, day)
 
             if intervention.apply_interventions:
                 test_tagged_agents(my, g, intervention, day, click)
@@ -1845,14 +1846,21 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day):
 
     R_state = g.N_states - 1  # 8
 
+    # Check if all vaccines have been given
+    if day > intervention.vaccination_schedule[-1] :
+        return
+
     # Check if any vaccines are effective yet:
     if day >= intervention.vaccination_schedule[0] :
 
         # Get the number of new effective vaccines
         N = intervention.vaccinations_per_age_group[day - intervention.vaccination_schedule[0]]
 
-        # Scale the number of vaccines
-        N = N * my.cfg.N_tot / 5837213
+        # Check if any vaccines are planned for this day
+        if np.sum(N) == 0 :
+            return
+
+        # Compute probability for each agent being infected
         probabilities = np.array([N[my.age[agent]] for agent in possible_agents_to_vaccinate])
 
         # Distribute the effective vaccines among the population

@@ -9,6 +9,8 @@ Data/*
 
 Figures/
 
+Output/
+
 db.json
 
 *.joblib

@@ -1535,7 +1535,7 @@ def path(file):
     return file
 
 
-def hash_to_filenames(hash_, base_dir="Data/ABM", filetype="hdf5"):
+def hash_to_filenames(hash_, base_dir="Output/ABM", filetype="hdf5"):
     folder = path(base_dir) / hash_
     files = list(folder.rglob(f"*.{filetype}"))
     return [str(file) for file in files]
@@ -1945,7 +1945,7 @@ def query_cfg(cfg):
 #%%
 
 
-def delete_every_file_with_hash(hashes, base_dir="./Data/", verbose=True):
+def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True):
 
     if isinstance(hashes, str):
         hashes = [hashes]

@@ -187,8 +187,7 @@ class Simulation:
         self, force_rerun=False, save_initial_network=True, force_load_initial_network=False
     ):
         utils.set_numba_random_seed(self.cfg.ID)
-
-        filename = "Data/initialized_network/"
+        filename = "Output/initialized_network/"
         filename += f"initialized_network__{self.hash}__ID__{self.cfg.ID}.hdf5"
 
         cfg_network_initialized = utils.get_cfg_network_initialized(self.cfg)
@@ -339,12 +338,12 @@ class Simulation:
 
     def _get_filename(self, name="ABM", filetype="hdf5"):
         date = datetime.datetime.now().strftime("%Y-%m-%d")
-        filename = f"Data/{name}/{self.hash}/{name}_{date}_{self.hash}_ID__{self.cfg.ID}.{filetype}"
+        filename = f"Output/{name}/{self.hash}/{name}_{date}_{self.hash}_ID__{self.cfg.ID}.{filetype}"
         return filename
 
     def _save_cfg(self):
         date = datetime.datetime.now().strftime("%Y-%m-%d")
-        filename_cfg = f"Data/cfgs/cfg_{date}_{self.hash}.yaml"
+        filename_cfg = f"Output/cfgs/cfg_{date}_{self.hash}.yaml"
         self.cfg.dump_to_file(filename_cfg, exclude="ID")
         return None
 

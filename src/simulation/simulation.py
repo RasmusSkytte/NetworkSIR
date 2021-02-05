@@ -54,7 +54,8 @@ class Simulation:
 
         self.verbose = verbose
 
-        self.cfg = utils.DotDict(cfg)
+        self.cfg = cfg
+
         self.N_tot = self.cfg.N_tot
 
         # unique code that identifies this simulation
@@ -69,8 +70,7 @@ class Simulation:
         if self.verbose:
             print("Importing work and other matrices")
 
-        self.cfg.matrix_work, self.cfg.matrix_other, self.cfg.work_other_ratio, _ = utils.load_contact_matrices(scenario = cfg.contact_matrices_name)
-
+        self.cfg["network"]["work_matrix"], self.cfg["network"]["other_matrix"], self.cfg.network.work_other_ratio, _ = utils.load_contact_matrices(scenario = self.cfg.network.contact_matrices_name)
 
     def _initialize_network(self):
         """ Initializing the network for the simulation
@@ -120,8 +120,8 @@ class Simulation:
                 self.my,
                 N_ages,
                 mu_counter,
-                self.matrix_work,
-                self.matrix_other,
+                self.cfg.network.work_matrix,
+                self.cfg.network.other_matrix,
                 agents_in_age_group,
                 verbose=self.verbose,
             )
@@ -175,8 +175,7 @@ class Simulation:
         self, force_rerun=False, save_initial_network=True, force_load_initial_network=False
     ):
 
-        network_hash = utils.cfg_to_hash(utils.get_network_cfg(self.cfg))
-        #network_hash = self.hash
+        network_hash = utils.cfg_to_hash(self.cfg.network)
 
         filename = "Output/initialized_network/"
         filename += f"{network_hash}__ID__{self.cfg.ID}.hdf5"
@@ -344,6 +343,7 @@ class Simulation:
     def _add_cfg_to_hdf5_file(self, f, cfg=None):
         if cfg is None:
             cfg = self.cfg
+            print(cfg)
         utils.add_cfg_to_hdf5_file(f, cfg)
 
     def _save_dataframe(self, save_csv=False, save_hdf5=True):

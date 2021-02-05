@@ -45,7 +45,7 @@ spec_cfg = {
     "beta_connection_type": nb.float32[:],
     "algo": nb.uint8,
     "N_init": nb.uint16,
-    "N_init_UK": nb.uint16,
+    "N_init_UK_frac": nb.float64,
     "lambda_E": nb.float32,
     "lambda_I": nb.float32,
     # other
@@ -105,7 +105,7 @@ class Config(object):
         self.sigma_beta = 0.0
         self.algo = 2
         self.N_init = 100
-        self.N_init_UK = 0
+        self.N_init_UK_frac = 0
         self.lambda_E = 1.0
         self.lambda_I = 1.0
 
@@ -1155,7 +1155,7 @@ def compute_initial_agents_to_infect(my, possible_agents):
         initial_agents_to_infect = List()
         initial_agents_to_infect.append(outbreak_agent)
 
-        while len(initial_agents_to_infect) < (my.cfg.N_init + my.cfg.N_init_UK):
+        while len(initial_agents_to_infect) < (my.cfg.N_init):
             proposed_agent = single_random_choice(possible_agents)
 
             if my.dist_accepted(outbreak_agent, proposed_agent, rho_init_local_outbreak):
@@ -1271,7 +1271,7 @@ def make_initial_infections(
         states = np.arange(N_states - 1, dtype=np.int8)
         new_state = nb_random_choice(states, weights)[0]  # E1-E4 or I1-I4, uniformly distributed
         my.state[agent] = new_state
-        if np.random.rand() < my.cfg.N_init_UK/(my.cfg.N_init_UK + my.cfg.N_init):
+        if np.random.rand() < my.cfg.N_init_UK_frac:
             my.corona_type[agent] = 1  # IMPORTANT LINE!
 
         agents_in_state[new_state].append(np.uint32(agent))

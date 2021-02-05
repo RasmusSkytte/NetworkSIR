@@ -550,7 +550,7 @@ if debugging:
             "work_other_ratio": 0.5,
             "N_contacts_max": 200,
             # English type
-            "N_init_UK": 100,
+            "N_init_UK_frac": 0.05,
             "beta_UK_multiplier": 1.7,
             # contacts
             "N_events": 0,
@@ -571,7 +571,7 @@ if debugging:
             "masking_rate_reduction": [[0.0, 0.0, 0.3], [0.0, 0.0, 0.8]],
             "lockdown_rate_reduction": [[0.0, 1.0, 0.6], [0.0, 0.6, 0.6]],
             "isolation_rate_reduction": [0.2, 1.0, 1.0],
-            "tracking_rates": [1.0, 0.8, 0.0],
+            "tracking_rates": [1.0, 0.5, 0.0],
             "tracking_delay": 1.0,
             "ID": 0,
         }

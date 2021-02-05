@@ -100,7 +100,7 @@ if utils.is_local_computer():
             # "work_other_ratio": 0.5,
             "N_init": [4000],
             # "N_init": [1000],
-            "N_init_UK": [50],
+            "N_init_UK_frac": [0.05],
             "work_other_ratio": 0.95,  # "algo 1"
             # "rho": 0.1,
             # "beta": [0.004],
@@ -148,7 +148,7 @@ if utils.is_local_computer():
             # "work_other_ratio": 0.5,
             "N_init": [45],
             # "N_init": [1000],
-            "N_init_UK": [15],
+            "N_init_UK_frac": [0.03],
             #"work_other_ratio": 0.95,  # "algo 1"
             # "rho": 0.1,
             # "beta": [0.004],

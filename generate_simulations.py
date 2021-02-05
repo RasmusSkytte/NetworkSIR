@@ -33,7 +33,7 @@ if utils.is_local_computer():
     all_simulation_parameters = [
         {
             "N_tot": int(5_800_000 * f),
-            "rho": 0.0,
+            "rho": 0.1,
             #"epsilon_rho": 1,
             "weighted_random_initial_infections": True,
             #
@@ -89,7 +89,7 @@ else:
 
 #%%
 
-N_runs = 2 if utils.is_local_computer() else N_runs
+N_runs = 3 if utils.is_local_computer() else N_runs
 
 N_files_total = 0
 

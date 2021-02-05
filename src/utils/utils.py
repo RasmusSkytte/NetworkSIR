@@ -9,6 +9,7 @@ from numba import njit, prange, objmode, typeof #TODO delete prange, objmode
 from numba.typed import List, Dict
 # import platform #TODO delete line
 import datetime
+import os
 
 import awkward1 as ak
 import dict_hash
@@ -1020,7 +1021,7 @@ def get_cfg_default():
     """ Default Simulation Parameters """
     cfg              = load_yaml("cfg/simulation_parameters_default.yaml")
     cfg.network      = load_yaml("cfg/simulation_parameters_network.yaml")
-    cfg.intervention = load_yaml("cfg/simulation_parameters_intervention.yaml")
+    #cfg.intervention = load_yaml("cfg/simulation_parameters_intervention.yaml")
     return cfg
 
 
@@ -1125,7 +1126,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
         # Load numba specifications
         spec_cfg            = nb_simulation.spec_cfg
         spec_network        = nb_simulation.spec_network
-        spec_intervention   = nb_simulation.spec_intervention
+        #spec_intervention   = nb_simulation.spec_intervention
 
         # Update cfg values
         cfgs = []
@@ -1141,15 +1142,15 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                 elif key in spec_network.keys() :
                     cfg["network"].update(d)
 
-                elif key in spec_intervention.keys() :
-                    cfg["intervention"].update(d)
+                #elif key in spec_intervention.keys() :
+                #    cfg["intervention"].update(d)
 
 
             if not N_tot_max or cfg["N_tot"] < N_tot_max:
                 
                 cfg              = format_cfg(cfg, spec_cfg)
                 cfg.network      = format_cfg(cfg.network, spec_network)
-                cfg.intervention = format_cfg(cfg.intervention, spec_intervention)
+                #cfg.intervention = format_cfg(cfg.intervention, spec_intervention)
                 
                 cfgs.append(cfg)
             else:
@@ -1177,6 +1178,22 @@ def cfg_to_hash(cfg, N=10, exclude_ID=True, exclude_hash=True):
     s_hash = sha256(d)
 
     return s_hash[:N]
+
+
+def flatten_cfg(cfg) :
+    flat_cfg = {}
+    for key, val in cfg.items() :
+
+        if isinstance(val, dict) :
+            tmp = flatten_cfg(val)
+
+            for tmp_key, tmp_val in tmp.items() :
+                flat_cfg[tmp_key] = tmp_val
+
+        else :
+            flat_cfg[key] = val
+
+    return flat_cfg
 
 
 d_num_cores_N_tot = RangeKeyDict(
@@ -1875,7 +1892,7 @@ def load_contact_matrices(scenario = 'reference') :
     work_other_ratio = matrix_work.sum() / (matrix_other.sum() + matrix_work.sum())
 
     # Normalize the contact matrices after this ratio has been determined
-    return (matrix_work, matrix_other, work_other_ratio, age_groups_work)
+    return (matrix_work.tolist(), matrix_other.tolist(), work_other_ratio, age_groups_work)
 
 
 def load_vaccination_schedule(scenario = 'reference') :
@@ -1966,8 +1983,12 @@ def dict_to_query(d):
 from tinydb import TinyDB, Query
 
 
-def get_db_cfg():
-    db = TinyDB("db.json", sort_keys=False, indent=4, separators=(",", ": "))
+def get_db_cfg(path="Output/db.json"):
+        
+    if not (os.path.dirname(path) == '') and not os.path.exists(os.path.dirname(path)) :
+        os.makedirs(os.path.dirname(path))
+
+    db = TinyDB(path, sort_keys=False, indent=4, separators=(",", ": "))
     db_cfg = db.table("cfg", cache_size=0)
     return db_cfg
 
@@ -2021,20 +2042,33 @@ def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True):
 import h5py
 
 
-def add_cfg_to_hdf5_file(f, cfg):
+def add_cfg_to_hdf5_file(f, cfg, path='/'):
     for key, val in cfg.items():
-        # if isinstance(val, set):
-        # val = list(val)
-        f.attrs[key] = val
+        
+        if isinstance(val, dict) :
+            add_cfg_to_hdf5_file(f, val, path = path + key + '/')
+
+        else :
+            f.attrs[path + key] = val
 
 
 def read_cfg_from_hdf5_file(filename):
-    cfg = {}
     with h5py.File(filename, "r") as f:
-        for key, val in f.attrs.items():
-            cfg[key] = val
+        cfg = read_cfg_from_hdf5_file_recursively(f)
+
     return format_cfg(cfg)
 
+def read_cfg_from_hdf5_file_recursively(f):
+    tmp = {}
+    for key, item in f[path].items():
+
+        if isinstance(item, h5py._h1.dataset.Dataset) :
+            tmp[key] = item.value
+
+        if isinstance(item, h5py._h1.group.Group) :
+            tmp[key] = read_cfg_from_hdf5_file_recursively(f, path=path + key + '/')
+
+    return tmp
 
 #%%
 

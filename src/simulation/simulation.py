@@ -120,8 +120,8 @@ class Simulation:
                 self.my,
                 N_ages,
                 mu_counter,
-                self.cfg.network.work_matrix,
-                self.cfg.network.other_matrix,
+                np.array(self.cfg.network.work_matrix),
+                np.array(self.cfg.network.other_matrix),
                 agents_in_age_group,
                 verbose=self.verbose,
             )
@@ -148,7 +148,7 @@ class Simulation:
             print(f"Saving initialized network to {filename}", flush=True)
         utils.make_sure_folder_exist(filename)
         my_hdf5ready = nb_load_jitclass.jitclass_to_hdf5_ready_dict(self.my)
-
+        
         with h5py.File(filename, "w", **hdf5_kwargs) as f:
             group_my = f.create_group("my")
             nb_load_jitclass.save_jitclass_hdf5ready(group_my, my_hdf5ready)
@@ -289,7 +289,6 @@ class Simulation:
         np.multiply(vaccinations_per_age_group, self.cfg.N_tot / 5_800_000, out=vaccinations_per_age_group, casting='unsafe')
         
         # Convert vaccination_schedule to integer day counter
-        work_matrix_init,     other_matrix_init,     _, _ = utils.load_contact_matrices(scenario="2021_fase1_sce1")
         work_matrix_restrict, other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario="ned2021jan")
         #work_matrix_restrict = work_matrix_restrict * 0.8
         #other_matrix_restrict = other_matrix_restrict * 0.8
@@ -302,10 +301,8 @@ class Simulation:
             labels = labels,
             vaccinations_per_age_group = vaccinations_per_age_group,
             vaccination_schedule = vaccination_schedule,
-            work_matrix_init = work_matrix_init,
-            work_matrix_restrict = work_matrix_restrict,
-            other_matrix_init = other_matrix_init,
-            other_matrix_restrict = other_matrix_restrict,
+            work_matrix_restrict = np.array(work_matrix_restrict),
+            other_matrix_restrict = np.array(other_matrix_restrict),
             verbose=verbose_interventions,
         )
 
@@ -343,7 +340,7 @@ class Simulation:
     def _add_cfg_to_hdf5_file(self, f, cfg=None):
         if cfg is None:
             cfg = self.cfg
-            print(cfg)
+          
         utils.add_cfg_to_hdf5_file(f, cfg)
 
     def _save_dataframe(self, save_csv=False, save_hdf5=True):
@@ -440,10 +437,11 @@ from p_tqdm import p_umap, p_uimap
 
 
 def update_database(db_cfg, q, cfg):
-    cfg["hash"] = utils.cfg_to_hash(cfg)
+    flat_cfg = utils.flatten_cfg(cfg)
+    cfg["hash"] = utils.cfg_to_hash(flat_cfg)
     cfg.pop("ID")
     if not db_cfg.contains(q.hash == cfg.hash):
-        db_cfg.insert(cfg)
+        db_cfg.insert(flat_cfg)
 
 
 def run_simulations(

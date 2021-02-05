@@ -1016,8 +1016,10 @@ from src.simulation import nb_simulation
 
 def get_cfg_default():
     """ Default Simulation Parameters """
-    yaml_filename = "cfg/simulation_parameters_default.yaml"
-    return load_yaml(yaml_filename)
+    cfg              = load_yaml("cfg/simulation_parameters_default.yaml")
+    cfg.network      = load_yaml("cfg/simulation_parameters_network.yaml")
+    cfg.intervention = load_yaml("cfg/simulation_parameters_intervention.yaml")
+    return cfg
 
 
 # def get_cfg_settings():
@@ -1036,28 +1038,30 @@ def format_simulation_paramters(d_simulation_parameters) :
 
     return d_simulation_parameters
 
-def format_cfg(cfg):
-    spec_cfg = nb_simulation.spec_cfg
+def format_cfg(cfg, spec):
 
     if not isinstance(cfg, DotDict):
         cfg = DotDict(cfg)
 
     for key, val in cfg.items():
 
-        if isinstance(spec_cfg[key], nb.types.Float):
+        if key == "network" or key == "intervention" :
+            continue
+
+        if isinstance(spec[key], nb.types.Float):
             cfg[key] = float(val)
-        elif isinstance(spec_cfg[key], nb.types.Integer):
+        elif isinstance(spec[key], nb.types.Integer):
             cfg[key] = int(val)
-        elif isinstance(spec_cfg[key], nb.types.Boolean):
+        elif isinstance(spec[key], nb.types.Boolean):
             cfg[key] = bool(val)
-        elif isinstance(spec_cfg[key], nb.types.ListType):
+        elif isinstance(spec[key], nb.types.ListType):
             if isinstance(val, np.ndarray):
                 cfg[key] = val.tolist()
             else:
                 cfg[key] = list(val)
-        elif isinstance(spec_cfg[key], nb.types.Set):
+        elif isinstance(spec[key], nb.types.Set):
             cfg[key] = set(val)
-        elif isinstance(spec_cfg[key], nb.types.Array):
+        elif isinstance(spec[key], nb.types.Array):
             # cfg[key] = np.array(val, dtype=spec_cfg[key].dtype.name)
             if isinstance(val, np.ndarray):
                 cfg[key] = val.tolist()
@@ -1066,6 +1070,28 @@ def format_cfg(cfg):
 
     return cfg
 
+
+def get_network_cfg(cfg):
+    network_cfg = DotDict()
+
+    network_cfg.ID                      = cfg.ID
+    network_cfg.version                 = cfg.version
+
+    network_cfg.N_tot                   = cfg.N_tot
+    network_cfg.rho                     = cfg.rho
+    network_cfg.epsilon_rho             = cfg.epsilon_rho
+    network_cfg.mu                      = cfg.mu
+    network_cfg.sigma_mu                = cfg.sigma_mu
+    network_cfg.beta_connection_type    = cfg.beta_connection_type
+    network_cfg.algo                    = cfg.algo
+    network_cfg.N_contacts_max          = cfg.N_contacts_max
+
+    network_cfg.matrix_work,            = cfg.matrix_work,
+    network_cfg.matrix_other            = cfg.matrix_other
+    network_cfg.work_other_ratio        = cfg.work_other_ratio
+    # clustering_connection_retries ?
+    
+    return network_cfg
 
 def _generate_cfgs_MCMC(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=False):
     """ Generates cfgs for MCMC-based simulation parameters """
@@ -1102,7 +1128,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
     else:
         cfg_default = get_cfg_default()
-
+        
         d_list = []
         for name, lst in d_simulation_parameters.items():
             
@@ -1116,19 +1142,46 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
         has_not_printed = True
 
+        # Load numba specifications
+        spec_cfg            = nb_simulation.spec_cfg
+        spec_network        = nb_simulation.spec_network
+        spec_intervention   = nb_simulation.spec_intervention
+
+        # Update cfg values
         cfgs = []
         for combination in all_combinations:
             cfg = cfg_default.copy()
+    
             for d in combination:
-                cfg.update(d)
+                key = list(d.keys())[0]
+
+                if key in spec_cfg.keys() :
+                    cfg.update(d)
+
+                elif key in spec_network.keys() :
+                    cfg["network"].update(d)
+
+                elif key in spec_intervention.keys() :
+                    cfg["intervention"].update(d)
+
+                else :
+                    print(d)
+
+                
+
             if not N_tot_max or cfg["N_tot"] < N_tot_max:
+                
+                cfg              = format_cfg(cfg, spec_cfg)
+                cfg.network      = format_cfg(cfg, spec_network)
+                cfg.intervention = format_cfg(cfg, spec_intervention)
+                
                 cfgs.append(cfg)
             else:
                 if verbose and has_not_printed:
                     print("Skipping some files due to N_tot > N_tot_max")
                     has_not_printed = False
 
-    cfgs = [format_cfg(cfg) for cfg in cfgs]
+        print(cfgs)
     return cfgs
 
 

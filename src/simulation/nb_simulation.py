@@ -36,10 +36,6 @@ spec_cfg = {
     # Default parameters
     "version": nb.float32,
     "N_tot": nb.uint32,
-    "rho": nb.float32,
-    "epsilon_rho": nb.float32,
-    "mu": nb.float32,
-    "sigma_mu": nb.float32,
     "beta": nb.float32,
     "sigma_beta": nb.float32,
     "beta_connection_type": nb.float32[:],
@@ -55,8 +51,6 @@ spec_cfg = {
     "make_initial_infections_at_kommune": nb.boolean,
     "make_restrictions_at_kommune_level": nb.boolean,
     "clustering_connection_retries": nb.uint32,
-    "work_other_ratio": nb.float32,  # 0.2 = 20% work, 80% other
-    "N_contacts_max": nb.uint16,
     "beta_UK_multiplier": nb.float32,
     "outbreak_position_UK": nb.types.unicode_type,
     "burn_in": nb.int64,
@@ -90,6 +84,18 @@ spec_cfg = {
     "ID": nb.uint16,
 }
 
+
+spec_network = {
+    # Default parameters
+    "rho": nb.float32,
+    "epsilon_rho": nb.float32,
+    "mu": nb.float32,
+    "sigma_mu": nb.float32,
+    "work_matrix": nb.float64[:, :],
+    "other_matrix": nb.float64[:, :],
+    "work_other_ratio": nb.float32,  # 0.2 = 20% work, 80% other
+    "N_contacts_max": nb.uint16,
+}
 
 @jitclass(spec_cfg)
 class Config(object):
@@ -334,9 +340,7 @@ spec_intervention = {
     "started_as": nb.uint8[:],
     "vaccinations_per_age_group": nb.int64[:, :],
     "vaccination_schedule": nb.int64[:],
-    "work_matrix_init": nb.float64[:, :],
     "work_matrix_restrict": nb.float64[:, :],
-    "other_matrix_init": nb.float64[:, :],
     "other_matrix_restrict": nb.float64[:, :],
 
     "verbose": nb.boolean,
@@ -1455,7 +1459,7 @@ def do_bug_check(
     x,
 ):
 
-    if my.cfg.day_max > 0 and day > my.cfg.day_max:
+    if my.cfg.day_max > 0 and day >= my.cfg.day_max:
         if verbose:
             print("day exceeded day_max")
         continue_run = False
@@ -1855,10 +1859,6 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day):
 
         # Get the number of new effective vaccines
         N = intervention.vaccinations_per_age_group[day - intervention.vaccination_schedule[0]]
-
-        # Check if any vaccines are planned for this day
-        if np.sum(N) == 0 :
-            return
 
         # Compute probability for each agent being infected
         probabilities = np.array([N[my.age[agent]] for agent in possible_agents_to_vaccinate])

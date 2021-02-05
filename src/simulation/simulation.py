@@ -290,17 +290,16 @@ class Simulation:
          # Scale the number of vaccines
         np.multiply(vaccinations_per_age_group, self.cfg.N_tot / 5_800_000, out=vaccinations_per_age_group, casting='unsafe')
 
+        vaccinations_per_age_group = vaccinations_per_age_group.T.astype(np.int64)
+        vaccination_schedule = self.cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + 10
+
         # Convert vaccination_schedule to integer day counter
         work_matrix_init,     other_matrix_init,     _, _ = utils.load_contact_matrices(scenario="2021_fase1_sce1")
         work_matrix_restrict, other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario="ned2021jan")
         #work_matrix_restrict = work_matrix_restrict * 0.8
         #other_matrix_restrict = other_matrix_restrict * 0.8
 
-        # TODO: If vaccinations are already started, make sure intialization accounts for it
-
-        vaccinations_per_age_group = vaccinations_per_age_group.T.astype(np.int64)
-        vaccination_schedule = self.cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + 10
-
+        
         self.intervention = nb_simulation.Intervention(
             self.my.cfg,
             labels = labels,

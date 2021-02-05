@@ -1,13 +1,13 @@
 from datetime import datetime
 import numpy as np
-from tqdm import tqdm
-import multiprocessing as mp
-from pathlib import Path
-from importlib import reload
+# from tqdm import tqdm
+# import multiprocessing as mp
+# from pathlib import Path
+# from importlib import reload
 from src.utils import utils
 from src.simulation import simulation
-from functools import partial
-import yaml
+# from functools import partial
+# import yaml
 from contexttimer import Timer
 
 
@@ -59,7 +59,7 @@ if utils.is_local_computer():
             # "work_other_ratio": 0.5,
             "N_init": np.array([4500, 4600, 4700]) * f,
             # "N_init": [1000],
-            "N_init_UK": np.array([4500, 4600, 4700]) * 0.03 * f,
+            "N_init_UK_frac": [0.03],
             #"work_other_ratio": 0.95,  # "algo 1"
             # "rho": 0.1,
             # "beta": [0.004],

@@ -1852,7 +1852,7 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day):
         N = intervention.vaccinations_per_age_group[day - intervention.vaccination_schedule[0]]
 
         # Scale the number of vaccines
-        N = N * my.cfg.N_tot / 5837213
+        N = N * my.cfg.N_tot / 5_800_000
         probabilities = np.array([N[my.age[agent]] for agent in possible_agents_to_vaccinate])
 
         # Distribute the effective vaccines among the population

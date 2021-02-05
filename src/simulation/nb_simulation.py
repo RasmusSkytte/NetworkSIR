@@ -60,6 +60,7 @@ spec_cfg = {
     "beta_UK_multiplier": nb.float32,
     "outbreak_position_UK": nb.types.unicode_type,
     "burn_in": nb.int64,
+    "start_date_offset" : nb.int64,
     "days_of_vacci_start": nb.int64,
     # events
     "N_events": nb.uint16,
@@ -120,7 +121,7 @@ class Config(object):
         self.N_contacts_max = 0
         self.beta_UK_multiplier = 1.0
         self.burn_in = 20 # burn in period, -int how many days the sim shall run before
-        
+
         # events
         self.N_events = 0
         self.event_size_max = 0
@@ -131,7 +132,7 @@ class Config(object):
         self.do_interventions = True
         # self.interventions_to_apply = {1, 4, 6}
         self.threshold_type = 0
-        self.restriction_thresholds = np.array([150,50,10,10])       
+        self.restriction_thresholds = np.array([150,50,10,10])
         self.threshold_interventions_to_apply = List([1,2,3])
         self.continuous_interventions_to_apply = List([1,2,3,4,5])
         self.f_daily_tests = 0.05
@@ -377,7 +378,7 @@ class Intervention(object):
         # 2: Test people with symptoms
         # 3: Isolate
         # 4: Random Testing
-        # 5: vaccinations  
+        # 5: vaccinations
 
     - started_as: describes whether or not an intervention has been applied. If 0, no intervention has been applied.
 
@@ -1766,7 +1767,7 @@ def run_simulation(
                         intervention.vaccination_schedule - days_of_vacci_start
                         days_of_vacci_start = 0
 
-                    vaccinate(my, g, intervention, agents_in_state,state_total_counts, day)
+                    vaccinate(my, g, intervention, agents_in_state, state_total_counts, day)
 
             if intervention.apply_interventions:
                 test_tagged_agents(my, g, intervention, day, click)
@@ -1845,6 +1846,10 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day):
 
     R_state = g.N_states - 1  # 8
 
+    # Check if all vaccines have been given
+    if day > intervention.vaccination_schedule[-1] :
+        return
+
     # Check if any vaccines are effective yet:
     if day >= intervention.vaccination_schedule[0] :
 
@@ -1853,6 +1858,12 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day):
 
         # Scale the number of vaccines
         N = N * my.cfg.N_tot / 5_800_000
+
+        # Check if any vaccines are planned for this day
+        if np.sum(N) == 0 :
+            return
+
+        # Compute probability for each agent being infected
         probabilities = np.array([N[my.age[agent]] for agent in possible_agents_to_vaccinate])
 
         # Distribute the effective vaccines among the population
@@ -1890,9 +1901,9 @@ def calculate_R_True_brit(my, g):
     N_infected = 0
     for agent in range(my.cfg.N_tot):
         if my.agent_is_infectious(agent) and my.corona_type[agent] == 1:
-            N_infected += 1 
+            N_infected += 1
             rate_sum += g.sum_of_rates[agent]
-    return rate_sum / lambda_I / np.maximum(N_infected, 1.0) * 4    
+    return rate_sum / lambda_I / np.maximum(N_infected, 1.0) * 4
 
 @njit
 def calculate_population_freedom_impact(intervention):
@@ -2490,7 +2501,7 @@ def apply_random_testing(my, intervention, click):
 
 
 @njit
-def apply_interventions_on_label(my, g, intervention, day, click):    
+def apply_interventions_on_label(my, g, intervention, day, click):
     if intervention.start_interventions_by_real_incidens_rate or intervention.start_interventions_by_meassured_incidens_rate:
         threshold_info = np.array([[1, 2], [200, 100], [20, 20]]) #TODO: remove
         test_if_intervention_on_labels_can_be_removed_multi(my, g, intervention, day, click, threshold_info)
@@ -2557,9 +2568,9 @@ def apply_interventions_on_label(my, g, intervention, day, click):
                 if day == intervention_date:
                     if i % 2 == 0:
                         # just looping over all labels. intervention type is not necesary with intervention by day
-                        for ith_label, intervention_type in enumerate(intervention.types): 
-                            
-                            # if lockdown   
+                        for ith_label, intervention_type in enumerate(intervention.types):
+
+                            # if lockdown
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 1:
                                 print("lockdown")
                                 lockdown_on_label(
@@ -2569,7 +2580,7 @@ def apply_interventions_on_label(my, g, intervention, day, click):
                                     label=ith_label,
                                     rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[int(i/2)]
                                 )
-                            # if masking    
+                            # if masking
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 2:
                                 print("masks")
                                 masking_on_label(
@@ -2579,15 +2590,15 @@ def apply_interventions_on_label(my, g, intervention, day, click):
                                     label=ith_label,
                                     rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[int(i/2)]
                                 )
-                            # if matrix restriction    
-                            if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3: 
+                            # if matrix restriction
+                            if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3:
                                 print("matrix restriction ")
                                 matrix_restriction_on_label(
                                     my,
                                     g,
                                     intervention,
                                     label=ith_label,
-                                )    
+                                )
                     else:
                         for i_label, intervention_type in enumerate(intervention.types):
                             print("intervention removed")

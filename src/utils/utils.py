@@ -4,14 +4,12 @@ import multiprocessing as mp
 from pathlib import Path
 import yaml
 
-# conda install -c numba/label/dev numba
 import numba as nb
-from numba import njit, prange, objmode, typeof
+from numba import njit, prange, objmode, typeof #TODO delete prange, objmode
 from numba.typed import List, Dict
-import platform
+# import platform #TODO delete line
 import datetime
 
-# pip install awkward1
 import awkward1 as ak
 import dict_hash
 
@@ -1028,6 +1026,16 @@ def get_cfg_default():
 #     return load_yaml(yaml_filename)
 
 
+def format_simulation_paramters(d_simulation_parameters) :
+    
+    for name, lst in d_simulation_parameters.items():
+        
+        # Convert numpy arrays to integers
+        if isinstance(lst, np.ndarray) :
+            d_simulation_parameters[name] = np.unique(np.round(lst)).astype(int).tolist()
+
+    return d_simulation_parameters
+
 def format_cfg(cfg):
     spec_cfg = nb_simulation.spec_cfg
 
@@ -1097,8 +1105,11 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
         d_list = []
         for name, lst in d_simulation_parameters.items():
+            
+            # Convert all inputs to lists
             if isinstance(lst, (int, float)):
                 lst = [lst]
+
             d_list.append([{name: val} for val in lst])
         d_list.append([{"ID": ID} for ID in range(N_runs)])
         all_combinations = list(product(*d_list))
@@ -1535,7 +1546,7 @@ def path(file):
     return file
 
 
-def hash_to_filenames(hash_, base_dir="Data/ABM", filetype="hdf5"):
+def hash_to_filenames(hash_, base_dir="Output/ABM", filetype="hdf5"):
     folder = path(base_dir) / hash_
     files = list(folder.rglob(f"*.{filetype}"))
     return [str(file) for file in files]
@@ -1844,7 +1855,10 @@ def load_vaccination_schedule(scenario = 'reference') :
             scenario (string): Name for the scenario to load
     """
     # Load the contact matrices
-    vaccine_counts, age_groups, schedule  = load_age_stratified_file('Data/vaccination_schedule/' + scenario + '.csv')
+    vaccine_counts, age_groups, schedule = load_age_stratified_file('Data/vaccination_schedule/' + scenario + '.csv')
+
+    # Convert schedule to datetimes
+    schedule = [datetime.datetime.strptime(date, '%Y-%m-%d').date() for date in schedule]
 
     # Normalize the contact matrices after this ratio has been determined
     return (vaccine_counts, age_groups, schedule)
@@ -1945,7 +1959,7 @@ def query_cfg(cfg):
 #%%
 
 
-def delete_every_file_with_hash(hashes, base_dir="./Data/", verbose=True):
+def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True):
 
     if isinstance(hashes, str):
         hashes = [hashes]

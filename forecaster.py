@@ -1,60 +1,123 @@
+
+# Trin til at forecaste
+
+# Trin 1, kør modellen med et i et stort parameter rum,
+
+
+# Trin 2, sammenlign med de forventede test tal, og vælg de mest sandsynelige parametre
+
+# Trin 3, kør modellen med et mindre parameter rum centreret omkring de mest sandsynelige parametre
+
+# Trin 4, farvekod graferne efter deres likelihood
+
+
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
+import datetime
+
+from src.utils import utils
+from src.simulation import simulation
+from contexttimer import Timer
+
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
 from tqdm import tqdm
 from pathlib import Path
-import scipy as sp
-
-# from iminuit import Minuit
-from collections import defaultdict
-import joblib
 from importlib import reload
 from src.utils import utils
 from src import plot
 from src import file_loaders
 from src import rc_params
-from src import fits
 
-from matplotlib.backends.backend_pdf import PdfPages
-try:
-    from src.utils import utils
 
-    # from src import simulation_utils
-    from src import file_loaders
-    from src import SIR
-except ImportError:
-    import utils
 
-    # import simulation_utils
-    import file_loaders
-    import SIR
 
-def fit_exponential(x, y):
-	y = np.array(y)
-	popt, pcov = sp.optimize.curve_fit(exponential, x, y, p0=(y[0], 1, 1), bounds=([y[0]*0.5,0,0], [y[0]*1.5,2,100]))
-	return popt, pcov
 
-def exponential(x, a, b, c, T = 8):
-   		return a * b ** (x / T) + c
+N_tot_max = False
 
-def simple_ratio_with_symmetric_smoothing(x, n_smooth, T=8):
-	x_smoothed = [np.sum(x[i-n_smooth:i+n_smooth])/(2*n_smooth+1) for i in range(n_smooth,len(x)-n_smooth)]
-	return [x_smoothed[i+T]/x_smoothed[i] for i in range(len(x_smoothed)-T)]
 
-def fit_on_small_symmetric_range(x, window, T=8):
-	x_smoothed = [np.sum(x[i-window:i+window])/(2*window+1) for i in range(window,len(x)-window)]
-	results = []
-	for i in range(window,len(x)-window):
-		x_fit = np.array(x_smoothed[i-window:i+window])
-		try:
-			popt,_ = fit_exponential(np.arange(len(x_fit)), x_fit)
-			results.append(popt[1])
-		except:
-			results.append(0)
-	return results
+num_cores_max = 1
+N_runs = 1
 
-def troels_fit(x, y):
-	ey  = np.sqrt(y)
+
+dry_run     = False
+force_rerun = True
+verbose     = True
+
+
+
+
+
+wide_parameter_sweep = {
+        "N_tot": 200_000,
+        "weighted_random_initial_infections": True,
+        "lambda_I": 4 / 2.52,
+        "lambda_E": 4 / 2.5,
+        "rho": 0.0,
+        "epsilon_rho": 1,
+        "intervention_removal_delay_in_clicks": [21],
+        "make_restrictions_at_kommune_level": [False],
+        "burn_in": 0,
+        "do_interventions": True,
+        "interventions_to_apply": [[3, 4, 5, 6, 7]],
+        "N_init": [45],
+        "N_init_UK": [15],
+        "beta": [0.0125],
+        "beta_UK_multiplier": [1.5],
+        "tracking_delay": [10],
+        "day_max": 20,
+        "days_of_vacci_start": 0 # number of days after vaccinations calender start. 31 = 1-st of feb.
+    }
+
+
+
+
+
+N_files_total = 0
+
+with Timer() as t:
+
+    if dry_run:
+        print("\n\nRunning a dry run, nothing will actually be simulated.!!!\n\n")
+
+    if force_rerun:
+        print("Notice: forced rerun is set to True")
+
+    # break
+    verbose = True
+    N_files = simulation.run_simulations(
+        wide_parameter_sweep,
+        N_runs=N_runs,
+        num_cores_max=num_cores_max,
+        N_tot_max=N_tot_max,
+        verbose=verbose,
+        force_rerun=force_rerun,
+        dry_run=dry_run,
+        save_csv=True,
+        save_initial_network=False,
+    )
+
+    N_files_total += N_files
+
+print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
+print("Finished simulating!")
+
+
+
+
+
+
+############## Import test data
+df_index = pd.read_feather("Data/covid_index.feather")
+
+# Find the index for the starting date
+ind = np.where(df_index["date"] == datetime.date(2021, 1, 1))[0][0]
+
+
+
+
+
 
 def pandemic_control_calc(N_infected):
     lambda_I = 0.5
@@ -64,6 +127,9 @@ def pandemic_control_calc(N_infected):
     b = np.log(tal)/I_crit
     #return (1.0/(1+np.exp(-b*(N_infected-I_crit))))
     return (1.0/(1.0+np.exp(-b*(N_infected-I_crit)))-(1/(1+tal)))*((tal+1)/tal)
+
+
+
 
 def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_list, name_list,vaccinations_per_age_group, vaccination_schedule ):
     filenames = abm_files.cfg_to_filenames(cfg)
@@ -146,8 +212,8 @@ abm_files = file_loaders.ABM_simulations(verbose=True)
 network_files = file_loaders.ABM_simulations(base_dir="Data/network", filetype="hdf5")
 vaccinations_per_age_group, _, vaccination_schedule = utils.load_vaccination_schedule()
 vaccinations_per_age_group=vaccinations_per_age_group.astype(np.int64)
-vaccination_schedule = np.arange(len(vaccination_schedule),dtype=np.int64) + 14
-pdf_name = Path(f"Figures/data_analysis.pdf")
+vaccination_schedule = np.arange(len(vaccination_schedule),dtype=np.int64) + 10
+pdf_name = Path(f"Figures/data_anal.pdf")
 utils.make_sure_folder_exist(pdf_name)
 with PdfPages(pdf_name) as pdf:
         fi_list = []
@@ -168,136 +234,3 @@ with PdfPages(pdf_name) as pdf:
 
             pdf.savefig(fig, dpi=100)
             plt.close("all")
-
-
-
-
-        x=x
-        fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
-        fig.subplots_adjust(top=0.8)
-
-        for i in range(9,31):
-            if i in range(15):
-                color = 'b'
-            elif i in range(15,19):
-                color = 'g'
-            elif i in range(19,23):
-                color = 'r'
-            elif i in range(23,27):
-                color = 'm'
-            elif i in range(27,31):
-                color = 'k'
-            axes.scatter(fi_list[i],pc_list[i], c =color, label=name_list[i])
-            axes.text(fi_list[i]*1.01,pc_list[i]*1.01,name_list[i],fontsize=12)
-        #axes.legend()
-        pdf.savefig(fig, dpi=100)
-        plt.close("all")
-
-        fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
-        fig.subplots_adjust(top=0.8)
-
-        for i in range(31,67):
-            if i in range(31,40):
-                color = 'g'
-            elif i in range(40,49):
-                color = 'r'
-            elif i in range(49,58):
-                color = 'm'
-            elif i in range(58,66):
-                color = 'k'
-            if i!=57 and i!=66:
-                axes.scatter(fi_list[i],pc_list[i], c = color)
-                axes.text(fi_list[i]*1.01,pc_list[i]*1.01, str(i - 31),fontsize=12)
-
-        #axes.legend()
-        pdf.savefig(fig, dpi=100)
-        plt.close("all")
-        fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
-        fig.subplots_adjust(top=0.8)
-
-        for j in range(67,103):
-            i = j - 36
-            if i in range(31,40):
-                color = 'g'
-            elif i in range(40,49):
-                color = 'r'
-            elif i in range(49,58):
-                color = 'm'
-            elif i in range(58,66):
-                color = 'k'
-            if i!=57 and i!=66:
-                axes.scatter(fi_list[j],pc_list[j], c = color)
-                axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-
-        #axes.legend()
-        pdf.savefig(fig, dpi=100)
-        plt.close("all")
-
-        fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
-        fig.subplots_adjust(top=0.8)
-
-        for j in range(103,len(fi_list)):
-            i = j - 72
-            if i in range(31,40):
-                color = 'g'
-            elif i in range(40,49):
-                color = 'r'
-            elif i in range(49,58):
-                color = 'm'
-            elif i in range(58,66):
-                color = 'k'
-            if i!=57 and i!=66:
-                axes.scatter(fi_list[j],pc_list[j], c = color)
-                axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-
-        #axes.legend()
-        pdf.savefig(fig, dpi=100)
-        plt.close("all")
-
-
-        #one fig
-        fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
-        fig.subplots_adjust(top=0.8)
-
-        for i in range(31,67):
-
-            color = 'g'
-
-            if i!=57 and i!=66:
-                axes.scatter(fi_list[i],pc_list[i], c = color)
-                #axes.text(fi_list[i]*1.01,pc_list[i]*1.01, str(i - 31),fontsize=12)
-
-
-
-        for j in range(67,103):
-            i = j - 36
-            color = 'b'
-            if i!=57 and i!=66:
-                axes.scatter(fi_list[j],pc_list[j], c = color)
-                #axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-
-
-        for j in range(103,139):
-            i = j - 72
-
-            color = 'm'
-
-            if i!=57 and i!=66:
-                axes.scatter(fi_list[j],pc_list[j], c = color)
-                #axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-
-        for j in range(139, len(fi_list)):
-            i = j - 108
-            color = 'r'
-
-            axes.scatter(fi_list[j],pc_list[j], c = color)
-                #axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-
-        #axes.legend()
-        pdf.savefig(fig, dpi=100)
-        plt.close("all")
-
-
-
-
-

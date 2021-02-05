@@ -40,7 +40,7 @@ def file_is_empty(file):
     return path(file).stat().st_size == 0
 
 
-def get_all_ABM_filenames(base_dir="Data/ABM", filetype="hdf5"):
+def get_all_ABM_filenames(base_dir="Output/ABM", filetype="hdf5"):
     "get all ABM result files with filetype {filetype}"
     files = path(base_dir).rglob(f"*.{filetype}")
     # files = sorted(files, )
@@ -94,7 +94,7 @@ def folder_to_cfg(folder):
     return hash_to_cfg(hash_)
 
 
-def hash_to_cfg(hash_, cfgs_dir="./Data/cfgs"):
+def hash_to_cfg(hash_, cfgs_dir="./Output/cfgs"):
     db_cfg = utils.get_db_cfg()
     q = Query()
     q_result = db_cfg.search(q.hash == hash_)
@@ -124,7 +124,7 @@ def get_cfgs(all_folders):
 
 
 class ABM_simulations:
-    def __init__(self, base_dir="Data/ABM", filetype="hdf5", verbose=False):
+    def __init__(self, base_dir="Output/ABM", filetype="hdf5", verbose=False):
         self.base_dir = utils.path(base_dir)
         self.filetype = filetype
         self.verbose = verbose

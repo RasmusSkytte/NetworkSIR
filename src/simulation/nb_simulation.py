@@ -64,6 +64,22 @@ spec_cfg = {
     "event_weekend_multiplier": nb.float32,
     # lockdown-related / interventions
     "do_interventions": nb.boolean,
+    "threshold_type": nb.int8, # which thing set off restrictions: 0: certain date. 1: "real" incidens rate 2: measured incidens rate
+    "restriction_thresholds": nb.int64[:], # len == 2*nr of different thresholds, on the form [start stop start stop etc.]
+    "threshold_interventions_to_apply": ListType(nb.int64),
+    "list_of_threshold_interventions_effects": nb.float64[:, :, :],
+    "continuous_interventions_to_apply": ListType(nb.int64),
+    "f_daily_tests": nb.float32,
+    "test_delay_in_clicks": nb.int64[:],
+    "results_delay_in_clicks": nb.int64[:],
+    "chance_of_finding_infected": nb.float64[:],
+    "days_looking_back": nb.int64,
+    #"masking_rate_reduction": nb.float64[:, ::1],  # to make the type C instead if A
+    #"lockdown_rate_reduction": nb.float64[:, ::1],  # to make the type C instead if A
+    "isolation_rate_reduction": nb.float64[:],
+    "tracking_rates": nb.float64[:],
+    "tracking_delay": nb.int64,
+    "intervention_removal_delay_in_clicks": nb.int32,
     # ID
     "ID": nb.uint16,
 }
@@ -324,22 +340,6 @@ spec_intervention = {
 
     "verbose": nb.boolean,
 
-    "threshold_type": nb.int8, # which thing set off restrictions: 0: certain date. 1: "real" incidens rate 2: measured incidens rate
-    "restriction_thresholds": nb.int64[:], # len == 2*nr of different thresholds, on the form [start stop start stop etc.]
-    "threshold_interventions_to_apply": ListType(nb.int64),
-    "list_of_threshold_interventions_effects": nb.float64[:, :, :],
-    "continuous_interventions_to_apply": ListType(nb.int64),
-    "f_daily_tests": nb.float32,
-    "test_delay_in_clicks": nb.int64[:],
-    "results_delay_in_clicks": nb.int64[:],
-    "chance_of_finding_infected": nb.float64[:],
-    "days_looking_back": nb.int64,
-    #"masking_rate_reduction": nb.float64[:, ::1],  # to make the type C instead if A
-    #"lockdown_rate_reduction": nb.float64[:, ::1],  # to make the type C instead if A
-    "isolation_rate_reduction": nb.float64[:],
-    "tracking_rates": nb.float64[:],
-    "tracking_delay": nb.int64,
-    "intervention_removal_delay_in_clicks": nb.int32,
 }
 
 
@@ -2340,10 +2340,10 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent):
         if not my.connections_type[agent][ith_contact] == 0:
             if my.connections_type[agent][ith_contact] == 1:
                 mr = intervention.work_matrix_restrict
-                mi = intervention.work_matrix_init
+                mi = my.cfg_network.work_matrix
             elif my.connections_type[agent][ith_contact] == 2:
                 mr = intervention.other_matrix_restrict
-                mi = intervention.other_matrix_init
+                mi = my.cfg_network.other_matrix
 
             mr_single = mr[my.age[agent], my.age[contact]]
             mi_single = mi[my.age[agent], my.age[contact]]

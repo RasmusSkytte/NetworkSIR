@@ -24,6 +24,7 @@ make_initial_infections_at_kommune: False # Initiate infections at kommune basis
 make_restrictions_at_kommune_level: True # True makes interventions at labels=kommune, false
 day_max: 0 # 5 weeks. Sets the maximum number of days the algorithm runs
 
+do_interventions: True # bool, whether or not to apply any interventions, lockdowns or similar
 
 # vaccinations related variables. 
 burn_in: 20

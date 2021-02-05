@@ -1,10 +1,7 @@
-#  Define default simulation parameters
-
-
-do_interventions: True # bool, whether or not to apply any interventions, lockdowns or similar
+#  Define default intervention parameters
 
 # [[kind of interventions], [start, stop intervention 0],[start, stop intervention 1] etc ]
-restriction_thresholds: [1,39]
+restriction_thresholds: [1, 39]
 
 # 1: Lockdown (jobs and schools)
 # 2: Cover (with face masks)
@@ -22,7 +19,7 @@ threshold_interventions_to_apply: [3]
   # 2: Masking (reduce some contacts),
   # 3: Matrix based (used loaded contact matrices. )
 
-continuous_interventions_to_apply: [1,2,3,4,5]
+continuous_interventions_to_apply: [1, 2, 3, 4, 5]
     # 0: Do nothing
     # 1: Tracking (infected and their connections)
     # 2: Test people with symptoms

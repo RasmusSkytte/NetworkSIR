@@ -22,6 +22,8 @@ def sha256(d):
     for key, val in d.items():
         if isinstance(val, set):
             d[key] = list(val)
+        if isinstance(val, dict):
+            d[key] = sha256(val)
     return dict_hash.sha256(d)
 
 
@@ -1071,28 +1073,6 @@ def format_cfg(cfg, spec):
     return cfg
 
 
-def get_network_cfg(cfg):
-    network_cfg = DotDict()
-
-    network_cfg.ID                      = cfg.ID
-    network_cfg.version                 = cfg.version
-
-    network_cfg.N_tot                   = cfg.N_tot
-    network_cfg.rho                     = cfg.rho
-    network_cfg.epsilon_rho             = cfg.epsilon_rho
-    network_cfg.mu                      = cfg.mu
-    network_cfg.sigma_mu                = cfg.sigma_mu
-    network_cfg.beta_connection_type    = cfg.beta_connection_type
-    network_cfg.algo                    = cfg.algo
-    network_cfg.N_contacts_max          = cfg.N_contacts_max
-
-    network_cfg.matrix_work,            = cfg.matrix_work,
-    network_cfg.matrix_other            = cfg.matrix_other
-    network_cfg.work_other_ratio        = cfg.work_other_ratio
-    # clustering_connection_retries ?
-    
-    return network_cfg
-
 def _generate_cfgs_MCMC(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=False):
     """ Generates cfgs for MCMC-based simulation parameters """
 
@@ -1164,16 +1144,12 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                 elif key in spec_intervention.keys() :
                     cfg["intervention"].update(d)
 
-                else :
-                    print(d)
-
-                
 
             if not N_tot_max or cfg["N_tot"] < N_tot_max:
                 
                 cfg              = format_cfg(cfg, spec_cfg)
-                cfg.network      = format_cfg(cfg, spec_network)
-                cfg.intervention = format_cfg(cfg, spec_intervention)
+                cfg.network      = format_cfg(cfg.network, spec_network)
+                cfg.intervention = format_cfg(cfg.intervention, spec_intervention)
                 
                 cfgs.append(cfg)
             else:
@@ -1181,7 +1157,6 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                     print("Skipping some files due to N_tot > N_tot_max")
                     has_not_printed = False
 
-        print(cfgs)
     return cfgs
 
 
@@ -1191,7 +1166,7 @@ def cfg_to_hash(cfg, N=10, exclude_ID=True, exclude_hash=True):
     N = len of hash (truncate hash)
     """
 
-    d = format_cfg(cfg.copy())
+    d = cfg.copy()
 
     if exclude_ID and "ID" in d:
         d.pop("ID")
@@ -1886,20 +1861,21 @@ def load_contact_matrices(scenario = 'reference') :
             scenario (string): Name for the scenario to load
     """
     # Load the contact matrices
-    matrix_work,  age_groups_work,  _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
-    matrix_school,  age_groups_school,  _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_school.csv')
-    matrix_other, age_groups_other, _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
+    matrix_work,    age_groups_work,   _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
+    matrix_school,  age_groups_school, _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_school.csv')
+    matrix_other,   age_groups_other,  _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
     # TODO: Load the school contact matrix
 
     # Assert the age_groups are the same
     if not age_groups_work == age_groups_other :
         raise ValueError('Age groups for work contact matrix and other contact matrix not equal')
     matrix_work = matrix_work + matrix_school
+
     # Determine the work-to-other ratio
     work_other_ratio = matrix_work.sum() / (matrix_other.sum() + matrix_work.sum())
 
     # Normalize the contact matrices after this ratio has been determined
-    return (matrix_work , matrix_other , work_other_ratio, age_groups_work)
+    return (matrix_work, matrix_other, work_other_ratio, age_groups_work)
 
 
 def load_vaccination_schedule(scenario = 'reference') :

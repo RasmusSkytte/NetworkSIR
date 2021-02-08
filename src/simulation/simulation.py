@@ -188,7 +188,7 @@ class Simulation:
             initialize_network = True
             if self.verbose:
                 print("Initializing network since the hdf5-file does not exist")
-        
+
         # TODO: Find out why it does not exist in the database
         #elif len(utils.query_cfg(utils.get_cfg_network_initialized(self.cfg))) == 0:
         #    initialize_network = True
@@ -288,7 +288,6 @@ class Simulation:
          # Scale the number of vaccines
         np.multiply(vaccinations_per_age_group, self.cfg.N_tot / 5_800_000, out=vaccinations_per_age_group, casting='unsafe')
 
-        vaccinations_per_age_group = vaccinations_per_age_group.T.astype(np.int64)
         vaccination_schedule = self.cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + 10
 
         # Convert vaccination_schedule to integer day counter
@@ -296,7 +295,6 @@ class Simulation:
         #work_matrix_restrict = work_matrix_restrict * 0.8
         #other_matrix_restrict = other_matrix_restrict * 0.8
 
-        
         self.intervention = nb_simulation.Intervention(
             self.my.cfg,
             labels = labels,
@@ -341,7 +339,7 @@ class Simulation:
     def _add_cfg_to_hdf5_file(self, f, cfg=None):
         if cfg is None:
             cfg = self.cfg
-          
+
         utils.add_cfg_to_hdf5_file(f, cfg)
 
     def _save_dataframe(self, save_csv=False, save_hdf5=True):
@@ -504,7 +502,23 @@ def run_simulations(
             run_single_simulation(cfg, verbose=verbose, **kwargs)
             update_database(db_cfg, q, cfg)
     else:
-        # print("run simulation", flush=True)
+        # First generate the networks
+        f_single_network = partial(run_single_simulation, verbose=False, only_initialize_network=True, **kwargs)
+
+        # Get the network hashes
+        network_hashes = set([utils.cfg_to_hash(cfg.network) for cfg in cfgs])
+
+        # Get list of unique cfgs
+        cfgs_network = []
+        for cfg in cfgs :
+            if utils.cfg_to_hash(cfg.network) in network_hashes :
+                cfgs_network.append(cfg)
+                network_hashes.remove(utils.cfg_to_hash(cfg.network))
+
+        # Generate the networks
+        p_uimap(f_single_network, cfgs_network, num_cpus=num_cores)
+
+        # Then run the simulations on the netwrok
         f_single_simulation = partial(run_single_simulation, verbose=False, **kwargs)
         for cfg in p_uimap(f_single_simulation, cfgs, num_cpus=num_cores):
             update_database(db_cfg, q, cfg)

@@ -1,6 +1,5 @@
 # exclude data from source control by default
 !Data/
-!Data2/
 
 Data/*
 !Data/contact_matrices/
@@ -9,8 +8,8 @@ Data/*
 !Data/household_dist.csv
 
 Figures/
-
 Output/
+cleanup/
 
 db.json
 

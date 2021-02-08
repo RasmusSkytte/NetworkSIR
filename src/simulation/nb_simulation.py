@@ -785,7 +785,7 @@ def place_and_connect_families(
 
 @njit
 def place_and_connect_families_kommune_specific(
-    my, people_in_household, age_distribution_per_people_in_household, coordinates_raw, Kommune_ids, N_ages
+    my, people_in_household, age_distribution_per_people_in_household, coordinates_raw, Kommune_ids, N_ages, verbose=False
 ):
     """ Place agents into household, including assigning coordinates and making connections. First step in making the network.
         Parameters:
@@ -866,7 +866,11 @@ def place_and_connect_families_kommune_specific(
                     mu_counter += 1
 
     agents_in_age_group = utils.nested_lists_to_list_of_array(agents_in_age_group)
-    print(house_sizes)
+
+    if verbose :
+        print("House sizes:")
+        print(house_sizes)
+
     return mu_counter, counter_ages, agents_in_age_group
 
 @njit
@@ -1029,7 +1033,7 @@ def set_to_array(input_set):
 
 
 @njit
-def nb_random_choice(arr, prob, size=1, replace=False):
+def nb_random_choice(arr, prob, size=1, replace=False, verbose=False):
     """
     :param arr: A 1D numpy array of values to sample from.
     :param prob: A 1D numpy array of probabilities for the given samples.
@@ -1046,10 +1050,9 @@ def nb_random_choice(arr, prob, size=1, replace=False):
         idx = np.searchsorted(np.cumsum(prob), ra, side="right")
         return arr[idx]
     else:
-        if size / len(arr) > 0.5:
-            print(
-                "Warning: choosing more than 50% of the input array with replacement, can be slow."
-            )
+        if size / len(arr) > 0.5 and verbose:
+            print("Warning: choosing more than 50% of the input array with replacement, can be slow.")
+
         out = set()
         while len(out) < size:
             ra = np.random.random()
@@ -1246,6 +1249,7 @@ def make_initial_infections(
     initial_ages_exposed,
     # N_infectious_states,
     N_states,
+    verbose=False
 ):
 
     # version 2 has age groups
@@ -1265,7 +1269,7 @@ def make_initial_infections(
     for _, agent in enumerate(initial_agents_to_infect):
         weights = calc_E_I_dist(my, 1)
         states = np.arange(N_states - 1, dtype=np.int8)
-        new_state = nb_random_choice(states, weights)[0]  # E1-E4 or I1-I4, uniformly distributed
+        new_state = nb_random_choice(states, weights, verbose=verbose)[0]  # E1-E4 or I1-I4, uniformly distributed
         my.state[agent] = new_state
         if np.random.rand() < my.cfg.N_init_UK_frac:
             my.corona_type[agent] = 1  # IMPORTANT LINE!
@@ -1456,11 +1460,13 @@ def do_bug_check(
         continue_run = False
 
     elif day > 10_000:
-        print("day exceeded 10_000")
+        if verbose:
+            print("day exceeded 10_000")
         continue_run = False
 
     elif step_number > 100_000_000:
-        print("step_number > 100_000_000")
+        if verbose:
+            print("step_number > 100_000_000")
         continue_run = False
 
     elif (g.total_sum_infections + g.total_sum_of_state_changes < 0.0001) and (
@@ -1563,9 +1569,10 @@ def run_simulation(
     SIR_transition_rates,
     N_infectious_states,
     nts,
-    verbose,
+    verbose=False,
 ):
-    print("apply intervention", intervention.apply_interventions)
+    if verbose:
+        print("Apply intervention", intervention.apply_interventions)
 
     out_time = List()
     out_state_counts = List()
@@ -1577,7 +1584,8 @@ def run_simulation(
     click = nts * day
     step_number = 0
     real_time = 1.0 * day
-    print(day, click, real_time)
+    if verbose:
+        print(day, click, real_time)
 
     s_counter = np.zeros(4)
     where_infections_happened_counter = np.zeros(4)
@@ -1729,7 +1737,7 @@ def run_simulation(
             if daily_counter >= 10:
                 day += 1
                 if intervention.apply_interventions and intervention.apply_interventions_on_label and day >= 0:
-                    apply_interventions_on_label(my, g, intervention, day, click)
+                    apply_interventions_on_label(my, g, intervention, day, click, verbose)
 
                 if intervention.apply_random_testing:
                     apply_random_testing(my, intervention, click)
@@ -1758,11 +1766,11 @@ def run_simulation(
                 if intervention.apply_vaccinations:
                     if start_date_offset < 0:
                         for day in range(-start_date_offset):
-                            vaccinate(my, g, intervention, agents_in_state, state_total_counts, day)
+                            vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, verbose=verbose)
                         intervention.vaccination_schedule + start_date_offset
                         start_date_offset = 0
 
-                    vaccinate(my, g, intervention, agents_in_state, state_total_counts, day)
+                    vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, verbose=verbose)
 
             if intervention.apply_interventions:
                 test_tagged_agents(my, g, intervention, day, click)
@@ -1833,7 +1841,7 @@ def calc_contact_dist(my, contact_type):
 
 
 @njit
-def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day):
+def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, verbose=False):
 
     # try to vaccinate everyone, but only do vaccinate susceptable agents
     possible_agents_to_vaccinate = np.arange(my.cfg.N_tot, dtype=np.uint32)
@@ -1855,7 +1863,7 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day):
         probabilities = np.array([N[my.age[agent]] for agent in possible_agents_to_vaccinate])
 
         # Distribute the effective vaccines among the population
-        agents = nb_random_choice(possible_agents_to_vaccinate, probabilities, size = int(np.sum(N)))
+        agents = nb_random_choice(possible_agents_to_vaccinate, probabilities, size = int(np.sum(N)), verbose=verbose)
         for agent in agents:
 
             # pick agent if it is susceptible (in S state)
@@ -2489,7 +2497,7 @@ def apply_random_testing(my, intervention, click):
 
 
 @njit
-def apply_interventions_on_label(my, g, intervention, day, click):
+def apply_interventions_on_label(my, g, intervention, day, click, verbose=False):
     if intervention.start_interventions_by_real_incidens_rate or intervention.start_interventions_by_meassured_incidens_rate:
         threshold_info = np.array([[1, 2], [200, 100], [20, 20]]) #TODO: remove
         test_if_intervention_on_labels_can_be_removed_multi(my, g, intervention, day, click, threshold_info)
@@ -2560,7 +2568,10 @@ def apply_interventions_on_label(my, g, intervention, day, click):
 
                             # if lockdown
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 1:
-                                print("lockdown")
+
+                                if verbose:
+                                    print("Intervention type: lockdown")
+
                                 lockdown_on_label(
                                     my,
                                     g,
@@ -2570,7 +2581,9 @@ def apply_interventions_on_label(my, g, intervention, day, click):
                                 )
                             # if masking
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 2:
-                                print("masks")
+                                if verbose:
+                                    print("Intervention type: masks")
+
                                 masking_on_label(
                                     my,
                                     g,
@@ -2580,7 +2593,10 @@ def apply_interventions_on_label(my, g, intervention, day, click):
                                 )
                             # if matrix restriction
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3:
-                                print("matrix restriction ")
+
+                                if verbose:
+                                    print("Intervention type: matrix restriction")
+
                                 matrix_restriction_on_label(
                                     my,
                                     g,
@@ -2589,7 +2605,10 @@ def apply_interventions_on_label(my, g, intervention, day, click):
                                 )
                     else:
                         for i_label, intervention_type in enumerate(intervention.types):
-                            print("intervention removed")
+
+                            if verbose:
+                                print("Intervention removed")
+
                             remove_intervention_at_label(my, g, intervention, i_label)
 
 

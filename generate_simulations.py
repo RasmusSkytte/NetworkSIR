@@ -14,8 +14,8 @@ from contexttimer import Timer
 N_tot_max = False
 
 
-num_cores_max = 1
-N_runs = 1
+num_cores_max = 9
+N_runs = 9
 
 
 dry_run = False
@@ -28,24 +28,24 @@ verbose = True
 if utils.is_local_computer():
 
     # Fraction of population to simulate
-    f = 0.1
+    f = 0.01
 
     all_simulation_parameters = [
         {
             "N_tot": int(5_800_000 * f),
-            "rho": 0.1,
+            "rho": 0.0,
             #"epsilon_rho": 1,
             "weighted_random_initial_infections": True,
             #
             "burn_in": 0,
-            "start_date_offset" : (datetime(2020, 12, 28) - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date 
+            "start_date_offset" : (datetime(2020, 12, 28) - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date
             "day_max": 40,
             #
             "beta": [0.0125],
             "beta_UK_multiplier": [1.5],
             "lambda_I": 4 / 2.52,
             "lambda_E": 4 / 2.5,
-            "N_init": np.array([4500, 4600, 4700]),
+            "N_init": np.array([4500, 4600, 4700]).astype(int),
             #
             "do_interventions": True,
             "threshold_interventions_to_apply": [[3]],
@@ -54,7 +54,6 @@ if utils.is_local_computer():
             "intervention_removal_delay_in_clicks": [20],
             "make_restrictions_at_kommune_level": [False],
             "tracking_delay": [10],
-            "days_of_vacci_start": 0, # number of days after vaccinations calender start. 31 = 1-st of feb.  # TODO: Try to properly include dates in the simulations
             # "N_tot": [58_000],
             # "make_random_initial_infections": True,
             # "weighted_random_initial_infections": True,
@@ -81,7 +80,38 @@ if utils.is_local_computer():
         },
     ]
 else:
-    all_simulation_parameters = utils.get_simulation_parameters()
+
+    # Fraction of population to simulate
+    f = 0.1
+
+    #all_simulation_parameters = utils.get_simulation_parameters()
+    all_simulation_parameters = [
+        {
+            "N_tot": int(5_800_000 * f),
+            "rho": 0.1,
+            #"epsilon_rho": 1,
+            "weighted_random_initial_infections": True,
+            #
+            "burn_in": 0,
+            "start_date_offset" : (datetime(2020, 12, 28) - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date
+            "day_max": 40,
+            #
+            "beta": [0.0125],
+            "beta_UK_multiplier": [1.5],
+            "lambda_I": 4 / 2.52,
+            "lambda_E": 4 / 2.5,
+            "N_init": np.array([4400, 4500, 4600, 4700, 4800]).astype(int),
+            #
+            "do_interventions": True,
+            "threshold_interventions_to_apply": [[3]],
+            "restriction_thresholds": [[1,5]],
+            "continuous_interventions_to_apply":  [[1,2,3,4,5]],
+            "intervention_removal_delay_in_clicks": [20],
+            "make_restrictions_at_kommune_level": [False],
+            "tracking_delay": [10],
+            "N_init_UK_frac": [0.03],
+        },
+    ]
 
 
 # all_simulation_parameters = utils.get_simulation_parameters()
@@ -89,7 +119,7 @@ else:
 
 #%%
 
-N_runs = 3 if utils.is_local_computer() else N_runs
+N_runs = 1 if utils.is_local_computer() else N_runs
 
 N_files_total = 0
 
@@ -125,5 +155,3 @@ with Timer() as t:
 
 print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
 print("Finished simulating!")
-
-# %%

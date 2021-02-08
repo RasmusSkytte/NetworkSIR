@@ -468,8 +468,6 @@ def run_simulations(
     **kwargs,
 ):
 
-    d_simulation_parameters = utils.format_simulation_paramters(d_simulation_parameters)
-
     db_cfg = utils.get_db_cfg()
     q = Query()
 

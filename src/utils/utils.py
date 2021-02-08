@@ -1040,17 +1040,6 @@ def get_cfg_default():
 #     yaml_filename = "cfg/settings.yaml"
 #     return load_yaml(yaml_filename)
 
-
-def format_simulation_paramters(d_simulation_parameters) :
-
-    for name, lst in d_simulation_parameters.items():
-
-        # Convert numpy arrays to integers
-        if isinstance(lst, np.ndarray) :
-            d_simulation_parameters[name] = np.unique(np.round(lst)).astype(int).tolist()
-
-    return d_simulation_parameters
-
 def format_cfg(cfg, spec):
 
     if not isinstance(cfg, DotDict):

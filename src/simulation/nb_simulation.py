@@ -55,7 +55,6 @@ spec_cfg = {
     "outbreak_position_UK": nb.types.unicode_type,
     "burn_in": nb.int64,
     "start_date_offset" : nb.int64,
-    "days_of_vacci_start": nb.int64,
     # events
     "N_events": nb.uint16,
     "event_size_max": nb.uint16,
@@ -1583,7 +1582,7 @@ def run_simulation(
     s_counter = np.zeros(4)
     where_infections_happened_counter = np.zeros(4)
 
-    days_of_vacci_start = my.cfg.days_of_vacci_start
+    start_date_offset = my.cfg.start_date_offset
 
 
     # Run the simulation ################################
@@ -1757,11 +1756,11 @@ def run_simulation(
                     print("R_true_list_brit", intervention.R_true_list_brit[-1])
 
                 if intervention.apply_vaccinations:
-                    if days_of_vacci_start > 0:
-                        for day in range(days_of_vacci_start):
+                    if start_date_offset < 0:
+                        for day in range(-start_date_offset):
                             vaccinate(my, g, intervention, agents_in_state, state_total_counts, day)
-                        intervention.vaccination_schedule - days_of_vacci_start
-                        days_of_vacci_start = 0
+                        intervention.vaccination_schedule + start_date_offset
+                        start_date_offset = 0
 
                     vaccinate(my, g, intervention, agents_in_state, state_total_counts, day)
 

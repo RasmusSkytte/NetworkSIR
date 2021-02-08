@@ -84,6 +84,8 @@ else:
     # Fraction of population to simulate
     f = 0.1
 
+    noise = lambda d : np.linspace(-d, d, 5)
+
     #all_simulation_parameters = utils.get_simulation_parameters()
     all_simulation_parameters = [
         {
@@ -94,13 +96,13 @@ else:
             #
             "burn_in": 0,
             "start_date_offset" : (datetime(2020, 12, 28) - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date
-            "day_max": 40,
+            "day_max": 90,
             #
-            "beta": [0.0125],
-            "beta_UK_multiplier": [1.5],
+            "beta": 0.0125 + noise(0.005),
+            "beta_UK_multiplier": 1.5 + noise(0.2),
             "lambda_I": 4 / 2.52,
             "lambda_E": 4 / 2.5,
-            "N_init": np.array([4400, 4500, 4600, 4700, 4800]).astype(int),
+            "N_init": 4600 + noise(200),
             #
             "do_interventions": True,
             "threshold_interventions_to_apply": [[3]],
@@ -109,7 +111,7 @@ else:
             "intervention_removal_delay_in_clicks": [20],
             "make_restrictions_at_kommune_level": [False],
             "tracking_delay": [10],
-            "N_init_UK_frac": [0.03],
+            "N_init_UK_frac": 0.03 + noise(0.01),
         },
     ]
 

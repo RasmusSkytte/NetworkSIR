@@ -50,16 +50,16 @@ np.set_printoptions(linewidth=200)
 
 class Simulation:
 
-    def __init__(self, cfg, verbose=False):
+    def __init__(self, cfg, cfg_hash, verbose=False):
 
         self.verbose = verbose
 
         self.cfg = cfg
 
-        self.N_tot = self.cfg.N_tot
+        self.N_tot = cfg.N_tot
 
-        # unique code that identifies this simulation
-        self.hash = utils.cfg_to_hash(self.cfg)
+        self.hash = cfg_hash
+
         self.my = nb_simulation.initialize_My(self.cfg)
         utils.set_numba_random_seed(self.cfg.ID)
 
@@ -179,7 +179,8 @@ class Simulation:
         network_hash = utils.cfg_to_hash(self.cfg.network)
 
         filename = "Output/initialized_network/"
-        filename += f"{network_hash}__ID__{self.cfg.ID}.hdf5"
+        #filename += f"{network_hash}__ID__{self.cfg.ID}.hdf5"
+        filename += f"{network_hash}.hdf5"
 
         if force_load_initial_network:
             initialize_network = False
@@ -418,16 +419,28 @@ def run_single_simulation(
             warnings.simplefilter("ignore", NumbaTypeSafetyWarning)
             # warnings.simplefilter("ignore", NumbaPendingDeprecationWarning)
 
-        simulation = Simulation(cfg, verbose)
+        # TODO: Find a way to do this better
+        cfg_hash = cfg.hash
+        cfg.pop("hash")
+
+        simulation = Simulation(cfg, cfg_hash, verbose)
+
         simulation.initialize_network(
             force_rerun=force_rerun, save_initial_network=save_initial_network
         )
+
         if only_initialize_network:
             return None
 
         simulation.make_initial_infections()
+
         simulation.run_simulation()
+
         simulation.save(time_elapsed=t.elapsed, save_hdf5=True, save_csv=save_csv)
+
+        # TODO: Find a way to do this better
+        cfg["hash"] = cfg_hash
+
     return cfg
 
 
@@ -438,11 +451,10 @@ from p_tqdm import p_umap, p_uimap
 
 
 def update_database(db_cfg, q, cfg):
-    flat_cfg = utils.flatten_cfg(cfg)
-    cfg["hash"] = utils.cfg_to_hash(flat_cfg)
+    print(cfg)
     cfg.pop("ID")
     if not db_cfg.contains(q.hash == cfg.hash):
-        db_cfg.insert(flat_cfg)
+        db_cfg.insert(cfg)
 
 
 def run_simulations(
@@ -467,7 +479,7 @@ def run_simulations(
         N_files = 0
         return N_files
 
-    db_counts = np.array([db_cfg.count(q.hash == utils.cfg_to_hash(cfg)) for cfg in cfgs_all])
+    db_counts = np.array([db_cfg.count(q.hash == cfg.hash) for cfg in cfgs_all])
     assert np.max(db_counts) <= 1
 
     # keep only cfgs that are not in the database already
@@ -501,8 +513,8 @@ def run_simulations(
     # kwargs = {}
     if num_cores == 1:
         for cfg in tqdm(cfgs):
-            run_single_simulation(cfg, **kwargs)
-            update_database(db_cfg, q, cfg)
+            cfg_out = run_single_simulation(cfg, **kwargs)
+            update_database(db_cfg, q, cfg_out)
 
     else:
         # First generate the networks

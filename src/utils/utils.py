@@ -76,8 +76,13 @@ def make_sure_folder_exist(filename, delete_file_if_exists=False):
 
 def load_yaml(filename):
     with open(filename) as file:
-        return DotDict(yaml.safe_load(file))
+        tmp = yaml.safe_load(file)
 
+        for key, val in tmp.items() :
+            if isinstance(val, dict) :
+                tmp[key] = DotDict(val)
+
+        return DotDict(tmp)
 
 def format_time(t):
     return str(datetime.timedelta(seconds=t))
@@ -651,8 +656,13 @@ class DotDict(AttrDict):
                     out.pop(key)
 
             for key, val in out.items():
-                if isinstance(val, set):
+
+                if isinstance(val, type(self)) :
+                    out[key] = dict(val)
+
+                elif isinstance(val, set):
                     out[key] = list(val)
+
                 elif isinstance(val, np.ndarray):
                     out[key] = val.tolist()
 
@@ -1152,6 +1162,9 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                 cfg.network      = format_cfg(cfg.network, spec_network)
                 #cfg.intervention = format_cfg(cfg.intervention, spec_intervention)
 
+                # unique code that identifies this simulation
+                cfg.hash = cfg_to_hash(cfg)
+
                 cfgs.append(cfg)
             else:
                 if verbose and has_not_printed:
@@ -1168,6 +1181,7 @@ def cfg_to_hash(cfg, N=10, exclude_ID=True, exclude_hash=True):
     """
 
     d = cfg.copy()
+    d = flatten_cfg(d)
 
     if exclude_ID and "ID" in d:
         d.pop("ID")
@@ -2041,24 +2055,29 @@ def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True):
 
 import h5py
 
-
 def add_cfg_to_hdf5_file(f, cfg, path='/'):
     for key, val in cfg.items():
 
-        if isinstance(val, dict) :
+        if isinstance(val, (int, float, str, np.ndarray, list)):
+            f[path + key] = val
+
+        elif isinstance(val, dict) :
             add_cfg_to_hdf5_file(f, val, path = path + key + '/')
 
-        else :
-            f.attrs[path + key] = val
+        else:
+            raise ValueError("Cannot save %s of %s type" % (key, type(val)))
 
 
 def read_cfg_from_hdf5_file(filename):
     with h5py.File(filename, "r") as f:
         cfg = read_cfg_from_hdf5_file_recursively(f)
 
-    return format_cfg(cfg)
+    cfg              = format_cfg(cfg,         nb_simulation.spec_cfg)
+    cfg.network      = format_cfg(cfg.network, nb_simulation.spec_network)
 
-def read_cfg_from_hdf5_file_recursively(f):
+    return cfg
+
+def read_cfg_from_hdf5_file_recursively(f, path='/'):
     tmp = {}
     for key, item in f[path].items():
 

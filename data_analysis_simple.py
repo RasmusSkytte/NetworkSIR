@@ -33,7 +33,7 @@ def analyse_single_ABM_simulation(cfg, abm_files, fi_list, pc_list, name_list):
         label = r"ABM" if i == 0 else None
 
 
-        axes[1].plot(t, np.array(df["I"])/N_tot*5_800_000,lw=4, c="k", label=label)
+        axes[1].plot(t, np.array(df["I"]) / N_tot * 5_800_000, lw=4, c="k", label=label)
 
 
 

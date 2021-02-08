@@ -110,7 +110,8 @@ class Simulation:
                 age_distribution_per_person_in_house_per_kommune,
                 coordinates_raw,
                 kommune_ids,
-                self.N_ages
+                self.N_ages,
+                verbose=self.verbose
             )
 
             if self.verbose:
@@ -252,7 +253,7 @@ class Simulation:
                 infected_per_kommune_ints,
                 kommune_names,
                 my_kommune,
-                self.verbose,
+                verbose=self.verbose,
             )
 
         else:
@@ -266,6 +267,7 @@ class Simulation:
                 self.initial_ages_exposed,
                 # self.N_infectious_states,
                 self.N_states,
+                verbose=self.verbose
             )
 
     def run_simulation(self, verbose_interventions=None):
@@ -499,11 +501,12 @@ def run_simulations(
     # kwargs = {}
     if num_cores == 1:
         for cfg in tqdm(cfgs):
-            run_single_simulation(cfg, verbose=verbose, **kwargs)
+            run_single_simulation(cfg, **kwargs)
             update_database(db_cfg, q, cfg)
+
     else:
         # First generate the networks
-        f_single_network = partial(run_single_simulation, verbose=False, only_initialize_network=True, **kwargs)
+        f_single_network = partial(run_single_simulation, only_initialize_network=True, **kwargs)
 
         # Get the network hashes
         network_hashes = set([utils.cfg_to_hash(cfg.network) for cfg in cfgs])
@@ -519,7 +522,7 @@ def run_simulations(
         p_uimap(f_single_network, cfgs_network, num_cpus=num_cores)
 
         # Then run the simulations on the netwrok
-        f_single_simulation = partial(run_single_simulation, verbose=False, **kwargs)
+        f_single_simulation = partial(run_single_simulation, **kwargs)
         for cfg in p_uimap(f_single_simulation, cfgs, num_cpus=num_cores):
             update_database(db_cfg, q, cfg)
 

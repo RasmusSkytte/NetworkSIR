@@ -9,6 +9,7 @@ from numba import njit, prange, objmode, typeof #TODO delete prange, objmode
 from numba.typed import List, Dict
 # import platform #TODO delete line
 import datetime
+import os
 
 import awkward1 as ak
 import dict_hash
@@ -22,6 +23,8 @@ def sha256(d):
     for key, val in d.items():
         if isinstance(val, set):
             d[key] = list(val)
+        if isinstance(val, dict):
+            d[key] = sha256(val)
     return dict_hash.sha256(d)
 
 
@@ -1016,8 +1019,10 @@ from src.simulation import nb_simulation
 
 def get_cfg_default():
     """ Default Simulation Parameters """
-    yaml_filename = "cfg/simulation_parameters_default.yaml"
-    return load_yaml(yaml_filename)
+    cfg              = load_yaml("cfg/simulation_parameters_default.yaml")
+    cfg.network      = load_yaml("cfg/simulation_parameters_network.yaml")
+    #cfg.intervention = load_yaml("cfg/simulation_parameters_intervention.yaml")
+    return cfg
 
 
 # def get_cfg_settings():
@@ -1036,28 +1041,30 @@ def format_simulation_paramters(d_simulation_parameters) :
 
     return d_simulation_parameters
 
-def format_cfg(cfg):
-    spec_cfg = nb_simulation.spec_cfg
+def format_cfg(cfg, spec):
 
     if not isinstance(cfg, DotDict):
         cfg = DotDict(cfg)
 
     for key, val in cfg.items():
 
-        if isinstance(spec_cfg[key], nb.types.Float):
+        if key == "network" or key == "intervention" :
+            continue
+
+        if isinstance(spec[key], nb.types.Float):
             cfg[key] = float(val)
-        elif isinstance(spec_cfg[key], nb.types.Integer):
+        elif isinstance(spec[key], nb.types.Integer):
             cfg[key] = int(val)
-        elif isinstance(spec_cfg[key], nb.types.Boolean):
+        elif isinstance(spec[key], nb.types.Boolean):
             cfg[key] = bool(val)
-        elif isinstance(spec_cfg[key], nb.types.ListType):
+        elif isinstance(spec[key], nb.types.ListType):
             if isinstance(val, np.ndarray):
                 cfg[key] = val.tolist()
             else:
                 cfg[key] = list(val)
-        elif isinstance(spec_cfg[key], nb.types.Set):
+        elif isinstance(spec[key], nb.types.Set):
             cfg[key] = set(val)
-        elif isinstance(spec_cfg[key], nb.types.Array):
+        elif isinstance(spec[key], nb.types.Array):
             # cfg[key] = np.array(val, dtype=spec_cfg[key].dtype.name)
             if isinstance(val, np.ndarray):
                 cfg[key] = val.tolist()
@@ -1102,7 +1109,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
     else:
         cfg_default = get_cfg_default()
-
+        
         d_list = []
         for name, lst in d_simulation_parameters.items():
             
@@ -1116,19 +1123,41 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
         has_not_printed = True
 
+        # Load numba specifications
+        spec_cfg            = nb_simulation.spec_cfg
+        spec_network        = nb_simulation.spec_network
+        #spec_intervention   = nb_simulation.spec_intervention
+
+        # Update cfg values
         cfgs = []
         for combination in all_combinations:
             cfg = cfg_default.copy()
+    
             for d in combination:
-                cfg.update(d)
+                key = list(d.keys())[0]
+
+                if key in spec_cfg.keys() :
+                    cfg.update(d)
+
+                elif key in spec_network.keys() :
+                    cfg["network"].update(d)
+
+                #elif key in spec_intervention.keys() :
+                #    cfg["intervention"].update(d)
+
+
             if not N_tot_max or cfg["N_tot"] < N_tot_max:
+                
+                cfg              = format_cfg(cfg, spec_cfg)
+                cfg.network      = format_cfg(cfg.network, spec_network)
+                #cfg.intervention = format_cfg(cfg.intervention, spec_intervention)
+                
                 cfgs.append(cfg)
             else:
                 if verbose and has_not_printed:
                     print("Skipping some files due to N_tot > N_tot_max")
                     has_not_printed = False
 
-    cfgs = [format_cfg(cfg) for cfg in cfgs]
     return cfgs
 
 
@@ -1138,7 +1167,7 @@ def cfg_to_hash(cfg, N=10, exclude_ID=True, exclude_hash=True):
     N = len of hash (truncate hash)
     """
 
-    d = format_cfg(cfg.copy())
+    d = cfg.copy()
 
     if exclude_ID and "ID" in d:
         d.pop("ID")
@@ -1149,6 +1178,22 @@ def cfg_to_hash(cfg, N=10, exclude_ID=True, exclude_hash=True):
     s_hash = sha256(d)
 
     return s_hash[:N]
+
+
+def flatten_cfg(cfg) :
+    flat_cfg = {}
+    for key, val in cfg.items() :
+
+        if isinstance(val, dict) :
+            tmp = flatten_cfg(val)
+
+            for tmp_key, tmp_val in tmp.items() :
+                flat_cfg[tmp_key] = tmp_val
+
+        else :
+            flat_cfg[key] = val
+
+    return flat_cfg
 
 
 d_num_cores_N_tot = RangeKeyDict(
@@ -1833,20 +1878,21 @@ def load_contact_matrices(scenario = 'reference') :
             scenario (string): Name for the scenario to load
     """
     # Load the contact matrices
-    matrix_work,  age_groups_work,  _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
-    matrix_school,  age_groups_school,  _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_school.csv')
-    matrix_other, age_groups_other, _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
+    matrix_work,    age_groups_work,   _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
+    matrix_school,  age_groups_school, _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_school.csv')
+    matrix_other,   age_groups_other,  _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
     # TODO: Load the school contact matrix
 
     # Assert the age_groups are the same
     if not age_groups_work == age_groups_other :
         raise ValueError('Age groups for work contact matrix and other contact matrix not equal')
     matrix_work = matrix_work + matrix_school
+
     # Determine the work-to-other ratio
     work_other_ratio = matrix_work.sum() / (matrix_other.sum() + matrix_work.sum())
 
     # Normalize the contact matrices after this ratio has been determined
-    return (matrix_work , matrix_other , work_other_ratio, age_groups_work)
+    return (matrix_work.tolist(), matrix_other.tolist(), work_other_ratio, age_groups_work)
 
 
 def load_vaccination_schedule(scenario = 'reference') :
@@ -1937,8 +1983,12 @@ def dict_to_query(d):
 from tinydb import TinyDB, Query
 
 
-def get_db_cfg():
-    db = TinyDB("db.json", sort_keys=False, indent=4, separators=(",", ": "))
+def get_db_cfg(path="Output/db.json"):
+        
+    if not (os.path.dirname(path) == '') and not os.path.exists(os.path.dirname(path)) :
+        os.makedirs(os.path.dirname(path))
+
+    db = TinyDB(path, sort_keys=False, indent=4, separators=(",", ": "))
     db_cfg = db.table("cfg", cache_size=0)
     return db_cfg
 
@@ -1992,20 +2042,33 @@ def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True):
 import h5py
 
 
-def add_cfg_to_hdf5_file(f, cfg):
+def add_cfg_to_hdf5_file(f, cfg, path='/'):
     for key, val in cfg.items():
-        # if isinstance(val, set):
-        # val = list(val)
-        f.attrs[key] = val
+        
+        if isinstance(val, dict) :
+            add_cfg_to_hdf5_file(f, val, path = path + key + '/')
+
+        else :
+            f.attrs[path + key] = val
 
 
 def read_cfg_from_hdf5_file(filename):
-    cfg = {}
     with h5py.File(filename, "r") as f:
-        for key, val in f.attrs.items():
-            cfg[key] = val
+        cfg = read_cfg_from_hdf5_file_recursively(f)
+
     return format_cfg(cfg)
 
+def read_cfg_from_hdf5_file_recursively(f):
+    tmp = {}
+    for key, item in f[path].items():
+
+        if isinstance(item, h5py._h1.dataset.Dataset) :
+            tmp[key] = item.value
+
+        if isinstance(item, h5py._h1.group.Group) :
+            tmp[key] = read_cfg_from_hdf5_file_recursively(f, path=path + key + '/')
+
+    return tmp
 
 #%%
 

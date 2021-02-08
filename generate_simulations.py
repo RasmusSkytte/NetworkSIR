@@ -28,20 +28,33 @@ verbose = True
 if utils.is_local_computer():
 
     # Fraction of population to simulate
-    f = 0.01
+    f = 0.1
 
     all_simulation_parameters = [
         {
             "N_tot": int(5_800_000 * f),
-            "weighted_random_initial_infections": True,
-            "lambda_I": 4 / 2.52,
-            "lambda_E": 4 / 2.5,
-            "rho": 0.0,
+            "rho": 0.1,
             #"epsilon_rho": 1,
-            "intervention_removal_delay_in_clicks": [20],
-            "make_restrictions_at_kommune_level": [False],
+            "weighted_random_initial_infections": True,
+            #
             "burn_in": 0,
             "start_date_offset" : (datetime(2020, 12, 28) - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date 
+            "day_max": 40,
+            #
+            "beta": [0.0125],
+            "beta_UK_multiplier": [1.5],
+            "lambda_I": 4 / 2.52,
+            "lambda_E": 4 / 2.5,
+            "N_init": np.array([4500, 4600, 4700]),
+            #
+            "do_interventions": True,
+            "threshold_interventions_to_apply": [[3]],
+            "restriction_thresholds": [[1,5]],
+            "continuous_interventions_to_apply":  [[1,2,3,4,5]],
+            "intervention_removal_delay_in_clicks": [20],
+            "make_restrictions_at_kommune_level": [False],
+            "tracking_delay": [10],
+            "days_of_vacci_start": 0, # number of days after vaccinations calender start. 31 = 1-st of feb.  # TODO: Try to properly include dates in the simulations
             # "N_tot": [58_000],
             # "make_random_initial_infections": True,
             # "weighted_random_initial_infections": True,
@@ -49,30 +62,20 @@ if utils.is_local_computer():
             # "results_delay_in_clicks": [[20, 20, 20]],
             # "tracking_delay": [0, 5, 10, 15, 20, 25, 30],
             # "weighted_random_initial_infections": True,
-            "do_interventions": True,
-            "threshold_interventions_to_apply": [[3]],
-            "restriction_thresholds": [[1,5]],
-            "continuous_interventions_to_apply":  [[1,2,3,4,5]],
             # "results_delay_in_clicks": [20, 20, 20],
             # "tracking_delay": 15
             # "N_contacts_max": 100,
             # "work_other_ratio": 0.5,
-            "N_init": np.array([4500, 4600, 4700]) * f,
             # "N_init": [1000],
             "N_init_UK_frac": [0.03],
             #"work_other_ratio": 0.95,  # "algo 1"
             # "rho": 0.1,
             # "beta": [0.004],
-            "beta": [0.0125],
             # "beta": [0.016, 0.018],
-            "beta_UK_multiplier": [1.5],
             # "N_daily_vaccinations": [0],
             # "N_events": 1000,
             # "mu": 20,
             # "tracking_rates": [1.0, 0.5,0.1]
-            "tracking_delay": [10],
-            "day_max": 100,
-            "days_of_vacci_start": 0, # number of days after vaccinations calender start. 31 = 1-st of feb.  # TODO: Try to properly include dates in the simulations
             #"verbose":True,
             # "event_size_max": 50,
         },
@@ -86,7 +89,7 @@ else:
 
 #%%
 
-N_runs = 1 if utils.is_local_computer() else N_runs
+N_runs = 3 if utils.is_local_computer() else N_runs
 
 N_files_total = 0
 

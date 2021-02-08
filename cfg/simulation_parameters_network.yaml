@@ -1,0 +1,12 @@
+# Default network parameters:
+rho: 0.1  # Spacial dependency. Average distance to connect with.
+epsilon_rho: 0.04  # fraction of connections not depending on distance
+mu: 20.0  # Average number of connections of a node (init: 20)
+sigma_mu: 0.0  # Spread (skewness) in N connections
+
+N_contacts_max: 0 # maximum number of contacts
+
+contact_matrices_name : reference
+work_matrix: [[1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1]]
+other_matrix: [[1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1]]
+work_other_ratio: 0.2 # 0.2 = 20% work, 80% other

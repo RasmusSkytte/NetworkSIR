@@ -1,17 +1,20 @@
 #  Define default simulation parameters
 
-
 # Default parameters:
 version: 2.1 # the version of the algorithm
 N_tot: 580_000  # Total number of nodes!
-rho: 0.1  # Spacial dependency. Average distance to connect with.
-epsilon_rho: 0.04  # fraction of connections not depending on distance
-mu: 20.0  # Average number of connections of a node (init: 20)
-sigma_mu: 0.0  # Spread (skewness) in N connections
+
+N_init: 2000  # Initial Infected
 beta: 0.012  # Daily infection rate (SIR, init: 0-1, but beta = (2mu/N_tot)* betaSIR)
 sigma_beta: 0.0  # Spread in rates, beta
-# algo: 2  # node connection algorithm, ignore if version >= 2
-N_init: 2000  # Initial Infected
+
+# english type corona
+N_init_UK_frac: 0
+beta_UK_multiplier: 1.7
+outbreak_position_UK: random
+
+
+
 lambda_E: 1.0  # E->I, Lambda(from E states)
 lambda_I: 1.0  # I->R, Lambda(from I states)
 
@@ -21,14 +24,8 @@ weighted_random_initial_infections: True # Infections weighted by the number of 
 make_initial_infections_at_kommune: False # Initiate infections at kommune basis
 make_restrictions_at_kommune_level: True # True makes interventions at labels=kommune, false
 day_max: 0 # 5 weeks. Sets the maximum number of days the algorithm runs
-clustering_connection_retries: 0 # number of times to try and reconnect two agents
-work_other_ratio: 0.5 # 0.2 = 20% work, 80% other
-N_contacts_max: 0 # maximum number of contacts
 
-# english type corona
-N_init_UK_frac: 0
-beta_UK_multiplier: 1.7
-outbreak_position_UK: random
+
 
 # vaccinations related variables. 
 burn_in: 0
@@ -42,12 +39,11 @@ event_beta_scaling: 5 # how much more disease spreads at events (1 = normal, 2 =
 event_weekend_multiplier: 2.0 # ratio of how many more events are happening in weekends. 1 = similar, 2 = double
 
 
-# Lockdown-related variables
 
-do_interventions: True # bool, whether or not to apply any interventions, lockdowns or similar
+#  Define default intervention parameters
 
 # [[kind of interventions], [start, stop intervention 0],[start, stop intervention 1] etc ]
-restriction_thresholds: [1,39]
+restriction_thresholds: [1, 39]
 
 # 1: Lockdown (jobs and schools)
 # 2: Cover (with face masks)
@@ -65,7 +61,7 @@ threshold_interventions_to_apply: [3]
   # 2: Masking (reduce some contacts),
   # 3: Matrix based (used loaded contact matrices. )
 
-continuous_interventions_to_apply: [1,2,3,4,5]
+continuous_interventions_to_apply: [1, 2, 3, 4, 5]
     # 0: Do nothing
     # 1: Tracking (infected and their connections)
     # 2: Test people with symptoms

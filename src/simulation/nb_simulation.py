@@ -36,10 +36,6 @@ spec_cfg = {
     # Default parameters
     "version": nb.float32,
     "N_tot": nb.uint32,
-    "rho": nb.float32,
-    "epsilon_rho": nb.float32,
-    "mu": nb.float32,
-    "sigma_mu": nb.float32,
     "beta": nb.float32,
     "sigma_beta": nb.float32,
     "beta_connection_type": nb.float32[:],
@@ -55,8 +51,6 @@ spec_cfg = {
     "make_initial_infections_at_kommune": nb.boolean,
     "make_restrictions_at_kommune_level": nb.boolean,
     "clustering_connection_retries": nb.uint32,
-    "work_other_ratio": nb.float32,  # 0.2 = 20% work, 80% other
-    "N_contacts_max": nb.uint16,
     "beta_UK_multiplier": nb.float32,
     "outbreak_position_UK": nb.types.unicode_type,
     "burn_in": nb.int64,
@@ -90,7 +84,6 @@ spec_cfg = {
     "ID": nb.uint16,
 }
 
-
 @jitclass(spec_cfg)
 class Config(object):
     def __init__(self):
@@ -98,10 +91,6 @@ class Config(object):
         # Default parameters
         self.version = 2.0
         self.N_tot = 580_000
-        self.rho = 0.0
-        self.epsilon_rho = 0.04
-        self.mu = 40.0
-        self.sigma_mu = 0.0
         self.beta = 0.01
         self.sigma_beta = 0.0
         self.algo = 2
@@ -117,8 +106,6 @@ class Config(object):
         self.make_restrictions_at_kommune_level = True
         self.day_max = 0
         self.clustering_connection_retries = 0
-        self.work_other_ratio = 0.5
-        self.N_contacts_max = 0
         self.beta_UK_multiplier = 1.0
         self.burn_in = 20 # burn in period, -int how many days the sim shall run before
 
@@ -130,44 +117,55 @@ class Config(object):
         self.event_weekend_multiplier = 1.0
         # Interventions / Lockdown
         self.do_interventions = True
-        # self.interventions_to_apply = {1, 4, 6}
-        self.threshold_type = 0
-        self.restriction_thresholds = np.array([150,50,10,10])
-        self.threshold_interventions_to_apply = List([1,2,3])
-        self.continuous_interventions_to_apply = List([1,2,3,4,5])
-        self.f_daily_tests = 0.05
-        self.test_delay_in_clicks = np.array([0, 0, 25])
-        self.results_delay_in_clicks = np.array([5, 10, 5])
-        self.chance_of_finding_infected = np.array([0.0, 0.15, 0.15, 0.15, 0.0])
-        self.days_looking_back = 7
-        self.list_of_threshold_interventions_effects = np.array([[[0.0, 0.0, 0.0], [0.0, 0.0, 0.8]],[[0.0, 0.6, 0.6], [0.0, 0.6, 0.6]]])
-        #self.masking_rate_reduction = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.8]])
-        #self.lockdown_rate_reduction = np.array([[0.0, 0.6, 0.6], [0.0, 0.6, 0.6]])
-        self.isolation_rate_reduction = np.array([0.2, 1.0, 1.0])
-        self.tracking_rates = np.array([1.0, 0.8, 0.2])
-        self.tracking_delay = 10
-        self.intervention_removal_delay_in_clicks = 30
 
         self.ID = 0
 
 
+nb_cfg_type = Config.class_type.instance_type
 
+spec_network = {
+    # Default parameters
+    "rho": nb.float32,
+    "epsilon_rho": nb.float32,
+    "mu": nb.float32,
+    "sigma_mu": nb.float32,
+    "contact_matrices_name": nb.types.unicode_type,
+    "work_matrix": nb.float64[:, :],
+    "other_matrix": nb.float64[:, :],
+    "work_other_ratio": nb.float32,  # 0.2 = 20% work, 80% other
+    "N_contacts_max": nb.uint16,
+}
 
-def initialize_nb_cfg(cfg):
-    config = Config()
+@jitclass(spec_network)
+class Network(object):
+    def __init__(self):
+
+        # Default parameters
+        self.rho = 0.0
+        self.epsilon_rho = 0.04
+        self.mu = 40.0
+        self.sigma_mu = 0.0
+        self.work_matrix  = np.ones((8, 8), dtype=np.float64)
+        self.other_matrix = np.ones((8, 8), dtype=np.float64)
+        self.work_other_ratio = 0.5
+        self.N_contacts_max = 0
+        
+nb_cfg_network_type = Network.class_type.instance_type
+
+def initialize_nb_cfg(obj, cfg, spec):
     for key, val in cfg.items():
         if isinstance(val, list):
-            if isinstance(spec_cfg[key], nb.types.ListType):
+            if isinstance(spec[key], nb.types.ListType):
                 val = List(val)
-            elif isinstance(spec_cfg[key], nb.types.Array):
-                val = np.array(val, dtype=spec_cfg[key].dtype.name)
+            elif isinstance(spec[key], nb.types.Array):
+                val = np.array(val, dtype=spec[key].dtype.name)
             else:
                 raise AssertionError(f"Got {key}: {val}, not working")
-        setattr(config, key, val)
-    return config
+        elif isinstance(val, dict) :
+            continue
+        setattr(obj, key, val)
+    return obj
 
-
-nb_cfg_type = Config.class_type.instance_type
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -193,13 +191,14 @@ spec_my = {
     "vaccination_type": nb.uint8[:],
     "restricted_status": nb.uint8[:],
     "cfg": nb_cfg_type,
+    "cfg_network": nb_cfg_network_type,
 }
 
 
 # "Nested/Mutable" Arrays are faster than list of arrays which are faster than lists of lists
 @jitclass(spec_my)
 class My(object):
-    def __init__(self, nb_cfg):
+    def __init__(self, nb_cfg, nb_cfg_network):
         N_tot = nb_cfg.N_tot
         self.age = np.zeros(N_tot, dtype=np.uint8)
         self.coordinates = np.zeros((N_tot, 2), dtype=np.float32)
@@ -219,6 +218,7 @@ class My(object):
         self.vaccination_type = np.zeros(N_tot, dtype=np.uint8)
         self.restricted_status = np.zeros(N_tot, dtype=np.uint8)
         self.cfg = nb_cfg
+        self.cfg_network = nb_cfg_network
 
     def dist(self, agent1, agent2):
         point1 = self.coordinates[agent1]
@@ -251,8 +251,9 @@ class My(object):
 
 
 def initialize_My(cfg):
-    nb_cfg = initialize_nb_cfg(cfg)
-    return My(nb_cfg)
+    nb_cfg         = initialize_nb_cfg(Config(),  cfg,         spec_cfg)
+    nb_cfg_network = initialize_nb_cfg(Network(), cfg.network, spec_network)
+    return My(nb_cfg, nb_cfg_network)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -334,12 +335,11 @@ spec_intervention = {
     "started_as": nb.uint8[:],
     "vaccinations_per_age_group": nb.int64[:, :],
     "vaccination_schedule": nb.int64[:],
-    "work_matrix_init": nb.float64[:, :],
     "work_matrix_restrict": nb.float64[:, :],
-    "other_matrix_init": nb.float64[:, :],
     "other_matrix_restrict": nb.float64[:, :],
 
     "verbose": nb.boolean,
+
 }
 
 
@@ -392,9 +392,7 @@ class Intervention(object):
         labels,
         vaccinations_per_age_group,
         vaccination_schedule,
-        work_matrix_init,
         work_matrix_restrict,
-        other_matrix_init,
         other_matrix_restrict,
         verbose=False,
     ):
@@ -418,9 +416,7 @@ class Intervention(object):
         self.started_as = np.zeros(self.N_labels, dtype=np.uint8)
         self.vaccinations_per_age_group = vaccinations_per_age_group
         self.vaccination_schedule = vaccination_schedule
-        self.work_matrix_init = work_matrix_init
         self.work_matrix_restrict = work_matrix_restrict
-        self.other_matrix_init = other_matrix_init
         self.other_matrix_restrict = other_matrix_restrict
 
         self.verbose = verbose
@@ -578,7 +574,7 @@ def set_connection_weight(my, agent):
             my (class): Class of parameters describing the system
             agent (int): ID of agent
     """
-    if np.random.rand() < my.cfg.sigma_mu:
+    if np.random.rand() < my.cfg_network.sigma_mu:
         my.connection_weight[agent] = -np.log(np.random.rand())
     else:
         my.connection_weight[agent] = 1.0
@@ -676,7 +672,7 @@ def update_node_connections(
         return False
 
     #checks if one contact have exceeded the contact limit. Default is no contact limit. This check is incorporated to see effect of extreme tails in N_contact distribution
-    N_contacts_max = my.cfg.N_contacts_max
+    N_contacts_max = my.cfg_network.N_contacts_max
     maximum_contacts_exceeded = (N_contacts_max > 0) and (
         (len(my.connections[agent1]) >= N_contacts_max)
         or (len(my.connections[agent2]) >= N_contacts_max)
@@ -977,12 +973,12 @@ def connect_work_and_others(
 
     matrix_work  = matrix_work / matrix_work.sum()
     matrix_other  = matrix_other / matrix_other.sum()
-    mu_tot = my.cfg.mu / 2 * my.cfg.N_tot # total number of connections in the network, when done
+    mu_tot = my.cfg_network.mu / 2 * my.cfg.N_tot # total number of connections in the network, when done
     while mu_counter < mu_tot: # continue until all connections are made
 
         # determining if next connections is work or other.
         ra_work_other = np.random.rand()
-        if ra_work_other < my.cfg.work_other_ratio:
+        if ra_work_other < my.cfg_network.work_other_ratio:
             matrix = matrix_work
             run_algo = run_algo_work
         else:
@@ -993,8 +989,8 @@ def connect_work_and_others(
         age1, age2 = find_two_age_groups(N_ages, matrix)
 
         #some number small number of connections is independent on distance. eg. you now some people on the other side of the country. Data is based on pendling data.
-        if np.random.rand() > my.cfg.epsilon_rho:
-            rho_tmp = my.cfg.rho
+        if np.random.rand() > my.cfg_network.epsilon_rho:
+            rho_tmp = my.cfg_network.rho
         else:
             rho_tmp = 0.0
 
@@ -1455,7 +1451,7 @@ def do_bug_check(
     x,
 ):
 
-    if my.cfg.day_max > 0 and day > my.cfg.day_max:
+    if my.cfg.day_max > 0 and day >= my.cfg.day_max:
         if verbose:
             print("day exceeded day_max")
         continue_run = False
@@ -1855,10 +1851,6 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day):
 
         # Get the number of new effective vaccines
         N = intervention.vaccinations_per_age_group[day - intervention.vaccination_schedule[0]]
-
-        # Check if any vaccines are planned for this day
-        if np.sum(N) == 0 :
-            return
 
         # Compute probability for each agent being infected
         probabilities = np.array([N[my.age[agent]] for agent in possible_agents_to_vaccinate])
@@ -2348,10 +2340,10 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent):
         if not my.connections_type[agent][ith_contact] == 0:
             if my.connections_type[agent][ith_contact] == 1:
                 mr = intervention.work_matrix_restrict
-                mi = intervention.work_matrix_init
+                mi = my.cfg_network.work_matrix
             elif my.connections_type[agent][ith_contact] == 2:
                 mr = intervention.other_matrix_restrict
-                mi = intervention.other_matrix_init
+                mi = my.cfg_network.other_matrix
 
             mr_single = mr[my.age[agent], my.age[contact]]
             mi_single = mi[my.age[agent], my.age[contact]]

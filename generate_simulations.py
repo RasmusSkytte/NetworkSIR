@@ -13,19 +13,17 @@ from contexttimer import Timer
 
 N_tot_max = False
 
-
 num_cores_max = 9
 N_runs = 9
 
-
 dry_run = False
 force_rerun = False
-verbose = True
-
-#%%
 
 
 if utils.is_local_computer():
+
+    num_cores_max = 1
+    verbose = False
 
     # Fraction of population to simulate
     f = 0.01
@@ -80,6 +78,8 @@ if utils.is_local_computer():
         },
     ]
 else:
+
+    verbose = False
 
     # Fraction of population to simulate
     f = 0.1
@@ -138,7 +138,6 @@ with Timer() as t:
 
         for d_simulation_parameters in all_simulation_parameters:
             # break
-            verbose = True
             N_files = simulation.run_simulations(
                 d_simulation_parameters,
                 N_runs=N_runs,

@@ -1032,9 +1032,9 @@ def get_cfg_default():
 
 
 def format_simulation_paramters(d_simulation_parameters) :
-    
+
     for name, lst in d_simulation_parameters.items():
-        
+
         # Convert numpy arrays to integers
         if isinstance(lst, np.ndarray) :
             d_simulation_parameters[name] = np.unique(np.round(lst)).astype(int).tolist()
@@ -1109,10 +1109,10 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
     else:
         cfg_default = get_cfg_default()
-        
+
         d_list = []
         for name, lst in d_simulation_parameters.items():
-            
+
             # Convert all inputs to lists
             if isinstance(lst, (int, float)):
                 lst = [lst]
@@ -1132,7 +1132,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
         cfgs = []
         for combination in all_combinations:
             cfg = cfg_default.copy()
-    
+
             for d in combination:
                 key = list(d.keys())[0]
 
@@ -1147,11 +1147,11 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
 
             if not N_tot_max or cfg["N_tot"] < N_tot_max:
-                
+
                 cfg              = format_cfg(cfg, spec_cfg)
                 cfg.network      = format_cfg(cfg.network, spec_network)
                 #cfg.intervention = format_cfg(cfg.intervention, spec_intervention)
-                
+
                 cfgs.append(cfg)
             else:
                 if verbose and has_not_printed:
@@ -1984,7 +1984,7 @@ from tinydb import TinyDB, Query
 
 
 def get_db_cfg(path="Output/db.json"):
-        
+
     if not (os.path.dirname(path) == '') and not os.path.exists(os.path.dirname(path)) :
         os.makedirs(os.path.dirname(path))
 
@@ -2044,7 +2044,7 @@ import h5py
 
 def add_cfg_to_hdf5_file(f, cfg, path='/'):
     for key, val in cfg.items():
-        
+
         if isinstance(val, dict) :
             add_cfg_to_hdf5_file(f, val, path = path + key + '/')
 

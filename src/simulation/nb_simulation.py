@@ -149,7 +149,7 @@ class Network(object):
         self.other_matrix = np.ones((8, 8), dtype=np.float64)
         self.work_other_ratio = 0.5
         self.N_contacts_max = 0
-        
+
 nb_cfg_network_type = Network.class_type.instance_type
 
 def initialize_nb_cfg(obj, cfg, spec):

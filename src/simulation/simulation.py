@@ -140,7 +140,7 @@ class Simulation:
             nb_simulation.v1_connect_nodes(self.my)
 
             agents_in_age_group = List()
-            agents_in_age_group.append(np.arange(self.cfg.N_tot, dtype=np.uint32))
+            agents_in_age_group.append(np.arange(self.cfg.network.N_tot, dtype=np.uint32))
 
         self.agents_in_age_group = agents_in_age_group
 
@@ -291,7 +291,7 @@ class Simulation:
         vaccinations_per_age_group, _, vaccination_schedule = utils.load_vaccination_schedule()
 
          # Scale the number of vaccines
-        np.multiply(vaccinations_per_age_group, self.cfg.N_tot / 5_800_000, out=vaccinations_per_age_group, casting='unsafe')
+        np.multiply(vaccinations_per_age_group, self.cfg.network.N_tot / 5_800_000, out=vaccinations_per_age_group, casting='unsafe')
 
         vaccination_schedule = self.cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + 10
 

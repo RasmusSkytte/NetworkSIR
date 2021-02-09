@@ -21,7 +21,7 @@ if True: #utils.is_local_computer():
     N_runs = 1
 
     # Fraction of population to simulate
-    f = 0.02
+    f = 0.01
 
     #noise = lambda d : 0
     noise = lambda d : np.linspace(-d, d, 3)

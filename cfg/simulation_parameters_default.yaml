@@ -2,7 +2,6 @@
 
 # Default parameters:
 version: 2.1 # the version of the algorithm
-N_tot: 580_000  # Total number of nodes!
 
 N_init: 2000  # Initial Infected
 beta: 0.012  # Daily infection rate (SIR, init: 0-1, but beta = (2mu/N_tot)* betaSIR)

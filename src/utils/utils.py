@@ -2107,7 +2107,6 @@ def read_cfg_from_hdf5_file_recursively(f, path='/'):
 
 #%%
 
-
 def get_cfg_network_initialized(cfg):
     include = load_yaml("cfg/settings.yaml")["network_initialization_include_parameters"]
     cfg_network_initialized = {key: cfg[key] for key in include}

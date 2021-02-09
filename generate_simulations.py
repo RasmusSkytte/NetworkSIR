@@ -15,19 +15,19 @@ N_tot_max = False
 dry_run = False
 force_rerun = False
 
+start_date = datetime(2020, 12, 8)
 
-if True: #utils.is_local_computer():
+if utils.is_local_computer():
 
     N_runs = 1
 
     # Fraction of population to simulate
-    f = 0.015
+    f = 0.01
 
-    #noise = lambda d : 0
-    noise = lambda d : np.linspace(-d, d, 3)
+    noise = lambda d : 0
 
-    verbose = False
-    num_cores_max = 2
+    verbose = True
+    num_cores_max = 1
 
 else :
 
@@ -49,26 +49,24 @@ all_simulation_parameters = [
         #"epsilon_rho": 1,
         "contact_matrices_name": "2021_fase1_sce1",         # The target activity in the society
         "Intervention_contact_matrices_name": "ned2021jan", # Current activity in society
+        "threshold_interventions_to_apply": [[3]],          # 3: Matrix intervention
+        "restriction_thresholds": [[0, (datetime(2021, 2, 8) - start_date).days]],
         #
         "burn_in": 0,
-        "start_date_offset" : (datetime(2020, 12, 28) - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date
-        "day_max": 10,
+        "start_date_offset" : (start_date - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date
+        "day_max": 100,
         #
         "beta": 0.0125 + noise(0.005),
         "beta_UK_multiplier": 1.5 + noise(0.2),
         "lambda_I": 4 / 2.52,
         "lambda_E": 4 / 2.5,
         #
-        "N_init": (4600 + noise(200)) * f,
-        "N_init_UK_frac": 0.03,#+ noise(0.01),
-        #
-        "weighted_random_initial_infections": True,
+        "N_init": (2300 + noise(200)) * f,
+        "N_init_UK_frac": 0.03 + noise(0.01),
         #
         "do_interventions": True,
-        "threshold_interventions_to_apply": [[3]],
-        "restriction_thresholds": [[1,5]],
-        "continuous_interventions_to_apply":  [[1,2,3,4,5]],
-        "intervention_removal_delay_in_clicks": [20],
+        "continuous_interventions_to_apply":  [[1, 2, 3, 4, 5]],
+        "intervention_removal_delay_in_clicks": [0],
         "make_restrictions_at_kommune_level": [False],
         "tracking_delay": [10],
     },

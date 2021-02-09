@@ -1739,13 +1739,34 @@ def run_simulation(
                 out_state_counts.append(state_total_counts.copy())
 
             if daily_counter >= 10:
+
+                # Advance day
                 day += 1
-                if intervention.apply_interventions and intervention.apply_interventions_on_label and day >= 0:
-                    apply_interventions_on_label(my, g, intervention, day, click, verbose)
+                daily_counter = 0
 
-                if intervention.apply_random_testing:
-                    apply_random_testing(my, intervention, click)
+                # Apply interventions
+                if intervention.apply_interventions :
 
+                    if intervention.apply_interventions_on_label and day >= 0:
+                        apply_interventions_on_label(my, g, intervention, day, click, verbose)
+
+                    if intervention.apply_random_testing:
+                        apply_random_testing(my, intervention, click)
+
+                    if intervention.apply_vaccinations:
+
+                        if start_date_offset < 0:
+                            for day in range(-start_date_offset):
+                                vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, verbose=verbose)
+                            intervention.vaccination_schedule + start_date_offset
+                            start_date_offset = 0
+
+                        vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, verbose=verbose)
+
+
+                    test_tagged_agents(my, g, intervention, day, click)
+
+                # Apply events
                 if my.cfg.N_events > 0:
                     add_daily_events(
                         my,
@@ -1757,31 +1778,20 @@ def run_simulation(
                         where_infections_happened_counter,
                     )
 
-                daily_counter = 0
 
-                if day >= 0:
-                    out_my_state.append(my.state.copy())
                 if verbose:
                     print("day", day, "n_inf", np.sum(where_infections_happened_counter) )
                     print("R_true", intervention.R_true_list[-1])
                     print("freedom_impact", intervention.freedom_impact_list[-1])
                     print("R_true_list_brit", intervention.R_true_list_brit[-1])
 
-                if intervention.apply_vaccinations:
-                    if start_date_offset < 0:
-                        for day in range(-start_date_offset):
-                            vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, verbose=verbose)
-                        intervention.vaccination_schedule + start_date_offset
-                        start_date_offset = 0
 
-                    vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, verbose=verbose)
+                if day >= 0:
+                    out_my_state.append(my.state.copy())
 
-            if intervention.apply_interventions:
-                test_tagged_agents(my, g, intervention, day, click)
-            if day >= 0:
-                intervention.R_true_list.append(calculate_R_True(my, g))
-                intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
-                intervention.R_true_list_brit.append(calculate_R_True_brit(my, g))
+                    intervention.R_true_list.append(calculate_R_True(my, g))
+                    intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
+                    intervention.R_true_list_brit.append(calculate_R_True_brit(my, g))
 
 
             click += 1
@@ -1847,10 +1857,6 @@ def calc_contact_dist(my, contact_type):
 @njit
 def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, verbose=False):
 
-    # try to vaccinate everyone, but only do vaccinate susceptable agents
-    possible_agents_to_vaccinate = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
-    # agent = utils.numba_random_choice_list(agents_in_state[state_now])
-
     R_state = g.N_states - 1  # 8
 
     # Check if all vaccines have been given
@@ -1863,26 +1869,33 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, ver
         # Get the number of new effective vaccines
         N = intervention.vaccinations_per_age_group[day - intervention.vaccination_schedule[0]]
 
-        # Compute probability for each agent being infected
-        probabilities = np.array([N[my.age[agent]] for agent in possible_agents_to_vaccinate])
+        # Determine which agents can be vaccinated
+        possible_agents_to_vaccinate = np.array( [ agent
+                                                  for agent in np.arange(my.cfg_network.N_tot, dtype=np.uint32)
+                                                  if N[my.age[agent]] > 0 and my.vaccination_type[agent] == 0 ], dtype=np.uint32)
 
-        # Distribute the effective vaccines among the population
-        agents = nb_random_choice(possible_agents_to_vaccinate, probabilities, size = int(np.sum(N)), verbose=verbose)
-        for agent in agents:
+        if len(possible_agents_to_vaccinate) > 0 :
 
-            # pick agent if it is susceptible (in S state)
-            if my.agent_is_susceptable(agent):
-                # "vaccinate agent"
-                my.vaccination_type[agent] = 1
+            # Compute probability for each agent being infected
+            probabilities = np.array( [ N[my.age[agent]] for agent in possible_agents_to_vaccinate ] )
 
-                # set agent to recovered, instantly
-                my.state[agent] = R_state
+            # Distribute the effective vaccines among the population
+            agents = nb_random_choice(possible_agents_to_vaccinate, probabilities, size = int(np.sum(N)), verbose=verbose)
+            for agent in agents:
 
-                agents_in_state[R_state].append(np.uint32(agent))
-                state_total_counts[R_state] += 1
+                # pick agent if it is susceptible (in S state)
+                if my.agent_is_susceptable(agent):
+                    # "vaccinate agent"
+                    my.vaccination_type[agent] = 1
 
-                # remove rates into agent from its infectios contacts
-                update_infection_list_for_newly_infected_agent(my, g, agent)
+                    # set agent to recovered, instantly
+                    my.state[agent] = R_state
+
+                    agents_in_state[R_state].append(np.uint32(agent))
+                    state_total_counts[R_state] += 1
+
+                    # remove rates into agent from its infectios contacts
+                    update_infection_list_for_newly_infected_agent(my, g, agent)
 
 @njit
 def calculate_R_True(my, g):

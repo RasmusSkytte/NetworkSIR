@@ -175,14 +175,11 @@ class Simulation:
 
 
     def initialize_network(
-        self, force_rerun=False, save_initial_network=False, force_load_initial_network=False
+        self, force_rerun=False, save_initial_network=False, only_initialize_network=False, force_load_initial_network=False
     ):
-
-        network_hash = utils.cfg_to_hash(self.cfg.network)
-
         filename = "Output/initialized_network/"
         #filename += f"{network_hash}__ID__{self.cfg.ID}.hdf5"
-        filename += f"{network_hash}.hdf5"
+        filename += f"{utils.cfg_to_hash(self.cfg.network)}.hdf5"
 
         if force_load_initial_network:
             initialize_network = False
@@ -214,7 +211,7 @@ class Simulation:
                 self._save_initialized_network(filename)
 
         # Loading initialized network
-        else:
+        elif not only_initialize_network:
             self._load_initialized_network(filename)
 
     def make_initial_infections(self):
@@ -428,7 +425,7 @@ def run_single_simulation(
         simulation = Simulation(cfg, cfg_hash, verbose)
 
         simulation.initialize_network(
-            force_rerun=force_rerun, save_initial_network=save_initial_network
+            force_rerun=force_rerun, save_initial_network=save_initial_network, only_initialize_network=only_initialize_network
         )
 
         if only_initialize_network:
@@ -527,14 +524,15 @@ def run_simulations(
         # Get list of unique cfgs
         cfgs_network = []
         for cfg in cfgs :
-            if utils.cfg_to_hash(cfg.network) in network_hashes :
+            network_hash = utils.cfg_to_hash(cfg.network)
+
+            if network_hash in network_hashes :
                 cfgs_network.append(cfg)
-                network_hashes.remove(utils.cfg_to_hash(cfg.network))
+                network_hashes.remove(network_hash)
 
         # Generate the networks
-        if len(cfgs_network) > 0 :
-            print("Generating networks. Please wait")
-            p_umap(f_single_network, cfgs_network, num_cpus=num_cores)
+        print("Generating networks. Please wait")
+        p_umap(f_single_network, cfgs_network, num_cpus=num_cores)
 
         # Then run the simulations on the network
         print("Running simulations. Please wait")

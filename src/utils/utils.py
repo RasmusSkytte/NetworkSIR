@@ -1,3 +1,4 @@
+from numba.core.types.scalars import Float
 import numpy as np
 import pandas as pd
 import multiprocessing as mp
@@ -1040,6 +1041,32 @@ def get_cfg_default():
 #     yaml_filename = "cfg/settings.yaml"
 #     return load_yaml(yaml_filename)
 
+# Load numba specifications
+spec_cfg            = nb_simulation.spec_cfg
+spec_network        = nb_simulation.spec_network
+#spec_intervention   = nb_simulation.spec_intervention
+spec = {**spec_cfg, **spec_network}
+
+def format_simulation_paramters(d_simulation_parameters) :
+
+    for key, val in d_simulation_parameters.items():
+
+        # Format the numpy style arrays
+        if isinstance(val, np.ndarray) :
+
+            val = np.unique(val)
+
+            if isinstance(spec[key], nb.types.Float):
+                val = val.astype(float)
+            elif isinstance(spec[key], nb.types.Integer):
+                val = val.astype(int)
+            else :
+                raise ValueError("Type casting not yet defined for %s type" % spec[key])
+
+            d_simulation_parameters[key] = val.tolist()
+
+    return d_simulation_parameters
+
 def format_cfg(cfg, spec):
 
     if not isinstance(cfg, DotDict):
@@ -1113,7 +1140,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
         for name, lst in d_simulation_parameters.items():
 
             # Convert all inputs to lists
-            if isinstance(lst, (int, float)):
+            if isinstance(lst, (int, float, str)):
                 lst = [lst]
 
             d_list.append([{name: val} for val in lst])
@@ -1121,11 +1148,6 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
         all_combinations = list(product(*d_list))
 
         has_not_printed = True
-
-        # Load numba specifications
-        spec_cfg            = nb_simulation.spec_cfg
-        spec_network        = nb_simulation.spec_network
-        #spec_intervention   = nb_simulation.spec_intervention
 
         # Update cfg values
         cfgs = []

@@ -85,3 +85,5 @@ days_looking_back: 7 # When looking for local outbreaks, how many days are we lo
 isolation_rate_reduction: [0.2, 1.0, 1.0] # [family, job, other]
 tracking_rates: [1.0, 0.8, 0.0] # [family, job, other]
 tracking_delay: 10 #
+
+Intervention_contact_matrices_name : reference

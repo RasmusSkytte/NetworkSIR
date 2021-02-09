@@ -532,9 +532,12 @@ def run_simulations(
                 network_hashes.remove(utils.cfg_to_hash(cfg.network))
 
         # Generate the networks
-        p_umap(f_single_network, cfgs_network, num_cpus=num_cores)
+        if len(cfgs_network) > 0 :
+            print("Generating networks. Please wait")
+            p_umap(f_single_network, cfgs_network, num_cpus=num_cores)
 
-        # Then run the simulations on the netwrok
+        # Then run the simulations on the network
+        print("Running simulations. Please wait")
         f_single_simulation = partial(run_single_simulation, verbose=verbose, **kwargs)
         for cfg in p_uimap(f_single_simulation, cfgs, num_cpus=num_cores):
             update_database(db_cfg, q, cfg)

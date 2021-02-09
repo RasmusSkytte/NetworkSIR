@@ -27,7 +27,6 @@ day_max: 0 # 5 weeks. Sets the maximum number of days the algorithm runs
 
 
 # vaccinations related variables.
-burn_in: 0
 start_date_offset: 0 # Number of days between start date and vaccination start
 
 # event-related variables

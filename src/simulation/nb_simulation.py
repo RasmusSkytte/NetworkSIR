@@ -1754,8 +1754,8 @@ def run_simulation(
 
                     if intervention.apply_vaccinations:
 
-                        if start_date_offset < 0:
-                            for day in range(-start_date_offset):
+                        if start_date_offset > 0:
+                            for day in range(start_date_offset):
                                 vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, verbose=verbose)
                             intervention.vaccination_schedule + start_date_offset
                             start_date_offset = 0

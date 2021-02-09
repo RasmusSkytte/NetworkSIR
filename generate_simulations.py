@@ -52,7 +52,6 @@ all_simulation_parameters = [
         "threshold_interventions_to_apply": [[3]],          # 3: Matrix intervention
         "restriction_thresholds": [[0, (datetime(2021, 2, 8) - start_date).days]],
         #
-        "burn_in": 0,
         "start_date_offset" : (start_date - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date
         "day_max": 100,
         #

@@ -284,18 +284,27 @@ class Simulation:
         if verbose_interventions is None:
             verbose_interventions = self.verbose
 
+
         # Load the projected vaccination schedule
-        vaccinations_per_age_group, _, vaccination_schedule = utils.load_vaccination_schedule()
+        vaccinations_per_age_group, vaccination_schedule = utils.load_vaccination_schedule(self.cfg)
 
-         # Scale the number of vaccines
-        np.multiply(vaccinations_per_age_group, self.cfg.network.N_tot / 5_800_000, out=vaccinations_per_age_group, casting='unsafe')
 
-        vaccination_schedule = self.cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + 10
 
-        # Convert vaccination_schedule to integer day coun
-        work_matrix_restrict, other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario=self.cfg.Intervention_contact_matrices_name)
-        #work_matrix_restrict = work_matrix_restrict * 0.8
-        #other_matrix_restrict = other_matrix_restrict * 0.8
+        # Load the restriction contact matrices
+        work_matrix_restrict = []
+        other_matrix_restrict = []
+
+        for scenario in self.cfg.Intervention_contact_matrices_name :
+            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario=scenario)
+
+            work_matrix_restrict.append(tmp_work_matrix_restrict)
+            other_matrix_restrict.append(tmp_other_matrix_restrict)
+
+
+        print(np.array(work_matrix_restrict))
+        x = x
+
+
 
         self.intervention = nb_simulation.Intervention(
             self.my.cfg,

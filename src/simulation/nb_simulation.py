@@ -77,7 +77,9 @@ spec_cfg = {
     "tracking_rates": nb.float64[:],
     "tracking_delay": nb.int64,
     "intervention_removal_delay_in_clicks": nb.int32,
-    "Intervention_contact_matrices_name": nb.types.unicode_type,
+    "Intervention_contact_matrices_name": ListType(nb.types.unicode_type),
+    "Intervention_vaccination_schedule_name": ListType(nb.types.unicode_type),
+    "Intervention_vaccination_effect_delays" : nb.int16[:],
     # ID
     "ID": nb.uint16,
 }

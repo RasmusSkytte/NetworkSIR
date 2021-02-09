@@ -21,13 +21,13 @@ if True: #utils.is_local_computer():
     N_runs = 1
 
     # Fraction of population to simulate
-    f = 0.02
+    f = 0.015
 
     #noise = lambda d : 0
     noise = lambda d : np.linspace(-d, d, 3)
 
-    verbose = True
-    num_cores_max = 1
+    verbose = False
+    num_cores_max = 2
 
 else :
 
@@ -54,8 +54,8 @@ all_simulation_parameters = [
         "start_date_offset" : (datetime(2020, 12, 28) - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date
         "day_max": 10,
         #
-        "beta": 0.0125,# + noise(0.005),
-        "beta_UK_multiplier": 1.5,# + noise(0.2),
+        "beta": 0.0125 + noise(0.005),
+        "beta_UK_multiplier": 1.5 + noise(0.2),
         "lambda_I": 4 / 2.52,
         "lambda_E": 4 / 2.5,
         #

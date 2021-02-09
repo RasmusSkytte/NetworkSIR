@@ -17,6 +17,9 @@ import dict_hash
 
 from attrdict import AttrDict
 
+from tinydb import TinyDB, Query
+
+
 
 def sha256(d):
     if isinstance(d, DotDict):
@@ -1924,6 +1927,7 @@ def load_contact_matrices(scenario = 'reference') :
     work_other_ratio = matrix_work.sum() / (matrix_other.sum() + matrix_work.sum())
 
     # Normalize the contact matrices after this ratio has been determined
+    # TODO: Find out if lists or numpy arrays are better --- I am leaning towards using only numpy arrays
     return (matrix_work.tolist(), matrix_other.tolist(), work_other_ratio, age_groups_work)
 
 
@@ -1950,6 +1954,8 @@ def load_vaccination_schedule(cfg) :
         # Determine the timing of effective vaccines
         vaccination_schedule[i] = cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + cfg.Intervention_vaccination_effect_delays[i]
 
+    return (vaccinations_per_age_group, vaccination_schedule)
+
 
 def load_vaccination_schedule_file(scenario = "reference") :
     """ Loads and parses the vaccination schedule file corresponding to the chosen scenario.
@@ -1963,15 +1969,12 @@ def load_vaccination_schedule_file(scenario = "reference") :
 
     # Determine the number of files that matches the requested scenario
     i = 1
-    filename = f'Data/vaccination_schedule/{scenario}_{i}.csv'
-    while file_exists(filename) :
-        i += 1
+    filename = lambda i : f'Data/vaccination_schedule/{scenario}_{i}.csv'
+
+    while file_exists(filename(i)) :
 
         # Load the contact matrices
-        tmp_vaccine_counts, tmp_age_groups, tmp_schedule = load_age_stratified_file(filename)
-
-        # Unit test
-        test_length(tmp_age_groups, age_groups, "Age groups inconsistent between vaccination schedule files")
+        tmp_vaccine_counts, tmp_schedule, _ = load_age_stratified_file(filename(i))
 
         # Convert schedule to datetimes
         tmp_schedule = [datetime.datetime.strptime(date, '%Y-%m-%d').date() for date in tmp_schedule]
@@ -1979,6 +1982,9 @@ def load_vaccination_schedule_file(scenario = "reference") :
         # Store the loaded schedule
         vaccine_counts.append(tmp_vaccine_counts)
         schedule.append(tmp_schedule)
+
+        # Increment
+        i += 1
 
     # Normalize the contact matrices after this ratio has been determined
     return (vaccine_counts, schedule, age_groups)
@@ -2010,9 +2016,9 @@ def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=Fals
 def load_kommune_shapefiles(shapefile_size, verbose=False):
 
     shp_file = {}
-    shp_file["small"] = "Data/Kommuner/ADM_2M/KOMMUNE.shp"
+    shp_file["small"]  = "Data/Kommuner/ADM_2M/KOMMUNE.shp"
     shp_file["medium"] = "Data/Kommuner/ADM_500k/KOMMUNE.shp"
-    shp_file["large"] = "Data/Kommuner/ADM_10k/KOMMUNE.shp"
+    shp_file["large"]  = "Data/Kommuner/ADM_10k/KOMMUNE.shp"
 
     if verbose:
         print(f"Loading {shapefile_size} kommune shape files")
@@ -2052,10 +2058,6 @@ def dict_to_query(d):
     for key, val in d.items():
         lst.append(Query()[key] == val)
     return multiple_queries(*lst)
-
-
-from tinydb import TinyDB, Query
-
 
 def get_db_cfg(path="Output/db.json"):
 

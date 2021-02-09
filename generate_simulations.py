@@ -16,6 +16,7 @@ dry_run = False
 force_rerun = False
 
 start_date = datetime(2020, 12, 8)
+end_date   = datetime(2021, 3, 1)
 
 if utils.is_local_computer():
 
@@ -53,12 +54,12 @@ all_simulation_parameters = [
                                                 "2021_fase1_sce1" ]], # Genåbning af 0-4 klasse
         #
         "restriction_thresholds": [[                                       0, (datetime(2021, 2, 8) - start_date).days,
-                                    (datetime(2021, 2, 8) - start_date).days, (datetime(2021, 3, 1) - start_date).days]],
+                                    (datetime(2021, 2, 8) - start_date).days, (datetime(2021, 2, 15) - start_date).days]],
         #
         "threshold_interventions_to_apply": [[3, 3]],          # 3: Matrix intervention
         #
         "start_date_offset" : (start_date - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date
-        "day_max": 100,
+        "day_max": (end_date - start_date).days,
         #
         "beta": 0.0125 + noise(0.0005),
         "beta_UK_multiplier": 1.5 + noise(0.2),
@@ -68,11 +69,12 @@ all_simulation_parameters = [
         "N_init": (2300 + noise(200)) * f,
         "N_init_UK_frac": 0.03 + noise(0.01),
         #
+        "Intervention_vaccination_effect_delays" : [[10, 21]],
+        #
         "do_interventions": True,
         "continuous_interventions_to_apply":  [[1, 2, 3, 4, 5]],
         "intervention_removal_delay_in_clicks": [0],
         "make_restrictions_at_kommune_level": [False],
-        "tracking_delay": [10],
     },
 ]
 

@@ -87,5 +87,5 @@ tracking_delay: 10 #
 Intervention_contact_matrices_name : [reference]
 
 # Vaccination related parameters
-Intervention_vaccination_schedule_name : [reference]
+Intervention_vaccination_schedule_name : reference
 Intervention_vaccination_effect_delays : [10]

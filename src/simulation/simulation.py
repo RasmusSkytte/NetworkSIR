@@ -174,7 +174,7 @@ class Simulation:
 
 
     def initialize_network(
-        self, force_rerun=False, save_initial_network=True, force_load_initial_network=False
+        self, force_rerun=False, save_initial_network=False, force_load_initial_network=False
     ):
 
         network_hash = utils.cfg_to_hash(self.cfg.network)
@@ -409,10 +409,9 @@ def run_single_simulation(
     verbose=False,
     force_rerun=False,
     only_initialize_network=False,
-    save_initial_network=True,
+    save_initial_network=False,
     save_csv=False,
 ):
-
     with Timer() as t, warnings.catch_warnings():
         if not verbose:
             # ignore warning about run_algo
@@ -513,12 +512,12 @@ def run_simulations(
     # kwargs = {}
     if num_cores == 1:
         for cfg in tqdm(cfgs):
-            cfg_out = run_single_simulation(cfg, **kwargs)
+            cfg_out = run_single_simulation(cfg, save_initial_network=True, **kwargs)
             update_database(db_cfg, q, cfg_out)
 
     else:
         # First generate the networks
-        f_single_network = partial(run_single_simulation, only_initialize_network=True, **kwargs)
+        f_single_network = partial(run_single_simulation, only_initialize_network=True, save_initial_network=True, **kwargs)
 
         # Get the network hashes
         network_hashes = set([utils.cfg_to_hash(cfg.network) for cfg in cfgs])
@@ -531,7 +530,7 @@ def run_simulations(
                 network_hashes.remove(utils.cfg_to_hash(cfg.network))
 
         # Generate the networks
-        p_uimap(f_single_network, cfgs_network, num_cpus=num_cores)
+        p_umap(f_single_network, cfgs_network, num_cpus=num_cores)
 
         # Then run the simulations on the netwrok
         f_single_simulation = partial(run_single_simulation, **kwargs)

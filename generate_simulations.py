@@ -27,7 +27,7 @@ if utils.is_local_computer():
     #noise = lambda d : np.linspace(-d, d, 3)
 
     verbose = False
-    num_cores_max = 1
+    num_cores_max = 2
 
 else :
 
@@ -38,7 +38,7 @@ else :
 
     noise = lambda d : np.linspace(-d, d, 5)
 
-    verbose = False
+    verbose = True
     num_cores_max = 20
 
 
@@ -76,10 +76,9 @@ all_simulation_parameters = [
 
 
 N_files_total = 0
-# if __name__ == "__main__":
-with Timer() as t:
 
-    if __name__ == "__main__" : # Needed for windows multiprocessing    # TODO: Is it really needed on this line?
+if __name__ == "__main__":
+    with Timer() as t:
 
         if dry_run:
             print("\n\nRunning a dry run, nothing will actually be simulated.!!!\n\n")
@@ -98,10 +97,9 @@ with Timer() as t:
                 force_rerun=force_rerun,
                 dry_run=dry_run,
                 save_csv=True,
-                save_initial_network=True,
             )
 
         N_files_total += N_files
 
-print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
-print("Finished simulating!")
+    print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
+    print("Finished simulating!")

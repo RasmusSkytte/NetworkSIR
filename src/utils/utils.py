@@ -1047,6 +1047,8 @@ spec_network        = nb_simulation.spec_network
 #spec_intervention   = nb_simulation.spec_intervention
 spec = {**spec_cfg, **spec_network}
 
+
+# TODO: Check if this can be refactored with format_cfg()
 def format_simulation_paramters(d_simulation_parameters) :
 
     for key, val in d_simulation_parameters.items():
@@ -1064,6 +1066,9 @@ def format_simulation_paramters(d_simulation_parameters) :
                 raise ValueError("Type casting not yet defined for %s type" % spec[key])
 
             d_simulation_parameters[key] = val.tolist()
+
+        elif isinstance(val, float) and isinstance(spec[key], nb.types.Integer) :
+            d_simulation_parameters[key] = int(val)
 
     return d_simulation_parameters
 

@@ -79,6 +79,7 @@ spec_cfg = {
     "tracking_rates": nb.float64[:],
     "tracking_delay": nb.int64,
     "intervention_removal_delay_in_clicks": nb.int32,
+    "Intervention_contact_matrices_name": nb.types.unicode_type,
     # ID
     "ID": nb.uint16,
 }
@@ -2359,7 +2360,7 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent):
                 print(my.age[agent])
                 print(my.age[contact])
                 print(my.connections_type[agent][ith_contact])
-                assert mr_single < mi_single
+                assert mr_single <= mi_single
 
             p = 1 - np.sqrt(4 - 4 * (1 - min(mr_single / mi_single, 1))) / 2
             if np.random.rand() < p:

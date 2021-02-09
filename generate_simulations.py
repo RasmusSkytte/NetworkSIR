@@ -32,7 +32,9 @@ if utils.is_local_computer():
         {
             "N_tot": int(5_800_000 * f),
             "rho": 0.0,
-            #"epsilon_rho": 1,
+            # "epsilon_rho": 1,
+            "contact_matrices_name": "2021_fase1_sce1",         # The target activity in the society
+            "Intervention_contact_matrices_name": "ned2021jan", # Current activity in society
             "weighted_random_initial_infections": True,
             #
             "burn_in": 0,
@@ -43,7 +45,7 @@ if utils.is_local_computer():
             "beta_UK_multiplier": [1.5],
             "lambda_I": 4 / 2.52,
             "lambda_E": 4 / 2.5,
-            "N_init": np.array([4500, 4600, 4700]).astype(int),
+            "N_init": np.array([4500, 4600, 4700]) * f,
             #
             "do_interventions": True,
             "threshold_interventions_to_apply": [[3]],
@@ -84,7 +86,7 @@ else:
     # Fraction of population to simulate
     f = 0.1
 
-    noise = lambda d : np.linspace(-d, d, 5)
+    noise = lambda d : np.linspace(-d, d, 3)
 
     #all_simulation_parameters = utils.get_simulation_parameters()
     all_simulation_parameters = [

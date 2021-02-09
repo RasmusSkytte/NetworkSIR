@@ -70,6 +70,7 @@ class Simulation:
         if self.verbose:
             print("Importing work and other matrices")
 
+        # TODO: fix the DotDict indexing
         self.cfg["network"]["work_matrix"], self.cfg["network"]["other_matrix"], self.cfg.network.work_other_ratio, _ = utils.load_contact_matrices(scenario = self.cfg.network.contact_matrices_name)
 
     def _initialize_network(self):
@@ -293,8 +294,8 @@ class Simulation:
 
         vaccination_schedule = self.cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + 10
 
-        # Convert vaccination_schedule to integer day counter
-        work_matrix_restrict, other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario="ned2021jan")
+        # Convert vaccination_schedule to integer day coun
+        work_matrix_restrict, other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario=self.cfg.Intervention_contact_matrices_name)
         #work_matrix_restrict = work_matrix_restrict * 0.8
         #other_matrix_restrict = other_matrix_restrict * 0.8
 
@@ -451,7 +452,6 @@ from p_tqdm import p_umap, p_uimap
 
 
 def update_database(db_cfg, q, cfg):
-    print(cfg)
     cfg.pop("ID")
     if not db_cfg.contains(q.hash == cfg.hash):
         db_cfg.insert(cfg)
@@ -470,6 +470,8 @@ def run_simulations(
 
     db_cfg = utils.get_db_cfg()
     q = Query()
+
+    d_simulation_parameters = utils.format_simulation_paramters(d_simulation_parameters)
 
     cfgs_all = utils.generate_cfgs(d_simulation_parameters, N_runs, N_tot_max, verbose=verbose)
 

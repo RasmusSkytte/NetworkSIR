@@ -23,8 +23,8 @@ if True: #utils.is_local_computer():
     # Fraction of population to simulate
     f = 0.01
 
-    noise = lambda d : 0
-    #noise = lambda d : np.linspace(-d, d, 3)
+    #noise = lambda d : 0
+    noise = lambda d : np.linspace(-d, d, 3)
 
     verbose = True
     num_cores_max = 1
@@ -50,17 +50,17 @@ all_simulation_parameters = [
         "contact_matrices_name": "2021_fase1_sce1",         # The target activity in the society
         "Intervention_contact_matrices_name": "ned2021jan", # Current activity in society
         #
-        "burn_in": 20,
+        "burn_in": 0,
         "start_date_offset" : (datetime(2020, 12, 28) - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date
-        "day_max": 90,
+        "day_max": 10,
         #
-        "beta": 0.0125 + noise(0.005),
-        "beta_UK_multiplier": 1.5 + noise(0.2),
+        "beta": 0.0125,# + noise(0.005),
+        "beta_UK_multiplier": 1.5,# + noise(0.2),
         "lambda_I": 4 / 2.52,
         "lambda_E": 4 / 2.5,
         #
         "N_init": (4600 + noise(200)) * f,
-        "N_init_UK_frac": 0.03 + noise(0.01),
+        "N_init_UK_frac": 0.03,#+ noise(0.01),
         #
         "weighted_random_initial_infections": True,
         #

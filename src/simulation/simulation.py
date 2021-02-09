@@ -1,4 +1,5 @@
 # from re import X TODO: Delete line
+from sys import version
 import numpy as np
 # import pandas as pd TODO: Delete line
 # import matplotlib.pyplot as plt TODO: Delete line
@@ -323,7 +324,6 @@ class Simulation:
         )
 
         out_time, out_state_counts, out_my_state, intervention = res
-        print(res)
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
         self.df = utils.state_counts_to_df(np.array(out_time), np.array(out_state_counts))
@@ -513,12 +513,12 @@ def run_simulations(
     # kwargs = {}
     if num_cores == 1:
         for cfg in tqdm(cfgs):
-            cfg_out = run_single_simulation(cfg, save_initial_network=True, **kwargs)
+            cfg_out = run_single_simulation(cfg, save_initial_network=True, verbose=verbose, **kwargs)
             update_database(db_cfg, q, cfg_out)
 
     else:
         # First generate the networks
-        f_single_network = partial(run_single_simulation, only_initialize_network=True, save_initial_network=True, **kwargs)
+        f_single_network = partial(run_single_simulation, only_initialize_network=True, save_initial_network=True, verbose=verbose, **kwargs)
 
         # Get the network hashes
         network_hashes = set([utils.cfg_to_hash(cfg.network) for cfg in cfgs])
@@ -534,7 +534,7 @@ def run_simulations(
         p_umap(f_single_network, cfgs_network, num_cpus=num_cores)
 
         # Then run the simulations on the netwrok
-        f_single_simulation = partial(run_single_simulation, **kwargs)
+        f_single_simulation = partial(run_single_simulation, verbose=verbose, **kwargs)
         for cfg in p_uimap(f_single_simulation, cfgs, num_cpus=num_cores):
             update_database(db_cfg, q, cfg)
 

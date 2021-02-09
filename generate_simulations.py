@@ -104,7 +104,7 @@ else:
             "beta_UK_multiplier": 1.5 + noise(0.2),
             "lambda_I": 4 / 2.52,
             "lambda_E": 4 / 2.5,
-            "N_init": 4600 + noise(200),
+            "N_init": (4600 + noise(200)) * f,
             #
             "do_interventions": True,
             "threshold_interventions_to_apply": [[3]],

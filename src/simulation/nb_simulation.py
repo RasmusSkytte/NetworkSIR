@@ -52,7 +52,6 @@ spec_cfg = {
     "clustering_connection_retries": nb.uint32,
     "beta_UK_multiplier": nb.float32,
     "outbreak_position_UK": nb.types.unicode_type,
-    "burn_in": nb.int64,
     "start_date_offset" : nb.int64,
     # events
     "N_events": nb.uint16,
@@ -105,7 +104,6 @@ class Config(object):
         self.day_max = 0
         self.clustering_connection_retries = 0
         self.beta_UK_multiplier = 1.0
-        self.burn_in = 20 # burn in period, -int how many days the sim shall run before
 
         # events
         self.N_events = 0
@@ -1583,11 +1581,12 @@ def run_simulation(
     out_my_state = List()
 
     daily_counter = 0
-    day = -1 * my.cfg.burn_in
+    day = 0
     #day = 0
-    click = nts * day
+    click = 0
     step_number = 0
-    real_time = 1.0 * day
+
+    real_time = 0
     if verbose:
         print(day, click, real_time)
 
@@ -1730,7 +1729,7 @@ def run_simulation(
 
         ################
 
-        while nts * click + abs(2*my.cfg.burn_in) < real_time + abs(2*my.cfg.burn_in):
+        while nts * click  < real_time:
             # if nts * click < real_time:
 
             daily_counter += 1
@@ -1866,7 +1865,7 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, ver
     # Check if any vaccines are effective yet:
     if day >= intervention.vaccination_schedule[0] :
 
-        # Get the number of new effective vaccines
+        # Get the numbe0cgrlævsdø- Xxr of new effective vaccines
         N = intervention.vaccinations_per_age_group[day - intervention.vaccination_schedule[0]]
 
         # Determine which agents can be vaccinated

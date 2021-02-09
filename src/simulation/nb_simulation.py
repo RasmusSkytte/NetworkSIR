@@ -59,9 +59,7 @@ spec_cfg = {
     "N_contacts_max": nb.uint16,
     "beta_UK_multiplier": nb.float32,
     "outbreak_position_UK": nb.types.unicode_type,
-    "burn_in": nb.int64,
     "start_date_offset" : nb.int64,
-    "days_of_vacci_start": nb.int64,
     # events
     "N_events": nb.uint16,
     "event_size_max": nb.uint16,
@@ -120,7 +118,6 @@ class Config(object):
         self.work_other_ratio = 0.5
         self.N_contacts_max = 0
         self.beta_UK_multiplier = 1.0
-        self.burn_in = 20 # burn in period, -int how many days the sim shall run before
 
         # events
         self.N_events = 0
@@ -1577,17 +1574,17 @@ def run_simulation(
     out_my_state = List()
 
     daily_counter = 0
-    day = -1 * my.cfg.burn_in
+    day = 0
     #day = 0
-    click = nts * day
+    click = 0
     step_number = 0
-    real_time = 1.0 * day
+    real_time = 0
     print(day, click, real_time)
 
     s_counter = np.zeros(4)
     where_infections_happened_counter = np.zeros(4)
 
-    days_of_vacci_start = my.cfg.days_of_vacci_start
+    days_of_vacci_start = my.cfg.start_date_offset
 
 
     # Run the simulation ################################
@@ -1723,7 +1720,7 @@ def run_simulation(
 
         ################
 
-        while nts * click + abs(2*my.cfg.burn_in) < real_time + abs(2*my.cfg.burn_in):
+        while nts * click  < real_time:
             # if nts * click < real_time:
 
             daily_counter += 1
@@ -1842,6 +1839,7 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day):
 
     # try to vaccinate everyone, but only do vaccinate susceptable agents
     possible_agents_to_vaccinate = np.arange(my.cfg.N_tot, dtype=np.uint32)
+
     # agent = utils.numba_random_choice_list(agents_in_state[state_now])
 
     R_state = g.N_states - 1  # 8
@@ -1853,7 +1851,7 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day):
     # Check if any vaccines are effective yet:
     if day >= intervention.vaccination_schedule[0] :
 
-        # Get the number of new effective vaccines
+        # Get the numbe0cgrlævsdø- Xxr of new effective vaccines
         N = intervention.vaccinations_per_age_group[day - intervention.vaccination_schedule[0]]
 
         # Scale the number of vaccines

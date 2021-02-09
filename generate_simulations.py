@@ -41,7 +41,6 @@ if utils.is_local_computer():
             #"epsilon_rho": 1,
             "intervention_removal_delay_in_clicks": [20],
             "make_restrictions_at_kommune_level": [False],
-            "burn_in": 0,
             "start_date_offset" : (datetime(2020, 12, 28) - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date 
             # "N_tot": [58_000],
             # "make_random_initial_infections": True,
@@ -73,7 +72,6 @@ if utils.is_local_computer():
             # "tracking_rates": [1.0, 0.5,0.1]
             "tracking_delay": [10],
             "day_max": 100,
-            "days_of_vacci_start": 0, # number of days after vaccinations calender start. 31 = 1-st of feb.  # TODO: Try to properly include dates in the simulations
             #"verbose":True,
             # "event_size_max": 50,
         },

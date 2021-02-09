@@ -31,7 +31,6 @@ beta_UK_multiplier: 1.7
 outbreak_position_UK: random
 
 # vaccinations related variables. 
-burn_in: 0
 days_of_vacci_start: 21 # number of days after vaccinations calender start. 31 = 1-st of feb. 
 
 # event-related variables

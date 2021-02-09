@@ -1,4 +1,5 @@
 # Default network parameters:
+N_tot: 580_000  # Total number of nodes!
 rho: 0.1  # Spacial dependency. Average distance to connect with.
 epsilon_rho: 0.04  # fraction of connections not depending on distance
 mu: 20.0  # Average number of connections of a node (init: 20)

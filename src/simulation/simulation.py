@@ -57,7 +57,7 @@ class Simulation:
 
         self.cfg = cfg
 
-        self.N_tot = cfg.N_tot
+        self.N_tot = cfg.network.N_tot
 
         self.hash = cfg_hash
 

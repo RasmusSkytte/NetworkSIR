@@ -323,6 +323,7 @@ class Simulation:
         )
 
         out_time, out_state_counts, out_my_state, intervention = res
+        print(res)
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
         self.df = utils.state_counts_to_df(np.array(out_time), np.array(out_state_counts))

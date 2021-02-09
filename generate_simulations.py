@@ -16,7 +16,7 @@ dry_run = False
 force_rerun = False
 
 
-if utils.is_local_computer():
+if True: #utils.is_local_computer():
 
     N_runs = 1
 
@@ -26,8 +26,8 @@ if utils.is_local_computer():
     noise = lambda d : 0
     #noise = lambda d : np.linspace(-d, d, 3)
 
-    verbose = False
-    num_cores_max = 2
+    verbose = True
+    num_cores_max = 1
 
 else :
 
@@ -38,7 +38,7 @@ else :
 
     noise = lambda d : np.linspace(-d, d, 5)
 
-    verbose = True
+    verbose = False
     num_cores_max = 20
 
 

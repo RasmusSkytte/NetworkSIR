@@ -302,6 +302,7 @@ class Simulation:
 
         self.intervention = nb_simulation.Intervention(
             self.my.cfg,
+            self.my.cfg_network,
             labels = labels,
             vaccinations_per_age_group = vaccinations_per_age_group,
             vaccination_schedule = vaccination_schedule,

@@ -317,6 +317,7 @@ class Gillespie(object):
 
 spec_intervention = {
     "cfg": nb_cfg_type,
+    "cfg_network": nb_cfg_network_type,
     "labels": nb.uint8[:],  # affilitation? XXX
     "label_counter": nb.uint32[:],
     "N_labels": nb.uint32,
@@ -389,6 +390,7 @@ class Intervention(object):
     def __init__(
         self,
         nb_cfg,
+        nb_cfg_network,
         labels,
         vaccinations_per_age_group,
         vaccination_schedule,
@@ -397,20 +399,21 @@ class Intervention(object):
         verbose=False,
     ):
 
-        self.cfg = nb_cfg
+        self.cfg         = nb_cfg
+        self.cfg_network = nb_cfg_network
 
         self._initialize_labels(labels)
 
-        self.day_found_infected = np.full(self.cfg.N_tot, fill_value=-1, dtype=np.int32)
-        self.freedom_impact = np.full(self.cfg.N_tot, fill_value=0.0, dtype=np.float64)
+        self.day_found_infected = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.freedom_impact = np.full(self.cfg_network.N_tot, fill_value=0.0, dtype=np.float64)
         self.freedom_impact_list = List([0.0])
         self.R_true_list = List([0.0])
         self.R_true_list_brit = List([0.0])
-        self.reason_for_test = np.full(self.cfg.N_tot, fill_value=-1, dtype=np.int8)
+        self.reason_for_test = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
         self.positive_test_counter = np.zeros(3, dtype=np.uint32)
-        self.clicks_when_tested = np.full(self.cfg.N_tot, fill_value=-1, dtype=np.int32)
-        self.clicks_when_tested_result = np.full(self.cfg.N_tot, fill_value=-1, dtype=np.int32)
-        self.clicks_when_isolated = np.full(self.cfg.N_tot, fill_value=-1, dtype=np.int32)
+        self.clicks_when_tested = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.clicks_when_tested_result = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.clicks_when_isolated = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_restriction_stops = np.full(self.N_labels, fill_value=-1, dtype=np.int32)
         self.types = np.zeros(self.N_labels, dtype=np.uint8)
         self.started_as = np.zeros(self.N_labels, dtype=np.uint8)

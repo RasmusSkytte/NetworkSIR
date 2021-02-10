@@ -1,3 +1,4 @@
+from numba.core.types.scalars import Float
 import numpy as np
 import pandas as pd
 import multiprocessing as mp
@@ -9,11 +10,15 @@ from numba import njit, prange, objmode, typeof #TODO delete prange, objmode
 from numba.typed import List, Dict
 # import platform #TODO delete line
 import datetime
+import os
 
 import awkward1 as ak
 import dict_hash
 
 from attrdict import AttrDict
+
+from tinydb import TinyDB, Query
+
 
 
 def sha256(d):
@@ -22,6 +27,8 @@ def sha256(d):
     for key, val in d.items():
         if isinstance(val, set):
             d[key] = list(val)
+        if isinstance(val, dict):
+            d[key] = sha256(val)
     return dict_hash.sha256(d)
 
 
@@ -73,12 +80,21 @@ def make_sure_folder_exist(filename, delete_file_if_exists=False):
 
 def load_yaml(filename):
     with open(filename) as file:
-        return DotDict(yaml.safe_load(file))
+        tmp = yaml.safe_load(file)
 
+        for key, val in tmp.items() :
+            if isinstance(val, dict) :
+                tmp[key] = DotDict(val)
+
+        return DotDict(tmp)
 
 def format_time(t):
     return str(datetime.timedelta(seconds=t))
 
+
+def test_length(arr1, arr2, error_message) :
+    if not len(arr1) == len(arr2) :
+        raise ValueError(error_message)
 
 #%%
 
@@ -648,8 +664,13 @@ class DotDict(AttrDict):
                     out.pop(key)
 
             for key, val in out.items():
-                if isinstance(val, set):
+
+                if isinstance(val, type(self)) :
+                    out[key] = dict(val)
+
+                elif isinstance(val, set):
                     out[key] = list(val)
+
                 elif isinstance(val, np.ndarray):
                     out[key] = val.tolist()
 
@@ -750,8 +771,6 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
     if "outbreak_position_UK" in cfg:
         cfg.outbreak_position_UK = r"\mathrm{" + str(cfg.outbreak_position_UK).capitalize() + r"}"
 
-    if "N_daily_vaccinations" in cfg:
-        cfg.N_daily_vaccinations = human_format(cfg.N_daily_vaccinations)
     if "N_init_UK" in cfg:
         cfg.N_init_UK = human_format(cfg.N_init_UK)
 
@@ -1016,8 +1035,10 @@ from src.simulation import nb_simulation
 
 def get_cfg_default():
     """ Default Simulation Parameters """
-    yaml_filename = "cfg/simulation_parameters_default.yaml"
-    return load_yaml(yaml_filename)
+    cfg              = load_yaml("cfg/simulation_parameters_default.yaml")
+    cfg.network      = load_yaml("cfg/simulation_parameters_network.yaml")
+    #cfg.intervention = load_yaml("cfg/simulation_parameters_intervention.yaml")
+    return cfg
 
 
 # def get_cfg_settings():
@@ -1025,39 +1046,61 @@ def get_cfg_default():
 #     yaml_filename = "cfg/settings.yaml"
 #     return load_yaml(yaml_filename)
 
+# Load numba specifications
+spec_cfg            = nb_simulation.spec_cfg
+spec_network        = nb_simulation.spec_network
+#spec_intervention   = nb_simulation.spec_intervention
+spec = {**spec_cfg, **spec_network}
 
+
+# TODO: Check if this can be refactored with format_cfg()
 def format_simulation_paramters(d_simulation_parameters) :
-    
-    for name, lst in d_simulation_parameters.items():
-        
-        # Convert numpy arrays to integers
-        if isinstance(lst, np.ndarray) :
-            d_simulation_parameters[name] = np.unique(np.round(lst)).astype(int).tolist()
+
+    for key, val in d_simulation_parameters.items():
+
+        # Format the numpy style arrays
+        if isinstance(val, np.ndarray) :
+
+            val = np.unique(val)
+
+            if isinstance(spec[key], nb.types.Float):
+                val = val.astype(float)
+            elif isinstance(spec[key], nb.types.Integer):
+                val = val.astype(int)
+            else :
+                raise ValueError("Type casting not yet defined for %s type" % spec[key])
+
+            d_simulation_parameters[key] = val.tolist()
+
+        elif isinstance(val, float) and isinstance(spec[key], nb.types.Integer) :
+            d_simulation_parameters[key] = int(val)
 
     return d_simulation_parameters
 
-def format_cfg(cfg):
-    spec_cfg = nb_simulation.spec_cfg
+def format_cfg(cfg, spec):
 
     if not isinstance(cfg, DotDict):
         cfg = DotDict(cfg)
 
     for key, val in cfg.items():
 
-        if isinstance(spec_cfg[key], nb.types.Float):
+        if key == "network" or key == "intervention" :
+            continue
+
+        if isinstance(spec[key], nb.types.Float):
             cfg[key] = float(val)
-        elif isinstance(spec_cfg[key], nb.types.Integer):
+        elif isinstance(spec[key], nb.types.Integer):
             cfg[key] = int(val)
-        elif isinstance(spec_cfg[key], nb.types.Boolean):
+        elif isinstance(spec[key], nb.types.Boolean):
             cfg[key] = bool(val)
-        elif isinstance(spec_cfg[key], nb.types.ListType):
+        elif isinstance(spec[key], nb.types.ListType):
             if isinstance(val, np.ndarray):
                 cfg[key] = val.tolist()
             else:
                 cfg[key] = list(val)
-        elif isinstance(spec_cfg[key], nb.types.Set):
+        elif isinstance(spec[key], nb.types.Set):
             cfg[key] = set(val)
-        elif isinstance(spec_cfg[key], nb.types.Array):
+        elif isinstance(spec[key], nb.types.Array):
             # cfg[key] = np.array(val, dtype=spec_cfg[key].dtype.name)
             if isinstance(val, np.ndarray):
                 cfg[key] = val.tolist()
@@ -1105,9 +1148,9 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
         d_list = []
         for name, lst in d_simulation_parameters.items():
-            
+
             # Convert all inputs to lists
-            if isinstance(lst, (int, float)):
+            if isinstance(lst, (int, float, str)):
                 lst = [lst]
 
             d_list.append([{name: val} for val in lst])
@@ -1116,19 +1159,39 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
         has_not_printed = True
 
+        # Update cfg values
         cfgs = []
         for combination in all_combinations:
             cfg = cfg_default.copy()
+
             for d in combination:
-                cfg.update(d)
+                key = list(d.keys())[0]
+
+                if key in spec_cfg.keys() :
+                    cfg.update(d)
+
+                elif key in spec_network.keys() :
+                    cfg["network"].update(d)
+
+                #elif key in spec_intervention.keys() :
+                #    cfg["intervention"].update(d)
+
+
             if not N_tot_max or cfg["N_tot"] < N_tot_max:
+
+                cfg              = format_cfg(cfg, spec_cfg)
+                cfg.network      = format_cfg(cfg.network, spec_network)
+                #cfg.intervention = format_cfg(cfg.intervention, spec_intervention)
+
+                # unique code that identifies this simulation
+                cfg.hash = cfg_to_hash(cfg)
+
                 cfgs.append(cfg)
             else:
                 if verbose and has_not_printed:
                     print("Skipping some files due to N_tot > N_tot_max")
                     has_not_printed = False
 
-    cfgs = [format_cfg(cfg) for cfg in cfgs]
     return cfgs
 
 
@@ -1138,7 +1201,8 @@ def cfg_to_hash(cfg, N=10, exclude_ID=True, exclude_hash=True):
     N = len of hash (truncate hash)
     """
 
-    d = format_cfg(cfg.copy())
+    d = cfg.copy()
+    d = flatten_cfg(d)
 
     if exclude_ID and "ID" in d:
         d.pop("ID")
@@ -1149,6 +1213,22 @@ def cfg_to_hash(cfg, N=10, exclude_ID=True, exclude_hash=True):
     s_hash = sha256(d)
 
     return s_hash[:N]
+
+
+def flatten_cfg(cfg) :
+    flat_cfg = {}
+    for key, val in cfg.items() :
+
+        if isinstance(val, dict) :
+            tmp = flatten_cfg(val)
+
+            for tmp_key, tmp_val in tmp.items() :
+                flat_cfg[tmp_key] = tmp_val
+
+        else :
+            flat_cfg[key] = val
+
+    return flat_cfg
 
 
 d_num_cores_N_tot = RangeKeyDict(
@@ -1823,7 +1903,7 @@ def load_age_stratified_file(file) :
     # Get the row_names
     row_names = data.index.values
 
-    return (data.to_numpy(), lower_breaks, row_names)
+    return (data.to_numpy(), row_names, lower_breaks)
 
 def load_contact_matrices(scenario = 'reference') :
     """ Loads and parses the contact matrices corresponding to the chosen scenario.
@@ -1833,35 +1913,81 @@ def load_contact_matrices(scenario = 'reference') :
             scenario (string): Name for the scenario to load
     """
     # Load the contact matrices
-    matrix_work,  age_groups_work,  _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
-    matrix_school,  age_groups_school,  _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_school.csv')
-    matrix_other, age_groups_other, _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
+    matrix_work,   _, age_groups_work   = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
+    matrix_school, _, age_groups_school = load_age_stratified_file('Data/contact_matrices/' + scenario + '_school.csv')
+    matrix_other,  _, age_groups_other  = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
     # TODO: Load the school contact matrix
 
     # Assert the age_groups are the same
     if not age_groups_work == age_groups_other :
         raise ValueError('Age groups for work contact matrix and other contact matrix not equal')
     matrix_work = matrix_work + matrix_school
+
     # Determine the work-to-other ratio
     work_other_ratio = matrix_work.sum() / (matrix_other.sum() + matrix_work.sum())
 
     # Normalize the contact matrices after this ratio has been determined
-    return (matrix_work , matrix_other , work_other_ratio, age_groups_work)
+    # TODO: Find out if lists or numpy arrays are better --- I am leaning towards using only numpy arrays
+    return (matrix_work.tolist(), matrix_other.tolist(), work_other_ratio, age_groups_work)
 
 
-def load_vaccination_schedule(scenario = 'reference') :
+
+
+
+def load_vaccination_schedule(cfg) :
     """ Loads and parses the vaccination schedule corresponding to the chosen scenario.
+        This includes scaling the number of infections and adjusting the effective start dates
+        Parameters:
+            cfg (dict): the configuration file
+    """
+    vaccinations_per_age_group, vaccination_schedule, _ = load_vaccination_schedule_file(scenario = cfg.Intervention_vaccination_schedule_name)
+
+    # Check that lengths match
+    test_length(vaccinations_per_age_group, cfg.Intervention_vaccination_effect_delays, "Loaded vaccination schedules does not match with the length of vaccination_effect_delays")
+
+    # Scale and adjust the vaccination schedules
+    for i in range(len(vaccinations_per_age_group)):
+
+        # Scale the number of vaccines
+        np.multiply(vaccinations_per_age_group[i], cfg.network.N_tot / 5_800_000, out=vaccinations_per_age_group[i], casting='unsafe')
+
+        # Determine the timing of effective vaccines
+        vaccination_schedule[i] = cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + cfg.Intervention_vaccination_effect_delays[i]
+
+    return (vaccinations_per_age_group, vaccination_schedule)
+
+
+def load_vaccination_schedule_file(scenario = "reference") :
+    """ Loads and parses the vaccination schedule file corresponding to the chosen scenario.
         Parameters:
             scenario (string): Name for the scenario to load
     """
-    # Load the contact matrices
-    vaccine_counts, age_groups, schedule = load_age_stratified_file('Data/vaccination_schedule/' + scenario + '.csv')
+    # Prepare output files
+    vaccine_counts  = []
+    schedule        = []
+    age_groups      = []
 
-    # Convert schedule to datetimes
-    schedule = [datetime.datetime.strptime(date, '%Y-%m-%d').date() for date in schedule]
+    # Determine the number of files that matches the requested scenario
+    i = 1
+    filename = lambda i : f'Data/vaccination_schedule/{scenario}_{i}.csv'
+
+    while file_exists(filename(i)) :
+
+        # Load the contact matrices
+        tmp_vaccine_counts, tmp_schedule, _ = load_age_stratified_file(filename(i))
+
+        # Convert schedule to datetimes
+        tmp_schedule = [datetime.datetime.strptime(date, '%Y-%m-%d').date() for date in tmp_schedule]
+
+        # Store the loaded schedule
+        vaccine_counts.append(tmp_vaccine_counts)
+        schedule.append(tmp_schedule)
+
+        # Increment
+        i += 1
 
     # Normalize the contact matrices after this ratio has been determined
-    return (vaccine_counts, age_groups, schedule)
+    return (vaccine_counts, schedule, age_groups)
 
 @njit
 def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=False):
@@ -1890,9 +2016,9 @@ def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=Fals
 def load_kommune_shapefiles(shapefile_size, verbose=False):
 
     shp_file = {}
-    shp_file["small"] = "Data/Kommuner/ADM_2M/KOMMUNE.shp"
+    shp_file["small"]  = "Data/Kommuner/ADM_2M/KOMMUNE.shp"
     shp_file["medium"] = "Data/Kommuner/ADM_500k/KOMMUNE.shp"
-    shp_file["large"] = "Data/Kommuner/ADM_10k/KOMMUNE.shp"
+    shp_file["large"]  = "Data/Kommuner/ADM_10k/KOMMUNE.shp"
 
     if verbose:
         print(f"Loading {shapefile_size} kommune shape files")
@@ -1933,12 +2059,12 @@ def dict_to_query(d):
         lst.append(Query()[key] == val)
     return multiple_queries(*lst)
 
+def get_db_cfg(path="Output/db.json"):
 
-from tinydb import TinyDB, Query
+    if not (os.path.dirname(path) == '') and not os.path.exists(os.path.dirname(path)) :
+        os.makedirs(os.path.dirname(path))
 
-
-def get_db_cfg():
-    db = TinyDB("db.json", sort_keys=False, indent=4, separators=(",", ": "))
+    db = TinyDB(path, sort_keys=False, indent=4, separators=(",", ": "))
     db_cfg = db.table("cfg", cache_size=0)
     return db_cfg
 
@@ -1991,24 +2117,41 @@ def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True):
 
 import h5py
 
-
-def add_cfg_to_hdf5_file(f, cfg):
+def add_cfg_to_hdf5_file(f, cfg, path='/'):
     for key, val in cfg.items():
-        # if isinstance(val, set):
-        # val = list(val)
-        f.attrs[key] = val
+
+        if isinstance(val, (int, float, str, np.ndarray, list)):
+            f[path + key] = val
+
+        elif isinstance(val, dict) :
+            add_cfg_to_hdf5_file(f, val, path = path + key + '/')
+
+        else:
+            raise ValueError("Cannot save %s of %s type" % (key, type(val)))
 
 
 def read_cfg_from_hdf5_file(filename):
-    cfg = {}
     with h5py.File(filename, "r") as f:
-        for key, val in f.attrs.items():
-            cfg[key] = val
-    return format_cfg(cfg)
+        cfg = read_cfg_from_hdf5_file_recursively(f)
 
+    cfg              = format_cfg(cfg,         nb_simulation.spec_cfg)
+    cfg.network      = format_cfg(cfg.network, nb_simulation.spec_network)
+
+    return cfg
+
+def read_cfg_from_hdf5_file_recursively(f, path='/'):
+    tmp = {}
+    for key, item in f[path].items():
+
+        if isinstance(item, h5py._h1.dataset.Dataset) :
+            tmp[key] = item.value
+
+        if isinstance(item, h5py._h1.group.Group) :
+            tmp[key] = read_cfg_from_hdf5_file_recursively(f, path=path + key + '/')
+
+    return tmp
 
 #%%
-
 
 def get_cfg_network_initialized(cfg):
     include = load_yaml("cfg/settings.yaml")["network_initialization_include_parameters"]

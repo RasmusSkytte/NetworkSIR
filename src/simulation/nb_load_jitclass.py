@@ -15,7 +15,7 @@ from src.simulation import nb_simulation
 #%%
 
 
-def jitclass_to_hdf5_ready_dict(jitclass, skip="cfg"):
+def jitclass_to_hdf5_ready_dict(jitclass, skip=["cfg", "cfg_network"]):
 
     if isinstance(skip, str):
         skip = [skip]

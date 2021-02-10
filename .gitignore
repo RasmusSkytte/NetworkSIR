@@ -1,6 +1,5 @@
 # exclude data from source control by default
 !Data/
-!Data2/
 
 Data/*
 !Data/contact_matrices/

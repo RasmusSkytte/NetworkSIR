@@ -183,7 +183,7 @@ class Simulation :
     def initialize_network(
         self, force_rerun=False, save_initial_network=False, only_initialize_network=False, force_load_initial_network=False
     ) :
-        filename = "Output/initialized_network/"
+        filename = "Initialized_networks/"
         #filename += f"{network_hash}__ID__{self.cfg.ID}.hdf5"
         filename += f"{utils.cfg_to_hash(self.cfg.network)}.hdf5"
 

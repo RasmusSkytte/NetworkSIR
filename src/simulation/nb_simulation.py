@@ -40,11 +40,11 @@ spec_cfg = {
     "beta_connection_type" : nb.float32[:],
     "algo" : nb.uint8,
     "N_init" : nb.uint16,
-    "N_init_UK_frac" : nb.float64,
+    "N_init_UK_frac" : nb.float32,
     "lambda_E" : nb.float32,
     "lambda_I" : nb.float32,
     # other
-    "day_max" : nb.float32,
+    "day_max" : nb.int32,
     "make_random_initial_infections" : nb.boolean,
     "weighted_random_initial_infections" : nb.boolean,
     "make_initial_infections_at_kommune" : nb.boolean,
@@ -52,7 +52,7 @@ spec_cfg = {
     "clustering_connection_retries" : nb.uint32,
     "beta_UK_multiplier" : nb.float32,
     "outbreak_position_UK" : nb.types.unicode_type,
-    "start_date_offset" : nb.int64,
+    "start_date_offset" : nb.int16,
     # events
     "N_events" : nb.uint16,
     "event_size_max" : nb.uint16,
@@ -62,7 +62,7 @@ spec_cfg = {
     # lockdown-related / interventions
     "do_interventions" : nb.boolean,
     "threshold_type" : nb.int8, # which thing set off restrictions : 0 : certain date. 1 : "real" incidens rate 2 : measured incidens rate
-    "restriction_thresholds" : nb.int64[:], # len == 2*nr of different thresholds, on the form [start stop start stop etc.]
+    "restriction_thresholds" : nb.int16[:], # len == 2*nr of different thresholds, on the form [start stop start stop etc.]
     "threshold_interventions_to_apply" : ListType(nb.int64),
     "list_of_threshold_interventions_effects" : nb.float64[:, :, :],
     "continuous_interventions_to_apply" : ListType(nb.int64),

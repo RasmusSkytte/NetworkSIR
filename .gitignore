@@ -9,7 +9,13 @@ Data/*
 
 Figures/
 
+Initialized_networks/
+
 Output/
+Output_HEP/
+Output_local/
+
+_Plot_tester.ipynb
 
 db.json
 

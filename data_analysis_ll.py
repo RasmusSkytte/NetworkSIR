@@ -29,8 +29,8 @@ except ImportError:
     import file_loaders
     import SIR
 
-def fit_exponential(x, y):	
-	y = np.array(y)	
+def fit_exponential(x, y):
+	y = np.array(y)
 	popt, pcov = sp.optimize.curve_fit(exponential, x, y, p0=(y[0], 1, 1), bounds=([y[0]*0.5,0,0], [y[0]*1.5,2,100]))
 	return popt, pcov
 
@@ -72,30 +72,30 @@ def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_lis
     filenames = abm_files.cfg_to_filenames(cfg)
     network_filenames = network_files.cfg_to_filenames(cfg)
 
-
     N_tot = cfg.N_tot
     fig, axes = plt.subplots(ncols=1, figsize=(12, 7))
     fig.subplots_adjust(top=0.8)
     lls = []
     i = 0
     data = []
+
     for  filename, network_filename in zip(filenames, network_filenames):
         df = file_loaders.pandas_load_file(filename)
         day_found_infected, R_true, freedom_impact, R_true_brit, my_state = file_loaders.load_Network_file(network_filename)
         t = df["time"].values
         pandemic_control2 = pandemic_control_calc(df["I"])
         label = r"ABM" if i == 0 else None
-   
-        inf = np.array(df["I"])/N_tot*5_800_000
+
+        inf = np.array(df["I"]) * 5_800_000 / N_tot
         data.append(inf)
         #axes[1].plot(t, inf,lw=4, c="k", label=label)
         ids = np.array([int(ts) - vaccination_schedule[0] + 21 for ts in t])
         ids[ids < 0] == 0
         ids[ids > 140] == 0
-     
+
         print("filename", "R_mean", np.mean(R_true[1:]), "freedom_impact", np.mean(freedom_impact[1:]),"R_true_brit", np.mean(R_true_brit[1:]),"pandemic_control2",np.mean(pandemic_control2))
 
-       
+
         n_pos = np.array([724, 886, 760, 773, 879, 754, 625, 652, 592, 668, 456, 431, 377, 488])
         pos_procent = np.array([0.86, 0.8, 0.67, 0.67, 0.61, 0.55, 0.69, 0.66, 0.52, 0.6, 0.36, 0.37, 0.3, 0.43])
         n_test = n_pos / pos_procent * 100
@@ -113,18 +113,20 @@ def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_lis
         # Find the index for the starting date
         #ind = np.where(df_index["date"] == datetime.date(2021, 1, 1))[0][0]
 
-        
-       
+
+
         i += 1
         #axes[1].legend()
     lls = np.array(lls)
+    print(lls)
+    x = x
     lls = lls - min(lls)
     lls = lls/max(lls)
     np.arange('2021-01', '2005-03', dtype='datetime64[D]')
     for ll, d in zip(lls, data):
-      
-      
-        axes.plot(t, d, lw=4, c="k", alpha = ll)        
+
+
+        axes.plot(t, d, lw=4, c="k", alpha = ll)
         axes.set_xlim(19, 100)
         #axes[0].set_xlim(19, 100)
         axes.set_ylim(0, 2500)
@@ -142,7 +144,7 @@ reload(plot)
 reload(file_loaders)
 
 abm_files = file_loaders.ABM_simulations(verbose=True)
-network_files = file_loaders.ABM_simulations(base_dir="Data/network", filetype="hdf5")
+network_files = file_loaders.ABM_simulations(base_dir="Output/network", filetype="hdf5")
 vaccinations_per_age_group, _, vaccination_schedule = utils.load_vaccination_schedule()
 vaccinations_per_age_group=vaccinations_per_age_group.astype(np.int64)
 vaccination_schedule = np.arange(len(vaccination_schedule),dtype=np.int64) + 10
@@ -174,10 +176,10 @@ with PdfPages(pdf_name) as pdf:
         x=x
         fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
         fig.subplots_adjust(top=0.8)
-        
-        for i in range(9,31):      
+
+        for i in range(9,31):
             if i in range(15):
-                color = 'b' 
+                color = 'b'
             elif i in range(15,19):
                 color = 'g'
             elif i in range(19,23):
@@ -194,8 +196,8 @@ with PdfPages(pdf_name) as pdf:
 
         fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
         fig.subplots_adjust(top=0.8)
-        
-        for i in range(31,67):      
+
+        for i in range(31,67):
             if i in range(31,40):
                 color = 'g'
             elif i in range(40,49):
@@ -204,18 +206,18 @@ with PdfPages(pdf_name) as pdf:
                 color = 'm'
             elif i in range(58,66):
                 color = 'k'
-            if i!=57 and i!=66:    
+            if i!=57 and i!=66:
                 axes.scatter(fi_list[i],pc_list[i], c = color)
                 axes.text(fi_list[i]*1.01,pc_list[i]*1.01, str(i - 31),fontsize=12)
-        
+
         #axes.legend()
         pdf.savefig(fig, dpi=100)
         plt.close("all")
         fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
         fig.subplots_adjust(top=0.8)
-        
-        for j in range(67,103): 
-            i = j - 36    
+
+        for j in range(67,103):
+            i = j - 36
             if i in range(31,40):
                 color = 'g'
             elif i in range(40,49):
@@ -224,18 +226,18 @@ with PdfPages(pdf_name) as pdf:
                 color = 'm'
             elif i in range(58,66):
                 color = 'k'
-            if i!=57 and i!=66:       
+            if i!=57 and i!=66:
                 axes.scatter(fi_list[j],pc_list[j], c = color)
                 axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-        
+
         #axes.legend()
         pdf.savefig(fig, dpi=100)
         plt.close("all")
 
         fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
         fig.subplots_adjust(top=0.8)
-        
-        for j in range(103,len(fi_list)):      
+
+        for j in range(103,len(fi_list)):
             i = j - 72
             if i in range(31,40):
                 color = 'g'
@@ -245,10 +247,10 @@ with PdfPages(pdf_name) as pdf:
                 color = 'm'
             elif i in range(58,66):
                 color = 'k'
-            if i!=57 and i!=66:  
+            if i!=57 and i!=66:
                 axes.scatter(fi_list[j],pc_list[j], c = color)
                 axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-        
+
         #axes.legend()
         pdf.savefig(fig, dpi=100)
         plt.close("all")
@@ -258,40 +260,40 @@ with PdfPages(pdf_name) as pdf:
         fig, axes = plt.subplots(ncols=1, figsize=(16, 7))
         fig.subplots_adjust(top=0.8)
 
-        for i in range(31,67):      
-            
+        for i in range(31,67):
+
             color = 'g'
-            
-            if i!=57 and i!=66:    
+
+            if i!=57 and i!=66:
                 axes.scatter(fi_list[i],pc_list[i], c = color)
                 #axes.text(fi_list[i]*1.01,pc_list[i]*1.01, str(i - 31),fontsize=12)
-        
-       
-        
-        for j in range(67,103): 
-            i = j - 36    
+
+
+
+        for j in range(67,103):
+            i = j - 36
             color = 'b'
-            if i!=57 and i!=66:       
-                axes.scatter(fi_list[j],pc_list[j], c = color)
-                #axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-        
-        
-        for j in range(103,139):      
-            i = j - 72
-            
-            color = 'm'
-            
-            if i!=57 and i!=66:  
+            if i!=57 and i!=66:
                 axes.scatter(fi_list[j],pc_list[j], c = color)
                 #axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
 
-        for j in range(139, len(fi_list)):      
-            i = j - 108            
+
+        for j in range(103,139):
+            i = j - 72
+
+            color = 'm'
+
+            if i!=57 and i!=66:
+                axes.scatter(fi_list[j],pc_list[j], c = color)
+                #axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
+
+        for j in range(139, len(fi_list)):
+            i = j - 108
             color = 'r'
-            
+
             axes.scatter(fi_list[j],pc_list[j], c = color)
                 #axes.text(fi_list[j]*1.01,pc_list[j]*1.01, str(i - 31),fontsize=12)
-        
+
         #axes.legend()
         pdf.savefig(fig, dpi=100)
         plt.close("all")
@@ -299,4 +301,4 @@ with PdfPages(pdf_name) as pdf:
 
 
 
-  
+

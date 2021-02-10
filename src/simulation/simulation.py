@@ -1,4 +1,5 @@
 # from re import X TODO: Delete line
+from sys import version
 import numpy as np
 # import pandas as pd TODO: Delete line
 # import matplotlib.pyplot as plt TODO: Delete line
@@ -50,21 +51,28 @@ np.set_printoptions(linewidth=200)
 
 class Simulation:
 
-    def __init__(self, cfg, verbose=False):
+    def __init__(self, cfg, cfg_hash, verbose=False):
 
         self.verbose = verbose
 
-        self.cfg = utils.DotDict(cfg)
-        self.N_tot = self.cfg.N_tot
+        self.cfg = cfg
 
-        # unique code that identifies this simulation
-        self.hash = utils.cfg_to_hash(self.cfg)
+        self.N_tot = cfg.network.N_tot
+
+        self.hash = cfg_hash
+
         self.my = nb_simulation.initialize_My(self.cfg)
         utils.set_numba_random_seed(self.cfg.ID)
 
         if self.cfg.version == 1:
             if self.cfg.do_interventions:
                 raise AssertionError("interventions not yet implemented for version 1")
+
+        if self.verbose:
+            print("Importing work and other matrices")
+
+        # TODO: fix the DotDict indexing
+        self.cfg["network"]["work_matrix"], self.cfg["network"]["other_matrix"], self.cfg.network.work_other_ratio, _ = utils.load_contact_matrices(scenario = self.cfg.network.contact_matrices_name)
 
     def _initialize_network(self):
         """ Initializing the network for the simulation
@@ -104,22 +112,9 @@ class Simulation:
                 age_distribution_per_person_in_house_per_kommune,
                 coordinates_raw,
                 kommune_ids,
-                self.N_ages
+                self.N_ages,
+                verbose=self.verbose
             )
-
-
-            #make connectivity matrices, right now they are uniform.
-            # TODO: take real input to get better matrices.
-            if self.verbose:
-                print("Using uniform work and other matrices")
-
-            matrix_work, matrix_other, work_other_ratio, age_groups_contact_matrices = utils.load_contact_matrices(scenario = '2021_fase1_sce1')
-
-            # Overwrite the value for the work_other_ratio based on the loaded matrices
-            self.my.cfg.work_other_ratio = work_other_ratio
-
-
-            # work_other_ratio = 0.5  # 20% work, 80% other
 
             if self.verbose:
                 print("Connecting work and others, currently slow, please wait")
@@ -128,8 +123,8 @@ class Simulation:
                 self.my,
                 N_ages,
                 mu_counter,
-                matrix_work,
-                matrix_other,
+                np.array(self.cfg.network.work_matrix),
+                np.array(self.cfg.network.other_matrix),
                 agents_in_age_group,
                 verbose=self.verbose,
             )
@@ -145,7 +140,7 @@ class Simulation:
             nb_simulation.v1_connect_nodes(self.my)
 
             agents_in_age_group = List()
-            agents_in_age_group.append(np.arange(self.cfg.N_tot, dtype=np.uint32))
+            agents_in_age_group.append(np.arange(self.cfg.network.N_tot, dtype=np.uint32))
 
         self.agents_in_age_group = agents_in_age_group
 
@@ -180,11 +175,11 @@ class Simulation:
 
 
     def initialize_network(
-        self, force_rerun=False, save_initial_network=True, force_load_initial_network=False
+        self, force_rerun=False, save_initial_network=False, only_initialize_network=False, force_load_initial_network=False
     ):
-        utils.set_numba_random_seed(self.cfg.ID)
         filename = "Output/initialized_network/"
-        filename += f"initialized_network__{self.hash}__ID__{self.cfg.ID}.hdf5"
+        #filename += f"{network_hash}__ID__{self.cfg.ID}.hdf5"
+        filename += f"{utils.cfg_to_hash(self.cfg.network)}.hdf5"
 
         if force_load_initial_network:
             initialize_network = False
@@ -194,6 +189,8 @@ class Simulation:
             initialize_network = True
             if self.verbose:
                 print("Initializing network since the hdf5-file does not exist")
+
+        # TODO: Find out why it does not exist in the database
         #elif len(utils.query_cfg(utils.get_cfg_network_initialized(self.cfg))) == 0:
         #    initialize_network = True
         #    if self.verbose:
@@ -207,12 +204,14 @@ class Simulation:
 
         # Initalizing network and (optionally) saving it
         if initialize_network:
+            utils.set_numba_random_seed(self.cfg.ID)
+
             self._initialize_network()
             if save_initial_network:
                 self._save_initialized_network(filename)
 
         # Loading initialized network
-        else:
+        elif not only_initialize_network:
             self._load_initialized_network(filename)
 
     def make_initial_infections(self):
@@ -254,7 +253,7 @@ class Simulation:
                 infected_per_kommune_ints,
                 kommune_names,
                 my_kommune,
-                self.verbose,
+                verbose=self.verbose,
             )
 
         else:
@@ -268,6 +267,7 @@ class Simulation:
                 self.initial_ages_exposed,
                 # self.N_infectious_states,
                 self.N_states,
+                verbose=self.verbose
             )
 
     def run_simulation(self, verbose_interventions=None):
@@ -284,32 +284,27 @@ class Simulation:
         if verbose_interventions is None:
             verbose_interventions = self.verbose
 
-         # Load the projected vaccination schedule
+        # Load the projected vaccination schedule
         vaccinations_per_age_group, _, vaccination_schedule = utils.load_vaccination_schedule()
 
          # Scale the number of vaccines
-        np.multiply(vaccinations_per_age_group, self.cfg.N_tot / 5_800_000, out=vaccinations_per_age_group, casting='unsafe')
+        np.multiply(vaccinations_per_age_group, self.cfg.network.N_tot / 5_800_000, out=vaccinations_per_age_group, casting='unsafe')
 
-        # Convert vaccination_schedule to integer day counter
-        work_matrix_init,     other_matrix_init,     _, _ = utils.load_contact_matrices(scenario="2021_fase1_sce1")
-        work_matrix_restrict, other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario="ned2021jan")
+        vaccination_schedule = self.cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + 10
+
+        # Convert vaccination_schedule to integer day coun
+        work_matrix_restrict, other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario=self.cfg.Intervention_contact_matrices_name)
         #work_matrix_restrict = work_matrix_restrict * 0.8
         #other_matrix_restrict = other_matrix_restrict * 0.8
 
-        # TODO: If vaccinations are already started, make sure intialization accounts for it
-
-        vaccinations_per_age_group = vaccinations_per_age_group.T.astype(np.int64)
-        vaccination_schedule = self.cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + 10
-
         self.intervention = nb_simulation.Intervention(
             self.my.cfg,
+            self.my.cfg_network,
             labels = labels,
             vaccinations_per_age_group = vaccinations_per_age_group,
             vaccination_schedule = vaccination_schedule,
-            work_matrix_init = work_matrix_init,
-            work_matrix_restrict = work_matrix_restrict,
-            other_matrix_init = other_matrix_init,
-            other_matrix_restrict = other_matrix_restrict,
+            work_matrix_restrict = np.array(work_matrix_restrict),
+            other_matrix_restrict = np.array(other_matrix_restrict),
             verbose=verbose_interventions,
         )
 
@@ -347,6 +342,7 @@ class Simulation:
     def _add_cfg_to_hdf5_file(self, f, cfg=None):
         if cfg is None:
             cfg = self.cfg
+
         utils.add_cfg_to_hdf5_file(f, cfg)
 
     def _save_dataframe(self, save_csv=False, save_hdf5=True):
@@ -412,10 +408,9 @@ def run_single_simulation(
     verbose=False,
     force_rerun=False,
     only_initialize_network=False,
-    save_initial_network=True,
+    save_initial_network=False,
     save_csv=False,
 ):
-
     with Timer() as t, warnings.catch_warnings():
         if not verbose:
             # ignore warning about run_algo
@@ -423,16 +418,28 @@ def run_single_simulation(
             warnings.simplefilter("ignore", NumbaTypeSafetyWarning)
             # warnings.simplefilter("ignore", NumbaPendingDeprecationWarning)
 
-        simulation = Simulation(cfg, verbose)
+        # TODO: Find a way to do this better
+        cfg_hash = cfg.hash
+        cfg.pop("hash")
+
+        simulation = Simulation(cfg, cfg_hash, verbose)
+
         simulation.initialize_network(
-            force_rerun=force_rerun, save_initial_network=save_initial_network
+            force_rerun=force_rerun, save_initial_network=save_initial_network, only_initialize_network=only_initialize_network
         )
+
         if only_initialize_network:
             return None
 
         simulation.make_initial_infections()
+
         simulation.run_simulation()
+
         simulation.save(time_elapsed=t.elapsed, save_hdf5=True, save_csv=save_csv)
+
+        # TODO: Find a way to do this better
+        cfg["hash"] = cfg_hash
+
     return cfg
 
 
@@ -443,7 +450,6 @@ from p_tqdm import p_umap, p_uimap
 
 
 def update_database(db_cfg, q, cfg):
-    cfg["hash"] = utils.cfg_to_hash(cfg)
     cfg.pop("ID")
     if not db_cfg.contains(q.hash == cfg.hash):
         db_cfg.insert(cfg)
@@ -460,17 +466,18 @@ def run_simulations(
     **kwargs,
 ):
 
-    d_simulation_parameters = utils.format_simulation_paramters(d_simulation_parameters)
-
     db_cfg = utils.get_db_cfg()
     q = Query()
 
+    d_simulation_parameters = utils.format_simulation_paramters(d_simulation_parameters)
+
     cfgs_all = utils.generate_cfgs(d_simulation_parameters, N_runs, N_tot_max, verbose=verbose)
+
     if len(cfgs_all) == 0:
         N_files = 0
         return N_files
 
-    db_counts = np.array([db_cfg.count(q.hash == utils.cfg_to_hash(cfg)) for cfg in cfgs_all])
+    db_counts = np.array([db_cfg.count(q.hash == cfg.hash) for cfg in cfgs_all])
     assert np.max(db_counts) <= 1
 
     # keep only cfgs that are not in the database already
@@ -504,11 +511,32 @@ def run_simulations(
     # kwargs = {}
     if num_cores == 1:
         for cfg in tqdm(cfgs):
-            run_single_simulation(cfg, verbose=verbose, **kwargs)
-            update_database(db_cfg, q, cfg)
+            cfg_out = run_single_simulation(cfg, save_initial_network=True, verbose=verbose, **kwargs)
+            update_database(db_cfg, q, cfg_out)
+
     else:
-        # print("run simulation", flush=True)
-        f_single_simulation = partial(run_single_simulation, verbose=False, **kwargs)
+        # First generate the networks
+        f_single_network = partial(run_single_simulation, only_initialize_network=True, save_initial_network=True, verbose=verbose, **kwargs)
+
+        # Get the network hashes
+        network_hashes = set([utils.cfg_to_hash(cfg.network) for cfg in cfgs])
+
+        # Get list of unique cfgs
+        cfgs_network = []
+        for cfg in cfgs :
+            network_hash = utils.cfg_to_hash(cfg.network)
+
+            if network_hash in network_hashes :
+                cfgs_network.append(cfg)
+                network_hashes.remove(network_hash)
+
+        # Generate the networks
+        print("Generating networks. Please wait")
+        p_umap(f_single_network, cfgs_network, num_cpus=num_cores)
+
+        # Then run the simulations on the network
+        print("Running simulations. Please wait")
+        f_single_simulation = partial(run_single_simulation, verbose=verbose, **kwargs)
         for cfg in p_uimap(f_single_simulation, cfgs, num_cpus=num_cores):
             update_database(db_cfg, q, cfg)
 

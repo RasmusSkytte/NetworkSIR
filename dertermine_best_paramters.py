@@ -3,31 +3,16 @@ import pandas as pd
 from datetime import datetime
 from scipy.stats import norm
 
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from matplotlib.backends.backend_pdf import PdfPages
-
 from tqdm import tqdm
-from pathlib import Path
 
 from importlib import reload
-from src.utils import utils
-from src import plot
 from src import file_loaders
-from src import rc_params
 
 
-# Define the subset to plot on
-subset = {"beta" : 0.0125, "N_init" : 210}
-
-# Number of plots to keep
-N = 625
-
-def plot_with_loglikelihood(cfg, abm_files, covid_index, covid_index_sigma, covid_index_offset, axes):
+def loglikelihood(cfg, abm_files, covid_index, covid_index_sigma, covid_index_offset):
 
     # Store the loglikelihood and function handles
     lls = []
-    lines = []
 
     # Loop over repetitions of the cfg
     for filename in abm_files.cfg_to_filenames(cfg) :
@@ -44,9 +29,6 @@ def plot_with_loglikelihood(cfg, abm_files, covid_index, covid_index_sigma, covi
         for k in range(days) :
             I[k] = np.mean(I[k*10:(k+1)*10])
         I_m = I[:days]
-
-        # Plot the simulation prediction
-        lines.extend(axes.plot(pd.date_range(start=datetime(2020, 12, 8), periods = len(I_m), freq="D"), I_m, lw = 4, c = "k"))
 
         if days >= len(covid_index) + covid_index_offset :
 
@@ -65,19 +47,9 @@ def plot_with_loglikelihood(cfg, abm_files, covid_index, covid_index_sigma, covi
         else :
             lls.append(np.nan)
 
-    return (lls, lines)
+    return lls
 
-
-rc_params.set_rc_params()
-
-#%%
-
-reload(plot)
 reload(file_loaders)
-
-# Prepare output file
-pdf_name = Path(f"Figures/data_analysis_rasmus_HEP.pdf")
-utils.make_sure_folder_exist(pdf_name)
 
 # Load the covid index data
 df_index = pd.read_feather("Data/covid_index.feather")
@@ -99,55 +71,24 @@ covid_index_offset = (datetime(2021, 1, 1) - datetime(2020, 12, 8)).days
 # Load the ABM simulations
 abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=None, verbose=True)
 
-
-handles = []
 lls     = []
-
-# Prepare figure
-fig = plt.figure()
-axes = plt.gca()
 
 for cfg in tqdm(
     abm_files.iter_cfgs(),
-    desc="Plotting the individual ABM simulations",
+    desc="Getting the log-likelihoods for the individual ABM simulations",
     total=len(abm_files.cfgs)) :
 
     # Plot and compute loglikelihoods
-    tmp_lls, tmp_handles = plot_with_loglikelihood(cfg, abm_files, logK, logK_sigma, covid_index_offset, axes)
+    tmp_lls = loglikelihood(cfg, abm_files, logK, logK_sigma, covid_index_offset)
 
     # Store the plot handles and loglikelihoods
     lls.extend(tmp_lls)
-    handles.extend(tmp_handles)
-
-# Rescale lls for plotting
-lls -= np.nanmin(lls)
-lls /= np.nanmax(lls) / 0.8
-lls += 0.2
-
-# Color according to lls
-for ll, line in zip(lls, handles) :
-    line.set_alpha(ll)
-
-# Keep only the N best lines
-for ind in sorted(lls.argsort()[:-N], reverse = True) :
-    handles.pop(ind).remove()
 
 
-months = mdates.MonthLocator()  # every month
-months_fmt = mdates.DateFormatter('%b')
-
-axes.xaxis.set_major_locator(months)
-axes.xaxis.set_major_formatter(months_fmt)
-
-plt.ylim(0, 5000)
-
-print(lls)
 cfgs = [cfg for cfg in abm_files.iter_cfgs()]
 cfg = cfgs[np.nanargmax(lls)]
-print(cfg.beta)
-print(cfg.beta_UK_multiplier)
-print(cfg.N_init)
-
-#plt.show()
-plt.savefig(pdf_name, dpi=100)
-plt.close("all")
+print("--- Best parameters ---")
+print(f"beta : {cfg.beta}")
+print(f"beta_UK_multiplier : {cfg.beta_UK_multiplier}")
+print(f"N_init : {cfg.N_init}")
+print(f"N_init_UK_frac : {cfg.N_init_UK_frac}")

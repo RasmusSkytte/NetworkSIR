@@ -21,65 +21,65 @@ from tinydb import TinyDB, Query
 
 
 
-def sha256(d):
-    if isinstance(d, DotDict):
+def sha256(d) :
+    if isinstance(d, DotDict) :
         d = d.copy()  # converts to regular dict
-    for key, val in d.items():
-        if isinstance(val, set):
+    for key, val in d.items() :
+        if isinstance(val, set) :
             d[key] = list(val)
-        if isinstance(val, dict):
+        if isinstance(val, dict) :
             d[key] = sha256(val)
     return dict_hash.sha256(d)
 
 
-def _is_ipython():
-    try:
+def _is_ipython() :
+    try :
         __IPYTHON__
         return True
-    except NameError:
+    except NameError :
         return False
 
 
 is_ipython = _is_ipython()
 
 
-def is_local_computer(N_local_cores=12):
-    if mp.cpu_count() <= N_local_cores:  # and platform.system() == 'Darwin':
+def is_local_computer(N_local_cores=12) :
+    if mp.cpu_count() <= N_local_cores :  # and platform.system() == 'Darwin' :
         return True
-    else:
+    else :
         return False
 
 
-def get_num_cores(num_cores_max=None, subtract_cores=1):
+def get_num_cores(num_cores_max=None, subtract_cores=1) :
     num_cores = mp.cpu_count() - subtract_cores
-    if num_cores_max and num_cores > num_cores_max:
+    if num_cores_max and num_cores > num_cores_max :
         return num_cores_max
     return num_cores
 
 
-def delete_file(filename):
-    try:
+def delete_file(filename) :
+    try :
         Path(filename).unlink()
-    except FileNotFoundError:
+    except FileNotFoundError :
         pass
 
 
-def file_exists(filename):
-    if isinstance(filename, str):
+def file_exists(filename) :
+    if isinstance(filename, str) :
         filename = Path(filename)
     return filename.exists()
 
 
-def make_sure_folder_exist(filename, delete_file_if_exists=False):
-    if isinstance(filename, str):
+def make_sure_folder_exist(filename, delete_file_if_exists=False) :
+    if isinstance(filename, str) :
         filename = Path(filename)
     filename.parent.mkdir(parents=True, exist_ok=True)
-    if delete_file_if_exists and filename.exists():
+    if delete_file_if_exists and filename.exists() :
         filename.unlink()
 
 
-def load_yaml(filename):
-    with open(filename) as file:
+def load_yaml(filename) :
+    with open(filename) as file :
         tmp = yaml.safe_load(file)
 
         for key, val in tmp.items() :
@@ -88,7 +88,7 @@ def load_yaml(filename):
 
         return DotDict(tmp)
 
-def format_time(t):
+def format_time(t) :
     return str(datetime.timedelta(seconds=t))
 
 
@@ -100,7 +100,7 @@ def test_length(arr1, arr2, error_message) :
 
 
 @njit
-def haversine(lon1, lat1, lon2, lat2):
+def haversine(lon1, lat1, lon2, lat2) :
     lon1, lat1, lon2, lat2 = (
         np.radians(lon1),
         np.radians(lat1),
@@ -114,21 +114,21 @@ def haversine(lon1, lat1, lon2, lat2):
 
 
 @njit
-def haversine_scipy(p1, p2):
+def haversine_scipy(p1, p2) :
     lon1, lat1 = p1
     lon2, lat2 = p2
     return haversine(lon1, lat1, lon2, lat2)
 
 
 @njit
-def set_numba_random_seed(seed):
+def set_numba_random_seed(seed) :
     np.random.seed(seed)
 
 
 @njit
-def initialize_nested_lists(N, dtype):
+def initialize_nested_lists(N, dtype) :
     nested_list = List()
-    for i in range(N):  # prange
+    for i in range(N) :  # prange
         tmp = List()
         tmp.append(dtype(-1))
         nested_list.append(tmp)
@@ -137,7 +137,7 @@ def initialize_nested_lists(N, dtype):
 
 
 @njit
-def initialize_empty_set(dtype):
+def initialize_empty_set(dtype) :
     s = set()
     x = dtype(1)
     s.add(x)  # trick to tell compiler which dtype
@@ -146,16 +146,16 @@ def initialize_empty_set(dtype):
 
 
 @njit
-def initialize_list_set(N, dtype):
+def initialize_list_set(N, dtype) :
     return [initialize_empty_set(dtype=dtype) for _ in range(N)]
 
 
 @njit
-def get_size(x, unit="gb"):
+def get_size(x, unit="gb") :
 
     d_prefix_conversion = {
-        "mb": 10 ** 6,
-        "gb": 10 ** 9,
+        "mb" : 10 ** 6,
+        "gb" : 10 ** 9,
     }
 
     return x.size * x.itemsize / d_prefix_conversion[unit.lower()]
@@ -165,107 +165,107 @@ import re
 from numba import typeof
 
 
-def get_numba_list_dtype(x, as_string=False):
+def get_numba_list_dtype(x, as_string=False) :
     s = str(typeof(x))
 
-    if "int" in s:
+    if "int" in s :
         pat = "int"
-    elif "float" in s:
+    elif "float" in s :
         pat = "float"
-    else:
+    else :
         raise AssertionError('Neither "int", nor "float" in x')
 
     pat = r"(\w*%s\w*)" % pat  # Not thrilled about this line
     dtype = re.findall(pat, s)[0]
 
-    if as_string:
+    if as_string :
         return dtype
     return getattr(np, dtype)
 
 
 # @njit
-# def sort_and_flatten_nested_list(nested_list):
+# def sort_and_flatten_nested_list(nested_list) :
 #     res = List()
-#     for lst in nested_list:
+#     for lst in nested_list :
 #         # sorted_indices = np.argsort(np.asarray(lst))
-#         for index in sorted_indices:
+#         for index in sorted_indices :
 #             res.append(lst[index])
 #     return np.asarray(res)
 
 
 @njit
-def flatten_nested_list(nested_list, sort_nested_list=False):
+def flatten_nested_list(nested_list, sort_nested_list=False) :
     res = List()
-    for lst in nested_list:
-        for x in lst:
+    for lst in nested_list :
+        for x in lst :
             res.append(x)
     return np.asarray(res)
 
 
 @njit
-def get_cumulative_indices(nested_list, index_dtype=np.int64):
+def get_cumulative_indices(nested_list, index_dtype=np.int64) :
     index = np.zeros(len(nested_list) + 1, index_dtype)
-    for i, lst in enumerate(nested_list):
+    for i, lst in enumerate(nested_list) :
         index[i + 1] = index[i] + len(lst)
     return index
 
 
-def nested_list_to_awkward_array(nested_list, return_lengths=False):
+def nested_list_to_awkward_array(nested_list, return_lengths=False) :
     content = ak.layout.NumpyArray(flatten_nested_list(nested_list))
     index = ak.layout.Index64(get_cumulative_indices(nested_list))
     listoffsetarray = ak.layout.ListOffsetArray64(index, content)
     array = ak.Array(listoffsetarray)
 
-    if return_lengths:
+    if return_lengths :
         return (
             array,
             np.diff(index).astype(np.uint16),
         )  # get_lengths_of_nested_list(nested_list)
-    else:
+    else :
         return array
 
 
 @njit
-def get_lengths_of_nested_list(nested_list):
+def get_lengths_of_nested_list(nested_list) :
     N = len(nested_list)
     res = np.zeros(N, dtype=np.uint16)
-    for i in range(N):
+    for i in range(N) :
         res[i] = len(nested_list[i])
     return res
 
 
 @njit
-def binary_search(array, item):
+def binary_search(array, item) :
     first = 0
     last = len(array) - 1
     found = False
 
-    while first <= last and not found:
+    while first <= last and not found :
         index = (first + last) // 2
-        if array[index] == item:
+        if array[index] == item :
             found = True
-        else:
-            if item < array[index]:
+        else :
+            if item < array[index] :
                 last = index - 1
-            else:
+            else :
                 first = index + 1
     return found, index
 
 
 @njit
-def nested_lists_to_list_of_array(nested_list):
+def nested_lists_to_list_of_array(nested_list) :
     out = List()
-    for l in nested_list:
+    for l in nested_list :
         out.append(np.asarray(l))
     return out
 
 
 @njit
-def list_of_arrays_to_list_of_lists(list_of_arrays):
+def list_of_arrays_to_list_of_lists(list_of_arrays) :
     outer = List()
-    for l in list_of_arrays:
+    for l in list_of_arrays :
         inner = List()
-        for x in l:
+        for x in l :
             inner.append(x)
         outer.append(inner)
     return outer
@@ -275,9 +275,9 @@ def list_of_arrays_to_list_of_lists(list_of_arrays):
 # %timeit np.searchsorted(my_connections[contact], 35818)
 
 # @njit
-# def get_lengths_of_nested_list2(nested_list, dtype=np.uint16):
+# def get_lengths_of_nested_list2(nested_list, dtype=np.uint16) :
 #     res = List()
-#     for i in range(len(nested_list)):
+#     for i in range(len(nested_list)) :
 #         res.append(dtype(len(nested_list[i])))
 #     return np.asarray(res)
 
@@ -287,100 +287,100 @@ from numba import types
 from numba.experimental import jitclass
 
 
-@jitclass({"_counter": types.DictType(types.int32, types.uint16)})
-class Counter_int32_uint16:
-    def __init__(self):
+@jitclass({"_counter" : types.DictType(types.int32, types.uint16)})
+class Counter_int32_uint16 :
+    def __init__(self) :
         self._counter = Dict.empty(key_type=types.int32, value_type=types.uint16)
 
-    def _check_key(self, key):
-        if not key in self._counter:
+    def _check_key(self, key) :
+        if not key in self._counter :
             self._counter[key] = 0
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) :
         self._check_key(key)
         return self._counter[key]
 
-    def __setitem__(self, key, val):
+    def __setitem__(self, key, val) :
         self._check_key(key)
         self._counter[key] = val
 
     @property
-    def d(self):
+    def d(self) :
         return self._counter
 
 
-@jitclass({"_counter": types.DictType(types.uint16, types.uint32)})
-class Counter_uint16_uint32:
-    def __init__(self):
+@jitclass({"_counter" : types.DictType(types.uint16, types.uint32)})
+class Counter_uint16_uint32 :
+    def __init__(self) :
         self._counter = Dict.empty(key_type=types.uint16, value_type=types.uint32)
 
-    def _check_key(self, key):
-        if not key in self._counter:
+    def _check_key(self, key) :
+        if not key in self._counter :
             self._counter[key] = 0
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) :
         self._check_key(key)
         return self._counter[key]
 
-    def __setitem__(self, key, val):
+    def __setitem__(self, key, val) :
         self._check_key(key)
         self._counter[key] = val
 
     @property
-    def d(self):
+    def d(self) :
         return self._counter
 
 
-def MetaClassNumbaCounter(key_type, value_type):
-    @jitclass({"_counter": types.DictType(key_type, value_type)})
-    class Counter:
-        def __init__(self):
+def MetaClassNumbaCounter(key_type, value_type) :
+    @jitclass({"_counter" : types.DictType(key_type, value_type)})
+    class Counter :
+        def __init__(self) :
             self._counter = Dict.empty(key_type=key_type, value_type=value_type)
 
-        def _check_key(self, key):
-            if not key in self._counter:
+        def _check_key(self, key) :
+            if not key in self._counter :
                 self._counter[key] = 0
 
-        def __getitem__(self, key):
+        def __getitem__(self, key) :
             self._check_key(key)
             return self._counter[key]
 
-        def __setitem__(self, key, val):
+        def __setitem__(self, key, val) :
             self._check_key(key)
             self._counter[key] = val
 
         @property
-        def d(self):
+        def d(self) :
             return self._counter
 
     return Counter()
 
 
 @njit
-def list_of_counters_to_numpy_array(counter_list, dtype=np.uint32):
+def list_of_counters_to_numpy_array(counter_list, dtype=np.uint32) :
 
     N = len(counter_list)  # number of "days" in the list
     M = max([max(c.keys()) for c in counter_list])  # maximum key in the list
 
     res = np.zeros((N, M + 1), dtype=dtype)
-    for i_day in range(N):
-        for key, val in counter_list[i_day].items():
+    for i_day in range(N) :
+        for key, val in counter_list[i_day].items() :
             res[i_day, key] = val
     return res
 
 
 @njit
-def array_to_counter(arr):
+def array_to_counter(arr) :
     counter = Counter_uint16_uint32()
-    for a in arr:
+    for a in arr :
         counter[a] += 1
     return counter.d
 
 
 @njit
-def array_to_counter2(arr):
+def array_to_counter2(arr) :
     counter = MetaClassNumbaCounter(types.uint16, types.uint32)
-    for a in arr:
+    for a in arr :
         counter[a] += 1
     return counter.d
 
@@ -390,34 +390,34 @@ def array_to_counter2(arr):
 
 
 @njit
-def numba_cumsum_2D(x, axis):
+def numba_cumsum_2D(x, axis) :
     y = np.zeros_like(x)
     n, m = np.shape(x)
-    if axis == 1:
-        for i in range(n):
+    if axis == 1 :
+        for i in range(n) :
             y[i, :] = np.cumsum(x[i, :])
-    elif axis == 0:
-        for j in range(m):
+    elif axis == 0 :
+        for j in range(m) :
             y[:, j] = np.cumsum(x[:, j])
     return y
 
 
 @njit
-def numba_cumsum_3D(x, axis):
+def numba_cumsum_3D(x, axis) :
     y = np.zeros_like(x)
     n, m, p = np.shape(x)
 
-    if axis == 2:
-        for i in range(n):
-            for j in range(m):
+    if axis == 2 :
+        for i in range(n) :
+            for j in range(m) :
                 y[i, j, :] = np.cumsum(x[i, j, :])
-    elif axis == 1:
-        for i in range(n):
-            for k in range(p):
+    elif axis == 1 :
+        for i in range(n) :
+            for k in range(p) :
                 y[i, :, k] = np.cumsum(x[i, :, k])
-    elif axis == 0:
-        for j in range(m):
-            for k in range(p):
+    elif axis == 0 :
+        for j in range(m) :
+            for k in range(p) :
                 y[:, j, k] = np.cumsum(x[:, j, k])
     return y
 
@@ -425,22 +425,22 @@ def numba_cumsum_3D(x, axis):
 from numba import generated_jit, types
 
 # overload
-# https://jcristharif.com/numba-overload.html
+# https ://jcristharif.com/numba-overload.html
 
 
 @generated_jit(nopython=True)
-def numba_cumsum_shape(x, axis):
-    if x.ndim == 1:
-        return lambda x, axis: np.cumsum(x)
-    elif x.ndim == 2:
-        return lambda x, axis: numba_cumsum_2D(x, axis=axis)
-    elif x.ndim == 3:
-        return lambda x, axis: numba_cumsum_3D(x, axis=axis)
+def numba_cumsum_shape(x, axis) :
+    if x.ndim == 1 :
+        return lambda x, axis : np.cumsum(x)
+    elif x.ndim == 2 :
+        return lambda x, axis : numba_cumsum_2D(x, axis=axis)
+    elif x.ndim == 3 :
+        return lambda x, axis : numba_cumsum_3D(x, axis=axis)
 
 
 @njit
-def numba_cumsum(x, axis=None):
-    if axis is None and x.ndim != 1:
+def numba_cumsum(x, axis=None) :
+    if axis is None and x.ndim != 1 :
         print("numba_cumsum was used without any axis keyword set. Continuing using axis=0.")
         axis = 0
     return numba_cumsum_shape(x, axis)
@@ -454,7 +454,7 @@ from numba import types
 from numba.experimental import jitclass
 
 
-def NumbaMutableArray(offsets, content, dtype):
+def NumbaMutableArray(offsets, content, dtype) :
 
     spec = [
         ("offsets", types.int64[:]),
@@ -462,15 +462,15 @@ def NumbaMutableArray(offsets, content, dtype):
     ]
 
     @jitclass(spec)
-    class MetaNumbaMutableArray:
-        def __init__(self, offsets, content):
+    class MetaNumbaMutableArray :
+        def __init__(self, offsets, content) :
             self.offsets = offsets
             self.content = content
 
-        def __getitem__(self, i):
+        def __getitem__(self, i) :
             return self.content[self.offsets[i] : self.offsets[i + 1]]
 
-        def copy(self):
+        def copy(self) :
             return MetaNumbaMutableArray(self.offsets, self.content)
 
     return MetaNumbaMutableArray(offsets, content)
@@ -479,14 +479,14 @@ def NumbaMutableArray(offsets, content, dtype):
 # "Nested/Mutable" Arrays are faster than list of arrays which are faster than lists of lists
 
 
-class MutableArray:
+class MutableArray :
 
     """The MutableArray is basically just a simple version of Awkward Array with _mutable_ data. Also allows the array to be used in zip/enumerate in numba code by using the .array property (not needed in awkward version >= 0.2.32)."""
 
-    def __init__(self, arraylike_object):
+    def __init__(self, arraylike_object) :
 
         # if numba List
-        if isinstance(arraylike_object, List):
+        if isinstance(arraylike_object, List) :
             dtype = get_numba_list_dtype(arraylike_object, as_string=True)
             self._content = np.array(
                 flatten_nested_list(arraylike_object), dtype=getattr(np, dtype)
@@ -495,13 +495,13 @@ class MutableArray:
             self._awkward_array = None
 
         # if awkward array
-        elif isinstance(arraylike_object, ak.Array):
+        elif isinstance(arraylike_object, ak.Array) :
             dtype = str(ak.type(arraylike_object)).split("* ")[-1]
             self._content = np.array(arraylike_object.layout.content, dtype=getattr(np, dtype))
             self._offsets = np.array(arraylike_object.layout.offsets, dtype=np.int64)
             self._awkward_array = arraylike_object
 
-        else:
+        else :
             raise AssertionError(
                 f"arraylike_object is neither numba list or awkward arry, got {type(arraylike_object)}"
             )
@@ -509,26 +509,26 @@ class MutableArray:
         self.dtype = dtype
         self._initialize_numba_array()
 
-    def _initialize_numba_array(self):
+    def _initialize_numba_array(self) :
         self._array = NumbaMutableArray(self._offsets, self._content, self.dtype)
 
-    def __getitem__(self, i):
-        if isinstance(i, int):
+    def __getitem__(self, i) :
+        if isinstance(i, int) :
             return self._content[self._offsets[i] : self._offsets[i + 1]]
         elif (
             isinstance(i, tuple) and len(i) == 2 and isinstance(i[0], int) and isinstance(i[1], int)
-        ):
+        ) :
             x, y = i
             return self._content[self._offsets[x] : self._offsets[x + 1]][y]
 
     @property
-    def array(self):
+    def array(self) :
         return self._array
 
-    def to_awkward(self, return_original_awkward_array=False):
-        if return_original_awkward_array and self._awkward_array:
+    def to_awkward(self, return_original_awkward_array=False) :
+        if return_original_awkward_array and self._awkward_array :
             return self._awkward_array
-        elif return_original_awkward_array and not self._awkward_array:
+        elif return_original_awkward_array and not self._awkward_array :
             raise AssertionError(
                 f"No original awkward array (possibly because it was loaded through pickle)"
             )
@@ -538,19 +538,19 @@ class MutableArray:
         listarray = ak.layout.ListOffsetArray64(offsets, content)
         return ak.Array(listarray)
 
-    def __repr__(self):
+    def __repr__(self) :
         return repr(self.to_awkward()).replace("Array", "MutableArray")
 
-    def __len__(self):
+    def __len__(self) :
         return len(self._offsets) - 1
 
     # make class pickle-able
-    def __getstate__(self):
-        d = {"_content": self._content, "_offsets": self._offsets, "dtype": self.dtype}
+    def __getstate__(self) :
+        d = {"_content" : self._content, "_offsets" : self._offsets, "dtype" : self.dtype}
         return d
 
     # make class pickle-able
-    def __setstate__(self, d):
+    def __setstate__(self, d) :
         self._content = d["_content"]
         self._offsets = d["_offsets"]
         self.dtype = d["dtype"]
@@ -560,63 +560,63 @@ class MutableArray:
 #%%
 
 
-def is_nested_numba_list(nested_lists):
-    if isinstance(nested_lists, List) and isinstance(nested_lists[0], (List, np.ndarray)):
+def is_nested_numba_list(nested_lists) :
+    if isinstance(nested_lists, List) and isinstance(nested_lists[0], (List, np.ndarray)) :
         return True
-    else:
+    else :
         return False
 
 
-class NestedArray:
+class NestedArray :
 
     """Simple Class that takes a nested list and converts to content and offsets."""
 
-    def __init__(self, nested_lists=None):
+    def __init__(self, nested_lists=None) :
 
-        if nested_lists is None:
+        if nested_lists is None :
             return
 
-        if is_nested_numba_list(nested_lists):
+        if is_nested_numba_list(nested_lists) :
             self.dtype = str(nested_lists._list_type.dtype.dtype)
-        else:
+        else :
             raise AssertionError("Only implemented for nested Numba lists")
 
         self.content = np.array(flatten_nested_list(nested_lists), dtype=getattr(np, self.dtype))
         self.offsets = np.array(get_cumulative_indices(nested_lists), dtype=np.int64)
 
-    def __getitem__(self, i):
+    def __getitem__(self, i) :
         return self.content[self.offsets[i] : self.offsets[i + 1]]
 
-    def __repr__(self):
+    def __repr__(self) :
         first_array = self.content[self.offsets[0] : self.offsets[1]]
-        with np.printoptions(threshold=0, edgeitems=2):
+        with np.printoptions(threshold=0, edgeitems=2) :
             s = str(first_array)
         s_dtype = repr(first_array).split("],")[1]
         return f"NestedArray([array({s},{s_dtype}, ..., ])"
 
-    def __len__(self):
+    def __len__(self) :
         return len(self.offsets) - 1
 
-    def to_dict(self):
-        return {"content": self.content, "offsets": self.offsets}
+    def to_dict(self) :
+        return {"content" : self.content, "offsets" : self.offsets}
 
-    def to_nested_numba_lists(self):
+    def to_nested_numba_lists(self) :
         return to_nested_numba_lists(self.content, self.offsets)
 
-    def add_to_hdf5_file(self, f, key):
+    def add_to_hdf5_file(self, f, key) :
         group = f.create_group(key)
         group.create_dataset("content", data=self.content)
         group.create_dataset("offsets", data=self.offsets)
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, d) :
         instance = cls()
         instance.content = d["content"]
         instance.offsets = d["offsets"]
         return instance
 
     @classmethod
-    def from_hdf5(cls, f, key):
+    def from_hdf5(cls, f, key) :
         instance = cls()
         instance.content = f[key]["content"][()]
         instance.offsets = f[key]["offsets"][()]
@@ -624,12 +624,12 @@ class NestedArray:
 
 
 @njit
-def to_nested_numba_lists(content, offsets):
+def to_nested_numba_lists(content, offsets) :
     out = List()
     N_offsets = len(offsets)
-    for i in range(N_offsets - 1):
+    for i in range(N_offsets - 1) :
         inner = List()
-        for x in content[offsets[i] : offsets[i + 1]]:
+        for x in content[offsets[i] : offsets[i + 1]] :
             inner.append(x)
         out.append(inner)
     return out
@@ -642,99 +642,99 @@ def to_nested_numba_lists(content, offsets):
 # from collections import UserDict
 
 
-class DotDict(AttrDict):
+class DotDict(AttrDict) :
     """
     Class that allows a dict to indexed using dot-notation.
-    Example:
-    >>> dotdict = DotDict({'first_name': 'Christian', 'last_name': 'Michelsen'})
+    Example :
+    >>> dotdict = DotDict({'first_name' : 'Christian', 'last_name' : 'Michelsen'})
     >>> dotdict.last_name
     'Michelsen'
     """
 
-    def dump_to_file(self, filename, exclude=None):
-        if any(substring in filename for substring in ["yaml", "yml"]):
+    def dump_to_file(self, filename, exclude=None) :
+        if any(substring in filename for substring in ["yaml", "yml"]) :
             make_sure_folder_exist(filename)
 
             out = self.copy
-            if exclude is not None:
-                if not isinstance(exclude, list):
+            if exclude is not None :
+                if not isinstance(exclude, list) :
                     exclude = [exclude]
                 out = self.copy()
-                for key in exclude:
+                for key in exclude :
                     out.pop(key)
 
-            for key, val in out.items():
+            for key, val in out.items() :
 
                 if isinstance(val, type(self)) :
                     out[key] = dict(val)
 
-                elif isinstance(val, set):
+                elif isinstance(val, set) :
                     out[key] = list(val)
 
-                elif isinstance(val, np.ndarray):
+                elif isinstance(val, np.ndarray) :
                     out[key] = val.tolist()
 
-            with open(filename, "w") as yaml_file:
+            with open(filename, "w") as yaml_file :
                 yaml.dump(out, yaml_file, default_flow_style=False, sort_keys=False)
-        else:
+        else :
             raise AssertionError("This filetype is not yet implemented. Currently only yamls")
 
-    def __repr__(self):
+    def __repr__(self) :
         s = f"{type(self).__name__}(" + "\n    {\n"
-        s += "\n".join(f"\t{repr(k)}: {repr(v)}," for k, v in self.items())
+        s += "\n".join(f"\t{repr(k)} : {repr(v)}," for k, v in self.items())
         s += "\n    }\n)"
         return s
 
 
-# dotdict = DotDict({"first_name": "Christian", "last_name": "Michelsen"})
+# dotdict = DotDict({"first_name" : "Christian", "last_name" : "Michelsen"})
 # dotdict.middle = 'XXX'
 
 #%%
 
 
-def get_parameter_to_latex():
+def get_parameter_to_latex() :
     return load_yaml("cfg/parameter_to_latex.yaml")
 
 
-def human_format(num, digits=3):
-    num = float(f"{num:.{digits}g}")
+def human_format(num, digits=3) :
+    num = float(f"{num :.{digits}g}")
     magnitude = 0
-    while abs(num) >= 1000:
+    while abs(num) >= 1000 :
         magnitude += 1
         num /= 1000.0
     return "{}{}".format(
-        "{:f}".format(num).rstrip("0").rstrip("."), ["", "K", "M", "G", "T"][magnitude]
+        "{ :f}".format(num).rstrip("0").rstrip("."), ["", "K", "M", "G", "T"][magnitude]
     )
 
 
-def human_format_scientific(num, digits=3):
-    num = float(f"{num:.{digits}g}")
+def human_format_scientific(num, digits=3) :
+    num = float(f"{num :.{digits}g}")
     magnitude = 0
-    while abs(num) >= 1000:
+    while abs(num) >= 1000 :
         magnitude += 1
         num /= 1000.0
     return (
-        "{}".format("{:f}".format(num).rstrip("0").rstrip(".")),
+        "{}".format("{ :f}".format(num).rstrip("0").rstrip(".")),
         f"{['', '10^3', '10^6', '10^9', '10^12'][magnitude]}",
     )
 
 
-def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True):
+def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True) :
 
     # important to make a copy since overwriting below
     cfg = DotDict(d)
 
     # make "exclude" a list of keys to ignore
-    if isinstance(exclude, str) or exclude is None:
+    if isinstance(exclude, str) or exclude is None :
         exclude = [exclude]
 
-    if cfg.N_events == 0:
+    if cfg.N_events == 0 :
         exclude.append("event_size_max")
         exclude.append("event_size_mean")
         exclude.append("event_beta_scaling")
         exclude.append("event_weekend_multiplier")
 
-    if not cfg.do_interventions:
+    if not cfg.do_interventions :
         exclude.append("interventions_to_apply")
         exclude.append("f_daily_tests")
         exclude.append("test_delay_in_clicks")
@@ -747,11 +747,11 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
         exclude.append("tracking_rates")
         exclude.append("tracking_delay")
 
-    if cfg.N_init_UK == 0:
+    if cfg.N_init_UK == 0 :
         exclude.append("beta_UK_multiplier")
         exclude.append("outbreak_position_UK")
 
-    if cfg.clustering_connection_retries == 0:
+    if cfg.clustering_connection_retries == 0 :
         exclude.append("clustering_connection_retries")
 
     cfg.N_tot = human_format(cfg.N_tot)
@@ -764,14 +764,14 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
     )
     cfg.do_interventions = r"\mathrm{" + str(bool(cfg.do_interventions)) + r"}"
     cfg.N_events = human_format(cfg.N_events)
-    if "event_size_max" in cfg:
+    if "event_size_max" in cfg :
         cfg.event_size_max = human_format(cfg.event_size_max)
-    if "hash" in cfg:
+    if "hash" in cfg :
         cfg.hash = r"\mathrm{" + str(cfg.hash) + r"}"
-    if "outbreak_position_UK" in cfg:
+    if "outbreak_position_UK" in cfg :
         cfg.outbreak_position_UK = r"\mathrm{" + str(cfg.outbreak_position_UK).capitalize() + r"}"
 
-    if "N_init_UK" in cfg:
+    if "N_init_UK" in cfg :
         cfg.N_init_UK = human_format(cfg.N_init_UK)
 
     # parameter_to_latex = get_parameter_to_latex()
@@ -781,53 +781,53 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
     exclude.append("hash")
     exclude.append("day_max")
     exclude.append("make_initial_infections_at_kommune")
-    if remove_rates:
+    if remove_rates :
         exclude.append("masking_rate_reduction")
         exclude.append("lockdown_rate_reduction")
         exclude.append("isolation_rate_reduction")
         exclude.append("tracking_rates")
 
     title = "$"
-    for sim_par, val in cfg.items():
-        if not sim_par in exclude:
+    for sim_par, val in cfg.items() :
+        if not sim_par in exclude :
             title += f"{parameter_to_latex[sim_par]} = {val}, \,"
 
-    if not "version" in exclude:
+    if not "version" in exclude :
         title += f"{parameter_to_latex['version']} = {cfg.version}, \,"
 
-    if "hash" in cfg and "hash" not in exclude:
+    if "hash" in cfg and "hash" not in exclude :
         title += fr"{parameter_to_latex['hash']} = {cfg.hash}, \,"
 
-    if in_two_line:
-        if "lambda_E" in title:
+    if in_two_line :
+        if "lambda_E" in title :
             title = title.replace(", \\,\\lambda_E", "$\n$\\lambda_E")
-        else:
+        else :
             title = title.replace(", \\,\\lambda_I", "$\n$\\lambda_I")
-        if "N_\\mathrm{events}" in title:
+        if "N_\\mathrm{events}" in title :
             title = title.replace(", \\,N_\\mathrm{events}", "$\n$N_\\mathrm{events}")
-        if "N_\\mathrm{events}" in title:
+        if "N_\\mathrm{events}" in title :
             title = title.replace(
                 ", \\,\\mathrm{do}_\\mathrm{int.}", "$\n$\\mathrm{do}_\\mathrm{int.}"
             )
-        if "N_\\mathrm{events}" in title:
+        if "N_\\mathrm{events}" in title :
             title = title.replace(
                 ", \\,\\mathrm{chance}_\\mathrm{find. inf.}",
                 "$\n$\\mathrm{chance}_\\mathrm{find. inf.}",
             )
-        if "\\mathrm{v.}" in title:
+        if "\\mathrm{v.}" in title :
             title = title.replace(", \\,\\mathrm{v.}", "$\n$\\mathrm{v.}")
 
-        if "N_\\mathrm{init. UK.}" in title:
+        if "N_\\mathrm{init. UK.}" in title :
             title = title.replace(", \\,N_\\mathrm{init. UK.}", "$\n$\\,N_\\mathrm{init. UK.}")
 
-        if "N_\\mathrm{events} = 0$\n$\\mathrm{do}" in title:
+        if "N_\\mathrm{events} = 0$\n$\\mathrm{do}" in title :
             title = title.replace(
                 "N_\\mathrm{events} = 0$\n$\\mathrm{do}", "N_\\mathrm{events} = 0, \\,\\mathrm{do}"
             )
 
     # \mathrm{do}_\mathrm{int.}
 
-    if N:
+    if N :
         title += r"\#" + f"{N}, \,"
 
     title = title[:-4] + "$"
@@ -835,7 +835,7 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
     return title
 
 
-# def string_to_title(s, N=None, exclude=None, in_two_line=True):
+# def string_to_title(s, N=None, exclude=None, in_two_line=True) :
 #     d = string_to_dict(s)
 #     return dict_to_title(d, N, exclude, in_two_line)
 
@@ -843,7 +843,7 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
 from decimal import Decimal
 
 
-def round_to_uncertainty(value, uncertainty):
+def round_to_uncertainty(value, uncertainty) :
     # round the uncertainty to 1-2 significant digits
     u = Decimal(uncertainty).normalize()
     exponent = u.adjusted()  # find position of the most significant digit
@@ -856,56 +856,56 @@ def round_to_uncertainty(value, uncertainty):
 # import sigfig
 
 
-def format_asymmetric_uncertanties(value, errors, name="I"):
+def format_asymmetric_uncertanties(value, errors, name="I") :
 
-    if name == "I":
+    if name == "I" :
         name = r"I_\mathrm{peak}^\mathrm{fit}"
-    elif name == "R":
+    elif name == "R" :
         name = r"R_\infty^\mathrm{fit}"
-    else:
+    else :
         raise AssertionError(f"name = {name} not defined")
 
     mu, std_lower, exponent = round_to_uncertainty(value, errors[0])
     mu1, std_higher, exponent1 = round_to_uncertainty(value, errors[1])
 
-    if mu != mu1 or exponent != exponent1:
+    if mu != mu1 or exponent != exponent1 :
 
-        if np.abs(10 * mu - mu1) <= 9 and exponent - 1 == exponent1:
+        if np.abs(10 * mu - mu1) <= 9 and exponent - 1 == exponent1 :
             mu = mu1
             # std_lower = Decimal(std_lower*10).normalize()
             std_lower = str(std_lower * 10).replace(".0", "")
             exponent = exponent1
 
-        elif np.abs(mu - 10 * mu1) <= 9 and exponent == exponent1 - 1:
+        elif np.abs(mu - 10 * mu1) <= 9 and exponent == exponent1 - 1 :
             mu = mu / 10
             std_lower = std_lower / 10
             std_higher = std_higher
             exponent = exponent1
 
-        elif np.abs(100 * mu - mu1) <= 99 and exponent - 2 == exponent1:
+        elif np.abs(100 * mu - mu1) <= 99 and exponent - 2 == exponent1 :
             mu = mu1
             std_lower = str(std_lower * 100).replace(".0", "")
             exponent = exponent1
 
-        elif np.abs(mu - 100 * mu1) <= 99 and exponent == exponent1 - 2:
+        elif np.abs(mu - 100 * mu1) <= 99 and exponent == exponent1 - 2 :
             mu = mu / 100
             std_lower = std_lower / 100
             std_higher = std_higher
             exponent = exponent1
 
-        elif np.abs(mu - mu1) == 1 and exponent == exponent1:
-            if np.abs(mu * 10 ** exponent - value) < mu1 * 10 ** exponent1 - value:
+        elif np.abs(mu - mu1) == 1 and exponent == exponent1 :
+            if np.abs(mu * 10 ** exponent - value) < mu1 * 10 ** exponent1 - value :
                 mu = mu
-            else:
+            else :
                 mu = mu1
 
-        else:
+        else :
             # print("WARNING!!!")
             # print(mu, std_lower, exponent, mu1, std_higher, exponent1)
             # print("")
             raise AssertionError("The errors do not fit (not yet implemented)")
 
-    if "E" in str(std_lower):
+    if "E" in str(std_lower) :
         assert False
 
     s = (
@@ -925,7 +925,7 @@ def format_asymmetric_uncertanties(value, errors, name="I"):
     return s
 
 
-def format_relative_uncertainties(x, name):
+def format_relative_uncertainties(x, name) :
 
     mu, std = np.mean(x), SDOM(x)
 
@@ -937,7 +937,7 @@ def format_relative_uncertainties(x, name):
         r"$ "
         + f"{name} = ({s_mu[0]}"
         + r"\pm "
-        + f"{rel_uncertainty*100:.2}"
+        + f"{rel_uncertainty*100 :.2}"
         + r"\% )"
         + r"\cdot "
         + f"{s_mu[1]}"
@@ -950,25 +950,25 @@ def format_relative_uncertainties(x, name):
 #%%
 
 
-def df_encode_asci_to_utf8(series):
-    return series.apply(lambda x: x.encode("utf8", "ignore"))
+def df_encode_asci_to_utf8(series) :
+    return series.apply(lambda x : x.encode("utf8", "ignore"))
 
 
-def get_column_dtypes(df, cols_to_str):
+def get_column_dtypes(df, cols_to_str) :
     kwargs = {}
-    if cols_to_str:
-        if isinstance(cols_to_str, str):
+    if cols_to_str :
+        if isinstance(cols_to_str, str) :
             cols_to_str = [cols_to_str]
-            for col in cols_to_str:
+            for col in cols_to_str :
                 df[col] = df_encode_asci_to_utf8(df[col])
-        kwargs["column_dtypes"] = {col: f"<S{int(df[col].str.len().max())}" for col in cols_to_str}
+        kwargs["column_dtypes"] = {col : f"<S{int(df[col].str.len().max())}" for col in cols_to_str}
     return kwargs
 
 
-def dataframe_to_hdf5_format(df_in, include_index=False, cols_to_str=None):
+def dataframe_to_hdf5_format(df_in, include_index=False, cols_to_str=None) :
     df = df_in.copy()
     kwargs = get_column_dtypes(df, cols_to_str)
-    if include_index:
+    if include_index :
         kwargs["index_dtypes"] = f"<S{df.index.str.len().max()}"
     return np.array(df.to_records(index=include_index, **kwargs))
 
@@ -977,7 +977,7 @@ def dataframe_to_hdf5_format(df_in, include_index=False, cols_to_str=None):
 
 
 @njit
-def numba_random_choice_list(l):
+def numba_random_choice_list(l) :
     return l[np.random.randint(len(l))]
 
 
@@ -987,7 +987,7 @@ def numba_random_choice_list(l):
 from scipy.special import erf
 
 
-def get_central_confidence_intervals(x, agg_func=np.median, N_sigma=1):
+def get_central_confidence_intervals(x, agg_func=np.median, N_sigma=1) :
     agg = agg_func(x)
     sigma = 100 * erf(N_sigma / np.sqrt(2))
     p_lower = 50 - sigma / 2
@@ -998,7 +998,7 @@ def get_central_confidence_intervals(x, agg_func=np.median, N_sigma=1):
     return agg, errors
 
 
-def SDOM(x):
+def SDOM(x) :
     "standard deviation of the mean"
     return np.std(x) / np.sqrt(len(x))
 
@@ -1006,13 +1006,13 @@ def SDOM(x):
 #%%
 
 
-# def load_df_coordinates():
+# def load_df_coordinates() :
 #     GPS_filename = "Data/GPS_coordinates.feather"
 #     df_coordinates = pd.read_feather(GPS_filename)
 #     return df_coordinates
 
 
-# def load_coordinates_from_indices(coordinate_indices):
+# def load_coordinates_from_indices(coordinate_indices) :
 #     return load_df_coordinates().iloc[coordinate_indices].reset_index(drop=True)
 
 
@@ -1033,7 +1033,7 @@ import numba as nb
 from src.simulation import nb_simulation
 
 
-def get_cfg_default():
+def get_cfg_default() :
     """ Default Simulation Parameters """
     cfg              = load_yaml("cfg/simulation_parameters_default.yaml")
     cfg.network      = load_yaml("cfg/simulation_parameters_network.yaml")
@@ -1041,7 +1041,7 @@ def get_cfg_default():
     return cfg
 
 
-# def get_cfg_settings():
+# def get_cfg_settings() :
 #     """ CFG Settings """
 #     yaml_filename = "cfg/settings.yaml"
 #     return load_yaml(yaml_filename)
@@ -1053,19 +1053,19 @@ spec_network        = nb_simulation.spec_network
 spec = {**spec_cfg, **spec_network}
 
 
-# TODO: Check if this can be refactored with format_cfg()
+# TODO : Check if this can be refactored with format_cfg()
 def format_simulation_paramters(d_simulation_parameters) :
 
-    for key, val in d_simulation_parameters.items():
+    for key, val in d_simulation_parameters.items() :
 
         # Format the numpy style arrays
         if isinstance(val, np.ndarray) :
 
             val = np.unique(val)
 
-            if isinstance(spec[key], nb.types.Float):
+            if isinstance(spec[key], nb.types.Float) :
                 val = val.astype(float)
-            elif isinstance(spec[key], nb.types.Integer):
+            elif isinstance(spec[key], nb.types.Integer) :
                 val = val.astype(int)
             else :
                 raise ValueError("Type casting not yet defined for %s type" % spec[key])
@@ -1077,65 +1077,65 @@ def format_simulation_paramters(d_simulation_parameters) :
 
     return d_simulation_parameters
 
-def format_cfg(cfg, spec):
+def format_cfg(cfg, spec) :
 
-    if not isinstance(cfg, DotDict):
+    if not isinstance(cfg, DotDict) :
         cfg = DotDict(cfg)
 
-    for key, val in cfg.items():
+    for key, val in cfg.items() :
 
         if key == "network" or key == "intervention" :
             continue
 
-        if isinstance(spec[key], nb.types.Float):
+        if isinstance(spec[key], nb.types.Float) :
             cfg[key] = float(val)
-        elif isinstance(spec[key], nb.types.Integer):
+        elif isinstance(spec[key], nb.types.Integer) :
             cfg[key] = int(val)
-        elif isinstance(spec[key], nb.types.Boolean):
+        elif isinstance(spec[key], nb.types.Boolean) :
             cfg[key] = bool(val)
-        elif isinstance(spec[key], nb.types.ListType):
-            if isinstance(val, np.ndarray):
+        elif isinstance(spec[key], nb.types.ListType) :
+            if isinstance(val, np.ndarray) :
                 cfg[key] = val.tolist()
-            else:
+            else :
                 cfg[key] = list(val)
-        elif isinstance(spec[key], nb.types.Set):
+        elif isinstance(spec[key], nb.types.Set) :
             cfg[key] = set(val)
-        elif isinstance(spec[key], nb.types.Array):
+        elif isinstance(spec[key], nb.types.Array) :
             # cfg[key] = np.array(val, dtype=spec_cfg[key].dtype.name)
-            if isinstance(val, np.ndarray):
+            if isinstance(val, np.ndarray) :
                 cfg[key] = val.tolist()
-            else:
+            else :
                 cfg[key] = list(val)
 
     return cfg
 
 
-def _generate_cfgs_MCMC(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=False):
+def _generate_cfgs_MCMC(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=False) :
     """ Generates cfgs for MCMC-based simulation parameters """
 
     cfg_default = get_cfg_default()
     has_not_printed = True
 
     cfgs = []
-    for simulation_parameter in d_simulation_parameters:
+    for simulation_parameter in d_simulation_parameters :
         # break
         cfg = cfg_default.copy()
         cfg.update(simulation_parameter)
-        if not N_tot_max or cfg["N_tot"] < N_tot_max:
-            for ID in range(N_runs):
+        if not N_tot_max or cfg["N_tot"] < N_tot_max :
+            for ID in range(N_runs) :
                 tmp = cfg.copy()
                 tmp["ID"] = ID
                 cfgs.append(tmp)
-        else:
-            if verbose and has_not_printed:
+        else :
+            if verbose and has_not_printed :
                 print("Skipping some files due to N_tot > N_tot_max")
                 has_not_printed = False
     return cfgs
 
 
-def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=False):
+def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=False) :
 
-    if isinstance(d_simulation_parameters, list):
+    if isinstance(d_simulation_parameters, list) :
         cfgs = _generate_cfgs_MCMC(
             d_simulation_parameters,
             N_runs=N_runs,
@@ -1143,28 +1143,28 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
             verbose=verbose,
         )
 
-    else:
+    else :
         cfg_default = get_cfg_default()
 
         d_list = []
-        for name, lst in d_simulation_parameters.items():
+        for name, lst in d_simulation_parameters.items() :
 
             # Convert all inputs to lists
-            if isinstance(lst, (int, float, str)):
+            if isinstance(lst, (int, float, str)) :
                 lst = [lst]
 
-            d_list.append([{name: val} for val in lst])
-        d_list.append([{"ID": ID} for ID in range(N_runs)])
+            d_list.append([{name : val} for val in lst])
+        d_list.append([{"ID" : ID} for ID in range(N_runs)])
         all_combinations = list(product(*d_list))
 
         has_not_printed = True
 
         # Update cfg values
         cfgs = []
-        for combination in all_combinations:
+        for combination in all_combinations :
             cfg = cfg_default.copy()
 
-            for d in combination:
+            for d in combination :
                 key = list(d.keys())[0]
 
                 if key in spec_cfg.keys() :
@@ -1177,7 +1177,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                 #    cfg["intervention"].update(d)
 
 
-            if not N_tot_max or cfg["N_tot"] < N_tot_max:
+            if not N_tot_max or cfg["N_tot"] < N_tot_max :
 
                 cfg              = format_cfg(cfg, spec_cfg)
                 cfg.network      = format_cfg(cfg.network, spec_network)
@@ -1187,15 +1187,15 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                 cfg.hash = cfg_to_hash(cfg)
 
                 cfgs.append(cfg)
-            else:
-                if verbose and has_not_printed:
+            else :
+                if verbose and has_not_printed :
                     print("Skipping some files due to N_tot > N_tot_max")
                     has_not_printed = False
 
     return cfgs
 
 
-def cfg_to_hash(cfg, N=10, exclude_ID=True, exclude_hash=True):
+def cfg_to_hash(cfg, N=10, exclude_ID=True, exclude_hash=True) :
     """
     d = input object
     N = len of hash (truncate hash)
@@ -1204,10 +1204,10 @@ def cfg_to_hash(cfg, N=10, exclude_ID=True, exclude_hash=True):
     d = cfg.copy()
     d = flatten_cfg(d)
 
-    if exclude_ID and "ID" in d:
+    if exclude_ID and "ID" in d :
         d.pop("ID")
 
-    if exclude_hash and "hash" in d:
+    if exclude_hash and "hash" in d :
         d.pop("hash")
 
     s_hash = sha256(d)
@@ -1233,35 +1233,35 @@ def flatten_cfg(cfg) :
 
 d_num_cores_N_tot = RangeKeyDict(
     {
-        (0, 1_000_001): 100,
-        (1_000_001, 2_000_001): 50,
-        (2_000_001, 5_000_001): 30,
-        (5_000_001, 6_000_001): 18,
-        (6_000_001, 10_000_001): 10,
+        (0, 1_000_001) : 100,
+        (1_000_001, 2_000_001) : 50,
+        (2_000_001, 5_000_001) : 30,
+        (5_000_001, 6_000_001) : 18,
+        (6_000_001, 10_000_001) : 10,
     }
 )
 
 
-def extract_N_tot_max(d_simulation_parameters):
-    if isinstance(d_simulation_parameters, dict) and "N_tot" in d_simulation_parameters.keys():
-        if isinstance(d_simulation_parameters["N_tot"], int):
+def extract_N_tot_max(d_simulation_parameters) :
+    if isinstance(d_simulation_parameters, dict) and "N_tot" in d_simulation_parameters.keys() :
+        if isinstance(d_simulation_parameters["N_tot"], int) :
             return d_simulation_parameters["N_tot"]
-        else:
+        else :
             return max(d_simulation_parameters["N_tot"])
-    else:
+    else :
         return get_cfg_default()["N_tot"]
 
 
-def get_num_cores_N_tot(d_simulation_parameters, num_cores_max=None):
+def get_num_cores_N_tot(d_simulation_parameters, num_cores_max=None) :
     N_tot_max = d_num_cores_N_tot[extract_N_tot_max(d_simulation_parameters)]
     num_cores = get_num_cores(N_tot_max)
-    if num_cores_max:
+    if num_cores_max :
         return min([num_cores, num_cores_max])
-    else:
+    else :
         return num_cores
 
 
-def load_df_coordinates(N_tot, ID):
+def load_df_coordinates(N_tot, ID) :
     # np.random.seed(ID)
     # coordinates = np.load(coordinates_filename)
     coordinates_filename = "Data/GPS_coordinates.feather"
@@ -1274,7 +1274,7 @@ def load_df_coordinates(N_tot, ID):
 
     # coordinates = df_coordinates_to_coordinates(df_coordinates)
 
-    # if N_tot > len(df_coordinates):
+    # if N_tot > len(df_coordinates) :
     #     raise AssertionError(
     #         "N_tot cannot be larger than coordinates (number of generated houses in DK)"
     #     )
@@ -1284,11 +1284,11 @@ def load_df_coordinates(N_tot, ID):
     # return coordinates[index_subset], index_subset
 
 
-# def load_coordinates_indices(coordinates_filename, N_tot, ID):
+# def load_coordinates_indices(coordinates_filename, N_tot, ID) :
 #     return load_coordinates(coordinates_filename, N_tot, ID)[1]
 
 
-def df_coordinates_to_coordinates(df_coordinates):
+def df_coordinates_to_coordinates(df_coordinates) :
     return df_coordinates[["Longitude", "Lattitude"]].values
 
 
@@ -1296,39 +1296,39 @@ def df_coordinates_to_coordinates(df_coordinates):
 
 
 @njit
-def calculate_epsilon(alpha_age, N_ages):
+def calculate_epsilon(alpha_age, N_ages) :
     return 1 / N_ages * alpha_age
 
 
 @njit
-def calculate_age_proportions_1D(alpha_age, N_ages):
+def calculate_age_proportions_1D(alpha_age, N_ages) :
     """ Only used in v1 of simulation"""
     epsilon = calculate_epsilon(alpha_age, N_ages)
     x = epsilon * np.ones(N_ages, dtype=np.float32)
-    x[0] = 1 - x[1:].sum()
+    x[0] = 1 - x[1 :].sum()
     return x
 
 
 @njit
-def calculate_age_proportions_2D(alpha_age, N_ages):
+def calculate_age_proportions_2D(alpha_age, N_ages) :
     """ Only used in v1 of simulation"""
     epsilon = calculate_epsilon(alpha_age, N_ages)
     A = epsilon * np.ones((N_ages, N_ages), dtype=np.float32)
-    for i in range(N_ages):
+    for i in range(N_ages) :
         A[i, i] = 1 - np.sum(np.delete(A[i, :], i))
     return A
 
 
 @njit
-def set_numba_random_seed(seed):
+def set_numba_random_seed(seed) :
     np.random.seed(seed)
 
 
 @njit
-def _initialize_my_rates_nested_list(my_infection_weight, my_number_of_contacts):
+def _initialize_my_rates_nested_list(my_infection_weight, my_number_of_contacts) :
     N_tot = len(my_infection_weight)
     res = List()
-    for i in range(N_tot):
+    for i in range(N_tot) :
         x = np.full(
             my_number_of_contacts[i],
             fill_value=my_infection_weight[i],
@@ -1338,25 +1338,25 @@ def _initialize_my_rates_nested_list(my_infection_weight, my_number_of_contacts)
     return res
 
 
-def initialize_my_rates(my_infection_weight, my_number_of_contacts):
+def initialize_my_rates(my_infection_weight, my_number_of_contacts) :
     return MutableArray(
         _initialize_my_rates_nested_list(my_infection_weight, my_number_of_contacts)
     )
 
 
-# def initialize_my_rates(my_infection_weight, my_number_of_contacts):
+# def initialize_my_rates(my_infection_weight, my_number_of_contacts) :
 #     return ak.Array(_initialize_my_rates_nested_list(my_infection_weight, my_number_of_contacts))
 
 
 @njit
-def initialize_non_infectable(N_tot, my_number_of_contacts):
+def initialize_non_infectable(N_tot, my_number_of_contacts) :
     res = List()
-    for i in range(N_tot):
+    for i in range(N_tot) :
         res.append(np.ones(my_number_of_contacts[i], dtype=np.bool_))
     return res
 
 
-def initialize_SIR_transition_rates(N_states, N_infectious_states, cfg):
+def initialize_SIR_transition_rates(N_states, N_infectious_states, cfg) :
     SIR_transition_rates = np.zeros(N_states, dtype=np.float64)
     SIR_transition_rates[:N_infectious_states] = cfg.lambda_E
     SIR_transition_rates[N_infectious_states : 2 * N_infectious_states] = cfg.lambda_I
@@ -1364,20 +1364,20 @@ def initialize_SIR_transition_rates(N_states, N_infectious_states, cfg):
 
 
 @njit
-def _compute_agents_in_age_group(ages, N_ages):
+def _compute_agents_in_age_group(ages, N_ages) :
     agents_in_age_group = initialize_nested_lists(N_ages, dtype=np.uint32)
-    for idx, age in enumerate(ages):  # prange
+    for idx, age in enumerate(ages) :  # prange
         agents_in_age_group[age].append(np.uint32(idx))
     return agents_in_age_group
 
 
-def compute_agents_in_age_group(ages, N_ages):
+def compute_agents_in_age_group(ages, N_ages) :
     agents_in_age_group = _compute_agents_in_age_group(ages, N_ages)
     agents_in_age_group = nested_list_to_awkward_array(agents_in_age_group)
     return agents_in_age_group
 
 
-def get_hospitalization_variables(N_tot, N_ages=1):
+def get_hospitalization_variables(N_tot, N_ages=1) :
 
     # Hospitalization track variables
     H_N_states = 6  # number of states
@@ -1417,7 +1417,7 @@ def get_hospitalization_variables(N_tot, N_ages=1):
 #%%
 
 
-def state_counts_to_df(time, state_counts):  #
+def state_counts_to_df(time, state_counts) :  #
 
     header = [
         "Time",
@@ -1433,9 +1433,9 @@ def state_counts_to_df(time, state_counts):  #
         # 'H1', 'H2', 'ICU1', 'ICU2', 'R_H', 'D',
     ]
 
-    df_time = pd.DataFrame(time, columns=header[0:1])
-    df_states = pd.DataFrame(state_counts, columns=header[1:])
-    # df_H_states = pd.DataFrame(H_state_total_counts, columns=header[10:])
+    df_time = pd.DataFrame(time, columns=header[0 :1])
+    df_states = pd.DataFrame(state_counts, columns=header[1 :])
+    # df_H_states = pd.DataFrame(H_state_total_counts, columns=header[10 :])
     df = pd.concat([df_time, df_states], axis=1)  # .convert_dtypes()
     # assert sum(df_H_states.sum(axis=1) == df_states['R'])
     return df
@@ -1444,7 +1444,7 @@ def state_counts_to_df(time, state_counts):  #
 #%%
 
 
-def parse_memory_file(filename):
+def parse_memory_file(filename) :
 
     change_points = {}
 
@@ -1455,27 +1455,27 @@ def parse_memory_file(filename):
 
     import csv
 
-    with open(filename, "r") as f:
+    with open(filename, "r") as f :
         reader = csv.reader(f, delimiter="\t")
-        for irow, row in enumerate(reader):
+        for irow, row in enumerate(reader) :
 
             # if new section
-            if len(row) == 1:
+            if len(row) == 1 :
                 next_is_change_point = True
-                s_change_points = row[0][1:]
+                s_change_points = row[0][1 :]
 
-            else:
+            else :
 
                 time = float(row[0])
                 memory = float(row[1])
 
-                # if zero_time is None:
+                # if zero_time is None :
                 # zero_time = time
                 # time -= zero_time
 
                 d_time_mem[time] = memory
 
-                if next_is_change_point:
+                if next_is_change_point :
                     change_points[time] = s_change_points
                     next_is_change_point = False
 
@@ -1511,12 +1511,12 @@ def plot_memory_comsumption(
     min_TimeDiffRel=0.1,
     min_MemoryDiffRel=0.1,
     time_unit="min",
-):
+) :
 
     colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
     colors = [col for i, col in enumerate(colors) if i != 5]
 
-    time_scale = {"s": 1, "sec": 1, "m": 60, "min": 60, "h": 60 * 60, "t": 60 * 60}
+    time_scale = {"s" : 1, "sec" : 1, "m" : 60, "min" : 60, "h" : 60 * 60, "t" : 60 * 60}
 
     fig, ax = plt.subplots()
 
@@ -1556,12 +1556,12 @@ def plot_memory_comsumption(
 
     ymax = ax.get_ylim()[1]
     i = 1
-    for index, row in df_change_points_non_compilation.iterrows():
+    for index, row in df_change_points_non_compilation.iterrows() :
         # first_or_last = (i == 0) or (i == len(df_change_points)-1)
         last = index == df_change_points_non_compilation.index[-1]
         large_time_diff = row["TimeDiffRel"] > min_TimeDiffRel  # sec
         large_memory_diff = np.abs(row["MemoryDiffRel"]) > min_MemoryDiffRel  # GiB
-        if any([last, large_time_diff, large_memory_diff]):
+        if any([last, large_time_diff, large_memory_diff]) :
             t = row["Time"] / time_scale[time_unit]
             y = row["Memory"]
             col = colors[(i) % len(colors)]
@@ -1569,7 +1569,7 @@ def plot_memory_comsumption(
             ax.plot([t, t], [0, y], ls="--", color=col, zorder=1, label=index)
             ax.plot([t, t], [y, ymax], ls="--", color=col, zorder=1, alpha=0.5)
 
-            if row["TimeDiffRel"] > 0.01 or last:
+            if row["TimeDiffRel"] > 0.01 or last :
                 kwargs = dict(
                     rotation=90,
                     color=col,
@@ -1578,9 +1578,9 @@ def plot_memory_comsumption(
                     va="center",
                     bbox=dict(boxstyle="square", ec=col, fc="white"),
                 )
-                if y / ymax > 0.45:
+                if y / ymax > 0.45 :
                     ax.text(t, y / 2, index, **kwargs)
-                else:
+                else :
                     ax.text(t, (ymax + y) / 2, index, **kwargs)
 
     # ax.set_yscale('log')
@@ -1592,26 +1592,26 @@ def plot_memory_comsumption(
 #%%
 
 
-def does_file_contains_string(filename, string):
-    with open(filename) as f:
-        if string in f.read():
+def does_file_contains_string(filename, string) :
+    with open(filename) as f :
+        if string in f.read() :
             return True
     return False
 
 
-def get_search_string_time(filename, search_string):
+def get_search_string_time(filename, search_string) :
     is_search_string = False
 
-    with open(filename, "r") as f:
+    with open(filename, "r") as f :
         reader = csv.reader(f, delimiter="\t")
-        for irow, row in enumerate(reader):
+        for irow, row in enumerate(reader) :
 
             # if new section
-            if len(row) == 1:
-                if search_string in row[0]:
+            if len(row) == 1 :
+                if search_string in row[0] :
                     is_search_string = True
 
-            elif is_search_string and len(row) == 2:
+            elif is_search_string and len(row) == 2 :
                 time = float(row[0])
                 return time
     return 0
@@ -1620,23 +1620,23 @@ def get_search_string_time(filename, search_string):
 #%%
 
 
-def path(file):
-    if isinstance(file, str):
+def path(file) :
+    if isinstance(file, str) :
         file = Path(file)
     return file
 
 
-def hash_to_filenames(hash_, base_dir="Output/ABM", filetype="hdf5"):
+def hash_to_filenames(hash_, base_dir="Output/ABM", filetype="hdf5") :
     folder = path(base_dir) / hash_
     files = list(folder.rglob(f"*.{filetype}"))
     return [str(file) for file in files]
 
 
-def get_1D_scan_cfgs_all_filenames(scan_parameter, non_default_parameters):
+def get_1D_scan_cfgs_all_filenames(scan_parameter, non_default_parameters) :
     """ Get a list of simulation parameters (as strings) for a given parameter to be used in a 1D-scan. Can take non-default values ('non_default_parameters')."""
 
     parameters = get_cfg_default()
-    for key, val in non_default_parameters.items():
+    for key, val in non_default_parameters.items() :
         parameters[key] = val
 
     parameters.pop(scan_parameter)
@@ -1656,57 +1656,57 @@ def get_1D_scan_cfgs_all_filenames(scan_parameter, non_default_parameters):
 
 
 @njit
-def numba_unique_with_counts(a):
+def numba_unique_with_counts(a) :
     b = np.sort(a.flatten())
     unique = list(b[:1])
     counts = [1 for _ in unique]
-    for x in b[1:]:
-        if x != unique[-1]:
+    for x in b[1 :] :
+        if x != unique[-1] :
             unique.append(x)
             counts.append(1)
-        else:
+        else :
             counts[-1] += 1
     return np.array(unique), np.array(counts)
 
 
-def PyDict2NumbaDict(d_python):
-    "https://github.com/numba/numba/issues/4728"
+def PyDict2NumbaDict(d_python) :
+    "https ://github.com/numba/numba/issues/4728"
 
     keys = list(d_python.keys())
     values = list(d_python.values())
 
-    if isinstance(keys[0], str):
+    if isinstance(keys[0], str) :
         key_type = nb.types.string
-    elif isinstance(keys[0], int):
+    elif isinstance(keys[0], int) :
         key_type = nb.types.int64
-    elif isinstance(keys[0], float):
+    elif isinstance(keys[0], float) :
         key_type = nb.types.float64
-    else:
+    else :
         raise AssertionError("Unknown Keytype")
 
-    if isinstance(values[0], dict):
+    if isinstance(values[0], dict) :
         d_numba = nb.typed.Dict.empty(key_type, nb.typeof(PyDict2NumbaDict(values[0])))
-        for i, subDict in enumerate(values):
+        for i, subDict in enumerate(values) :
             subDict = PyDict2NumbaDict(subDict)
             d_numba[keys[i]] = subDict
         return d_numba
 
-    if isinstance(values[0], int):
+    if isinstance(values[0], int) :
         d_numba = nb.typed.Dict.empty(key_type, nb.types.int64)
 
-    elif isinstance(values[0], str):
+    elif isinstance(values[0], str) :
         d_numba = nb.typed.Dict.empty(key_type, nb.types.string)
 
-    elif isinstance(values[0], float):
+    elif isinstance(values[0], float) :
         d_numba = nb.typed.Dict.empty(key_type, nb.types.float64)
 
-    elif isinstance(values[0], np.ndarray):
+    elif isinstance(values[0], np.ndarray) :
         assert values[0].ndim == 1
         d_numba = nb.typed.Dict.empty(key_type, nb.types.float64[:])
-    else:
+    else :
         raise AssertionError("Unknown ValueType")
 
-    for i, key in enumerate(keys):
+    for i, key in enumerate(keys) :
         d_numba[key] = values[i]
     return d_numba
 
@@ -1717,67 +1717,67 @@ from numba import generated_jit
 
 
 @njit
-def normalize_probabilities(p):
+def normalize_probabilities(p) :
     return p / p.sum()
 
 
 @njit
-def rand_choice_nb_arr(arr, prob):
+def rand_choice_nb_arr(arr, prob) :
     """
-    :param arr: A 1D numpy array of values to sample from.
-    :param prob: A 1D numpy array of probabilities for the given samples.
-    :return: A random sample from the given array with a given probability.
+    :param arr : A 1D numpy array of values to sample from.
+    :param prob : A 1D numpy array of probabilities for the given samples.
+    :return : A random sample from the given array with a given probability.
     """
     prob = normalize_probabilities(prob)
     return arr[np.searchsorted(np.cumsum(prob), np.random.random(), side="right")]
 
 
 @njit
-def rand_choice_nb(prob):
+def rand_choice_nb(prob) :
     """
-    :param prob: A 1D numpy array of probabilities for the given samples.
-    :return: A random sample from the given array with a given probability.
+    :param prob : A 1D numpy array of probabilities for the given samples.
+    :return : A random sample from the given array with a given probability.
     """
     prob = normalize_probabilities(prob)
     return np.searchsorted(np.cumsum(prob), np.random.random(), side="right")
 
 
 @njit
-def int_keys2array(d_prob):
+def int_keys2array(d_prob) :
     N = len(d_prob)
     arr = np.empty(N, dtype=np.int64)
-    for i, x in enumerate(d_prob.keys()):
+    for i, x in enumerate(d_prob.keys()) :
         arr[i] = x
     return arr
 
 
 @njit
-def values2array(d_prob):
+def values2array(d_prob) :
     N = len(d_prob)
     x = np.empty(N, dtype=np.float64)
-    for i, p in enumerate(d_prob.values()):
+    for i, p in enumerate(d_prob.values()) :
         x[i] = p
     return x
 
 
 @njit
-def draw_random_number_from_dict(d_prob):
+def draw_random_number_from_dict(d_prob) :
     arr = int_keys2array(d_prob)
     prob = values2array(d_prob)
     return rand_choice_nb_arr(arr, prob)
 
 
 @njit
-def draw_random_index_based_on_array(prob):
+def draw_random_index_based_on_array(prob) :
     return rand_choice_nb(prob)
 
 
 @generated_jit(nopython=True)
-def draw_random_nb(x):
-    if isinstance(x, types.DictType):
-        return lambda x: draw_random_number_from_dict(x)
-    elif isinstance(x, types.Array):
-        return lambda x: draw_random_index_based_on_array(x)
+def draw_random_nb(x) :
+    if isinstance(x, types.DictType) :
+        return lambda x : draw_random_number_from_dict(x)
+    elif isinstance(x, types.Array) :
+        return lambda x : draw_random_index_based_on_array(x)
 
 
 #%%
@@ -1785,54 +1785,54 @@ def draw_random_nb(x):
 from collections import defaultdict
 
 
-def parse_household_data(filename, age_dist_as_dict=True):
+def parse_household_data(filename, age_dist_as_dict=True) :
 
     data = defaultdict(list)
     ages_groups = [20, 30, 40, 50, 60, 70, 80]
 
-    with open(filename, "r") as file:
+    with open(filename, "r") as file :
         N_persons = -1
-        for line in file:
+        for line in file :
             line = line.strip()
-            if line[0] == "#":
-                N_persons = int(line[1:].split()[0])
-            else:
-                try:
+            if line[0] == "#" :
+                N_persons = int(line[1 :].split()[0])
+            else :
+                try :
                     x = int(line)
-                except ValueError:
+                except ValueError :
                     x = float(line)
                 data[N_persons].append(x)
 
     # make sure all entries are normalized numpy arrays
     data = dict(data)
-    for key, val in data.items():
-        if len(val) == 1:
+    for key, val in data.items() :
+        if len(val) == 1 :
             data[key] = val[0]
-        else:
+        else :
             vals = np.array(val)
             vals = vals / np.sum(vals)
-            if age_dist_as_dict:
-                data[key] = {age: val for age, val in zip(ages_groups, vals)}
-            else:
+            if age_dist_as_dict :
+                data[key] = {age : val for age, val in zip(ages_groups, vals)}
+            else :
                 data[key] = vals
 
     return PyDict2NumbaDict(data)
 
 
-def parse_household_data_list(filename, convert_to_numpy=False):
+def parse_household_data_list(filename, convert_to_numpy=False) :
 
     data = defaultdict(list)
 
-    with open(filename, "r") as file:
+    with open(filename, "r") as file :
         N_persons = -1
-        for line in file:
+        for line in file :
             line = line.strip()
-            if line[0] == "#":
-                N_persons = int(line[1:].split()[0])
-            else:
-                try:
+            if line[0] == "#" :
+                N_persons = int(line[1 :].split()[0])
+            else :
+                try :
                     x = int(line)
-                except ValueError:
+                except ValueError :
                     x = float(line)
                 data[N_persons].append(x)
 
@@ -1840,19 +1840,19 @@ def parse_household_data_list(filename, convert_to_numpy=False):
     data = dict(data)
 
     out = []
-    for key, val in data.items():
-        if len(val) == 1:
+    for key, val in data.items() :
+        if len(val) == 1 :
             out.append(val[0])
-        else:
+        else :
             vals = np.array(val)
             vals = vals / np.sum(vals)
             out.append(vals)
-    if convert_to_numpy:
+    if convert_to_numpy :
         out = np.array(out)
     return out
 
 
-def load_household_data():
+def load_household_data() :
 
     filename_PeopleInHousehold = load_yaml("cfg/files.yaml")["PeopleInHousehold"]
     filename_AgeDistribution = load_yaml("cfg/files.yaml")["AgeDistribution"]
@@ -1865,7 +1865,7 @@ def load_household_data():
     )
     return people_in_household, age_distribution_per_people_in_household
 
-def load_household_data_kommune_specific():
+def load_household_data_kommune_specific() :
     household_dist_raw = pd.read_csv("Data/household_dist.csv")
     household_dist_raw = household_dist_raw.set_index('0')
     kommune_id = household_dist_raw.index
@@ -1873,22 +1873,22 @@ def load_household_data_kommune_specific():
     age_dist_raw = age_dist_raw.set_index('0')
     age_dist_raw = np.array(age_dist_raw)
     age_dist = np.ones((age_dist_raw.shape[0],age_dist_raw.shape[1],len(eval(age_dist_raw[0,0]))),dtype=float)
-    for i in range(age_dist_raw.shape[0]):
-        for j in range(age_dist_raw.shape[1]):
+    for i in range(age_dist_raw.shape[0]) :
+        for j in range(age_dist_raw.shape[1]) :
             nrs = eval(age_dist_raw[i,j])
-            age_dist[i,j,:] = np.array(nrs)
+            age_dist[i,j, :] = np.array(nrs)
 
     household_dist_raw = np.array(household_dist_raw)
     household_dist = np.ones((household_dist_raw.shape[0],household_dist_raw.shape[1]), dtype=float)
-    for i in range(household_dist_raw.shape[0]):
-        for j in range(household_dist_raw.shape[1]):
+    for i in range(household_dist_raw.shape[0]) :
+        for j in range(household_dist_raw.shape[1]) :
             household_dist[i,j] = eval(household_dist_raw[i,j])[0]/(j+1)
     return household_dist, age_dist, kommune_id
 
 def load_age_stratified_file(file) :
     """ Loads and parses the contact matrix from the .csv file specifed
-        Parameters:
-            file (string): path the the .csv file
+        Parameters :
+            file (string) : path the the .csv file
     """
 
     # Load using pandas
@@ -1909,14 +1909,14 @@ def load_contact_matrices(scenario = 'reference') :
     """ Loads and parses the contact matrices corresponding to the chosen scenario.
         The function first determines what the relationship between work activites and other activites are
         After the work_other_ratio has been calculated, the function returns the normalized contact matrices
-        Parameters:
-            scenario (string): Name for the scenario to load
+        Parameters :
+            scenario (string) : Name for the scenario to load
     """
     # Load the contact matrices
     matrix_work,   _, age_groups_work   = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
     matrix_school, _, age_groups_school = load_age_stratified_file('Data/contact_matrices/' + scenario + '_school.csv')
     matrix_other,  _, age_groups_other  = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
-    # TODO: Load the school contact matrix
+    # TODO : Load the school contact matrix
 
     # Assert the age_groups are the same
     if not age_groups_work == age_groups_other :
@@ -1927,7 +1927,7 @@ def load_contact_matrices(scenario = 'reference') :
     work_other_ratio = matrix_work.sum() / (matrix_other.sum() + matrix_work.sum())
 
     # Normalize the contact matrices after this ratio has been determined
-    # TODO: Find out if lists or numpy arrays are better --- I am leaning towards using only numpy arrays
+    # TODO : Find out if lists or numpy arrays are better --- I am leaning towards using only numpy arrays
     return (matrix_work.tolist(), matrix_other.tolist(), work_other_ratio, age_groups_work)
 
 
@@ -1937,8 +1937,8 @@ def load_contact_matrices(scenario = 'reference') :
 def load_vaccination_schedule(cfg) :
     """ Loads and parses the vaccination schedule corresponding to the chosen scenario.
         This includes scaling the number of infections and adjusting the effective start dates
-        Parameters:
-            cfg (dict): the configuration file
+        Parameters :
+            cfg (dict) : the configuration file
     """
     vaccinations_per_age_group, vaccination_schedule, _ = load_vaccination_schedule_file(scenario = cfg.Intervention_vaccination_schedule_name)
 
@@ -1946,7 +1946,7 @@ def load_vaccination_schedule(cfg) :
     test_length(vaccinations_per_age_group, cfg.Intervention_vaccination_effect_delays, "Loaded vaccination schedules does not match with the length of vaccination_effect_delays")
 
     # Scale and adjust the vaccination schedules
-    for i in range(len(vaccinations_per_age_group)):
+    for i in range(len(vaccinations_per_age_group)) :
 
         # Scale the number of vaccines
         np.multiply(vaccinations_per_age_group[i], cfg.network.N_tot / 5_800_000, out=vaccinations_per_age_group[i], casting='unsafe')
@@ -1959,8 +1959,8 @@ def load_vaccination_schedule(cfg) :
 
 def load_vaccination_schedule_file(scenario = "reference") :
     """ Loads and parses the vaccination schedule file corresponding to the chosen scenario.
-        Parameters:
-            scenario (string): Name for the scenario to load
+        Parameters :
+            scenario (string) : Name for the scenario to load
     """
     # Prepare output files
     vaccine_counts  = []
@@ -1990,19 +1990,19 @@ def load_vaccination_schedule_file(scenario = "reference") :
     return (vaccine_counts, schedule, age_groups)
 
 @njit
-def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=False):
+def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=False) :
     coordinates = List()
-    for i in range(len(all_coordinates)):
-        if all_coordinates[i][1] > 57.14:
+    for i in range(len(all_coordinates)) :
+        if all_coordinates[i][1] > 57.14 :
             coordinates.append(all_coordinates[i])
-            if len(coordinates) == N_tot:
+            if len(coordinates) == N_tot :
                 break
-    if verbose:
+    if verbose :
         print(i)
     return coordinates
 
 
-# def load_coordinates_Nordjylland(N_tot=150_000, verbose=False):
+# def load_coordinates_Nordjylland(N_tot=150_000, verbose=False) :
 #     all_coordinates = np.load("../Data/GPS_coordinates.npy")
 #     coordinates = nb_load_coordinates_Nordjylland(all_coordinates, N_tot, verbose)
 #     return np.array(coordinates)
@@ -2013,22 +2013,22 @@ def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=Fals
 #import geopandas as gpd  # conda install -c conda-forge geopandas
 
 # Shapefiles
-def load_kommune_shapefiles(shapefile_size, verbose=False):
+def load_kommune_shapefiles(shapefile_size, verbose=False) :
 
     shp_file = {}
     shp_file["small"]  = "Data/Kommuner/ADM_2M/KOMMUNE.shp"
     shp_file["medium"] = "Data/Kommuner/ADM_500k/KOMMUNE.shp"
     shp_file["large"]  = "Data/Kommuner/ADM_10k/KOMMUNE.shp"
 
-    if verbose:
+    if verbose :
         print(f"Loading {shapefile_size} kommune shape files")
     kommuner = gpd.read_file(shp_file[shapefile_size]).to_crs(
-        {"proj": "latlong"}
+        {"proj" : "latlong"}
     )  # convert to lat lon, compared to UTM32_EUREF89
 
     kommune_navn, kommune_idx = np.unique(kommuner["KOMNAVN"], return_inverse=True)
     name_to_idx = dict(zip(kommune_navn, range(len(kommune_navn))))
-    idx_to_name = {v: k for k, v in name_to_idx.items()}
+    idx_to_name = {v : k for k, v in name_to_idx.items()}
 
     kommuner["idx"] = kommune_idx
     return kommuner, name_to_idx, idx_to_name
@@ -2041,7 +2041,7 @@ from functools import reduce
 from operator import iand
 
 
-def multiple_queries(*lst):
+def multiple_queries(*lst) :
     """
     Takes multiple queries and combines them into one, e.g.
     multiple_queries(q["ID"] == 0, q["version"] == 1)
@@ -2049,32 +2049,32 @@ def multiple_queries(*lst):
     return reduce(iand, lst)
 
 
-def dict_to_query(d):
+def dict_to_query(d) :
     """
     Takes a whole dictionary (d) as input and turns it into
     a database (TinyDB) query. Assumes q = Query()
     """
     lst = []
-    for key, val in d.items():
+    for key, val in d.items() :
         lst.append(Query()[key] == val)
     return multiple_queries(*lst)
 
-def get_db_cfg(path="Output/db.json"):
+def get_db_cfg(path="Output/db.json") :
 
     if not (os.path.dirname(path) == '') and not os.path.exists(os.path.dirname(path)) :
         os.makedirs(os.path.dirname(path))
 
-    db = TinyDB(path, sort_keys=False, indent=4, separators=(",", ": "))
+    db = TinyDB(path, sort_keys=False, indent=4, separators=(",", " : "))
     db_cfg = db.table("cfg", cache_size=0)
     return db_cfg
 
 
-def hash_to_cfg(hash_):
+def hash_to_cfg(hash_) :
     db_cfg = get_db_cfg()
     return DotDict(db_cfg.search(Query().hash == hash_)[0])
 
 
-def query_cfg(cfg):
+def query_cfg(cfg) :
     db_cfg = get_db_cfg()
     cfgs = db_cfg.search(dict_to_query(cfg))
     return [DotDict(cfg) for cfg in cfgs]
@@ -2085,31 +2085,31 @@ def query_cfg(cfg):
 #%%
 
 
-def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True):
+def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True) :
 
-    if isinstance(hashes, str):
+    if isinstance(hashes, str) :
         hashes = [hashes]
 
     files_to_delete = []
-    for hash_ in hashes:
+    for hash_ in hashes :
         files_to_delete.extend(list(Path(base_dir).rglob(f"*{hash_}*")))
 
     prompt = f"You are about the delete {len(files_to_delete)} files or folders. "
     prompt += "Please type exactly 'yes' (without apostrofes) to delete them."
     input_str = input(prompt)
 
-    if input_str == "yes":
+    if input_str == "yes" :
         folders_to_delete = []
-        for file_to_delete in files_to_delete:
-            if "." in str(file_to_delete):
-                if verbose:
-                    print(f"Deleting file: {file_to_delete}")
+        for file_to_delete in files_to_delete :
+            if "." in str(file_to_delete) :
+                if verbose :
+                    print(f"Deleting file : {file_to_delete}")
                 file_to_delete.unlink()
-            else:
+            else :
                 folders_to_delete.append(file_to_delete)
-        for folder_to_delete in folders_to_delete:
-            if verbose:
-                print(f"Deleting folder: {folder_to_delete}")
+        for folder_to_delete in folders_to_delete :
+            if verbose :
+                print(f"Deleting folder : {folder_to_delete}")
             folder_to_delete.rmdir()
 
 
@@ -2117,21 +2117,29 @@ def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True):
 
 import h5py
 
-def add_cfg_to_hdf5_file(f, cfg, path='/'):
-    for key, val in cfg.items():
+def add_cfg_to_hdf5_file(f, cfg) :
 
-        if isinstance(val, (int, float, str, np.ndarray, list)):
-            f[path + key] = val
+    add_cfg_to_hdf5_file_recursively(f, cfg)
+
+def add_cfg_to_hdf5_file_recursively(f, cfg, path = 'cfg') :
+
+    # Create group for each sub dict
+    d = f.create_group(path)
+
+    for key, val in cfg.items() :
+
+        if isinstance(val, (int, float, str, np.ndarray, list)) :
+            d.attrs[key] = val
 
         elif isinstance(val, dict) :
-            add_cfg_to_hdf5_file(f, val, path = path + key + '/')
+            add_cfg_to_hdf5_file_recursively(f, val, path = path + '/' + key)
 
-        else:
+        else :
             raise ValueError("Cannot save %s of %s type" % (key, type(val)))
 
 
-def read_cfg_from_hdf5_file(filename):
-    with h5py.File(filename, "r") as f:
+def read_cfg_from_hdf5_file(filename) :
+    with h5py.File(filename, "r") as f :
         cfg = read_cfg_from_hdf5_file_recursively(f)
 
     cfg              = format_cfg(cfg,         nb_simulation.spec_cfg)
@@ -2139,40 +2147,38 @@ def read_cfg_from_hdf5_file(filename):
 
     return cfg
 
-def read_cfg_from_hdf5_file_recursively(f, path='/'):
+def read_cfg_from_hdf5_file_recursively(f, path='cfg') :
     tmp = {}
-    for key, item in f[path].items():
+    for key in f[path].attrs :
+        tmp[key] = f[path].attrs[key]
 
-        if isinstance(item, h5py._h1.dataset.Dataset) :
-            tmp[key] = item.value
-
-        if isinstance(item, h5py._h1.group.Group) :
-            tmp[key] = read_cfg_from_hdf5_file_recursively(f, path=path + key + '/')
+    for item in f[path].keys() :
+        tmp[item] = read_cfg_from_hdf5_file_recursively(f, path=path + '/' + item)
 
     return tmp
 
 #%%
 
-def get_cfg_network_initialized(cfg):
+def get_cfg_network_initialized(cfg) :
     include = load_yaml("cfg/settings.yaml")["network_initialization_include_parameters"]
-    cfg_network_initialized = {key: cfg[key] for key in include}
+    cfg_network_initialized = {key : cfg[key] for key in include}
     return cfg_network_initialized
 
 
 #%%
 
 
-def get_simulation_parameters():
+def get_simulation_parameters() :
     yaml_filename = "cfg/simulation_parameters.yaml"
     all_simulation_parameters_input = load_yaml(yaml_filename)["all_simulation_parameters"]
     all_simulation_parameters = []
-    for simulation_parameter in all_simulation_parameters_input:
-        if "N_RS" in simulation_parameter.keys() and "MCMC" in simulation_parameter.keys():
+    for simulation_parameter in all_simulation_parameters_input :
+        if "N_RS" in simulation_parameter.keys() and "MCMC" in simulation_parameter.keys() :
             # break
             all_simulation_parameters.append(
                 get_random_samples(simulation_parameter, random_state=0)
             )
-        else:
+        else :
             all_simulation_parameters.append(simulation_parameter)
     return all_simulation_parameters
 
@@ -2184,48 +2190,48 @@ from scipy.stats import randint
 from sklearn.model_selection import ParameterSampler
 
 
-def uniform(a=0, b=1):
+def uniform(a=0, b=1) :
     loc = a
     scale = b - a
     return sp_uniform(loc, scale)
 
 
-def _round_param_list(param_list, param_grid):
+def _round_param_list(param_list, param_grid) :
 
     sorted_keys = list(param_grid.keys())
 
     rounded_list = []
-    for d in param_list:
+    for d in param_list :
         tmp = {}
-        for key in sorted_keys:
+        for key in sorted_keys :
             val = d[key]
-            if isinstance(val, float):
+            if isinstance(val, float) :
                 val = round(val, 4)
             tmp[key] = val
         rounded_list.append(tmp)
     return rounded_list
 
 
-def _append_remaining_parameters(simulation_parameter, rounded_list):
-    keyvals = {key: val for key, val in simulation_parameter.items() if not key in ["N_RS", "MCMC"]}
+def _append_remaining_parameters(simulation_parameter, rounded_list) :
+    keyvals = {key : val for key, val in simulation_parameter.items() if not key in ["N_RS", "MCMC"]}
     cfgs = []
-    for cfg in rounded_list:
-        for key, val in keyvals.items():
+    for cfg in rounded_list :
+        for key, val in keyvals.items() :
             cfg[key] = val
         cfgs.append(cfg)
     return cfgs
 
 
-def get_random_samples(simulation_parameter, random_state=0):
+def get_random_samples(simulation_parameter, random_state=0) :
     N = simulation_parameter["N_RS"]
     param_grid = {}
-    for key, val in simulation_parameter["MCMC"].items():
+    for key, val in simulation_parameter["MCMC"].items() :
         pdf = val[0]
-        if pdf.lower() == "uniform":
-            param_grid[key] = uniform(*val[1:])
-        elif pdf.lower() == "randint":
-            param_grid[key] = randint(*val[1:])
-        else:
+        if pdf.lower() == "uniform" :
+            param_grid[key] = uniform(*val[1 :])
+        elif pdf.lower() == "randint" :
+            param_grid[key] = randint(*val[1 :])
+        else :
             raise AssertionError(f"PDF for {pdf} not implemented yet")
     param_list = list(ParameterSampler(param_grid, n_iter=N, random_state=random_state))
     rounded_list = _round_param_list(param_list, param_grid)

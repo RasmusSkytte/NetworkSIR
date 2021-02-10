@@ -17,6 +17,9 @@ import dict_hash
 
 from attrdict import AttrDict
 
+from tinydb import TinyDB, Query
+
+
 
 def sha256(d):
     if isinstance(d, DotDict):
@@ -88,6 +91,10 @@ def load_yaml(filename):
 def format_time(t):
     return str(datetime.timedelta(seconds=t))
 
+
+def test_length(arr1, arr2, error_message) :
+    if not len(arr1) == len(arr2) :
+        raise ValueError(error_message)
 
 #%%
 
@@ -764,8 +771,6 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
     if "outbreak_position_UK" in cfg:
         cfg.outbreak_position_UK = r"\mathrm{" + str(cfg.outbreak_position_UK).capitalize() + r"}"
 
-    if "N_daily_vaccinations" in cfg:
-        cfg.N_daily_vaccinations = human_format(cfg.N_daily_vaccinations)
     if "N_init_UK" in cfg:
         cfg.N_init_UK = human_format(cfg.N_init_UK)
 
@@ -1898,7 +1903,7 @@ def load_age_stratified_file(file) :
     # Get the row_names
     row_names = data.index.values
 
-    return (data.to_numpy(), lower_breaks, row_names)
+    return (data.to_numpy(), row_names, lower_breaks)
 
 def load_contact_matrices(scenario = 'reference') :
     """ Loads and parses the contact matrices corresponding to the chosen scenario.
@@ -1908,9 +1913,9 @@ def load_contact_matrices(scenario = 'reference') :
             scenario (string): Name for the scenario to load
     """
     # Load the contact matrices
-    matrix_work,    age_groups_work,   _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
-    matrix_school,  age_groups_school, _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_school.csv')
-    matrix_other,   age_groups_other,  _ = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
+    matrix_work,   _, age_groups_work   = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
+    matrix_school, _, age_groups_school = load_age_stratified_file('Data/contact_matrices/' + scenario + '_school.csv')
+    matrix_other,  _, age_groups_other  = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
     # TODO: Load the school contact matrix
 
     # Assert the age_groups are the same
@@ -1922,22 +1927,67 @@ def load_contact_matrices(scenario = 'reference') :
     work_other_ratio = matrix_work.sum() / (matrix_other.sum() + matrix_work.sum())
 
     # Normalize the contact matrices after this ratio has been determined
+    # TODO: Find out if lists or numpy arrays are better --- I am leaning towards using only numpy arrays
     return (matrix_work.tolist(), matrix_other.tolist(), work_other_ratio, age_groups_work)
 
 
-def load_vaccination_schedule(scenario = 'reference') :
+
+
+
+def load_vaccination_schedule(cfg) :
     """ Loads and parses the vaccination schedule corresponding to the chosen scenario.
+        This includes scaling the number of infections and adjusting the effective start dates
+        Parameters:
+            cfg (dict): the configuration file
+    """
+    vaccinations_per_age_group, vaccination_schedule, _ = load_vaccination_schedule_file(scenario = cfg.Intervention_vaccination_schedule_name)
+
+    # Check that lengths match
+    test_length(vaccinations_per_age_group, cfg.Intervention_vaccination_effect_delays, "Loaded vaccination schedules does not match with the length of vaccination_effect_delays")
+
+    # Scale and adjust the vaccination schedules
+    for i in range(len(vaccinations_per_age_group)):
+
+        # Scale the number of vaccines
+        np.multiply(vaccinations_per_age_group[i], cfg.network.N_tot / 5_800_000, out=vaccinations_per_age_group[i], casting='unsafe')
+
+        # Determine the timing of effective vaccines
+        vaccination_schedule[i] = cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + cfg.Intervention_vaccination_effect_delays[i]
+
+    return (vaccinations_per_age_group, vaccination_schedule)
+
+
+def load_vaccination_schedule_file(scenario = "reference") :
+    """ Loads and parses the vaccination schedule file corresponding to the chosen scenario.
         Parameters:
             scenario (string): Name for the scenario to load
     """
-    # Load the contact matrices
-    vaccine_counts, age_groups, schedule = load_age_stratified_file('Data/vaccination_schedule/' + scenario + '.csv')
+    # Prepare output files
+    vaccine_counts  = []
+    schedule        = []
+    age_groups      = []
 
-    # Convert schedule to datetimes
-    schedule = [datetime.datetime.strptime(date, '%Y-%m-%d').date() for date in schedule]
+    # Determine the number of files that matches the requested scenario
+    i = 1
+    filename = lambda i : f'Data/vaccination_schedule/{scenario}_{i}.csv'
+
+    while file_exists(filename(i)) :
+
+        # Load the contact matrices
+        tmp_vaccine_counts, tmp_schedule, _ = load_age_stratified_file(filename(i))
+
+        # Convert schedule to datetimes
+        tmp_schedule = [datetime.datetime.strptime(date, '%Y-%m-%d').date() for date in tmp_schedule]
+
+        # Store the loaded schedule
+        vaccine_counts.append(tmp_vaccine_counts)
+        schedule.append(tmp_schedule)
+
+        # Increment
+        i += 1
 
     # Normalize the contact matrices after this ratio has been determined
-    return (vaccine_counts, age_groups, schedule)
+    return (vaccine_counts, schedule, age_groups)
 
 @njit
 def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=False):
@@ -1966,9 +2016,9 @@ def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=Fals
 def load_kommune_shapefiles(shapefile_size, verbose=False):
 
     shp_file = {}
-    shp_file["small"] = "Data/Kommuner/ADM_2M/KOMMUNE.shp"
+    shp_file["small"]  = "Data/Kommuner/ADM_2M/KOMMUNE.shp"
     shp_file["medium"] = "Data/Kommuner/ADM_500k/KOMMUNE.shp"
-    shp_file["large"] = "Data/Kommuner/ADM_10k/KOMMUNE.shp"
+    shp_file["large"]  = "Data/Kommuner/ADM_10k/KOMMUNE.shp"
 
     if verbose:
         print(f"Loading {shapefile_size} kommune shape files")
@@ -2008,10 +2058,6 @@ def dict_to_query(d):
     for key, val in d.items():
         lst.append(Query()[key] == val)
     return multiple_queries(*lst)
-
-
-from tinydb import TinyDB, Query
-
 
 def get_db_cfg(path="Output/db.json"):
 

@@ -1459,22 +1459,20 @@ def do_bug_check(
 
     if my.cfg.day_max > 0 and day >= my.cfg.day_max :
         if verbose :
-            print("day exceeded day_max")
+            print("--- day exceeded day_max ---")
         continue_run = False
 
     elif day > 10_000 :
         if verbose :
-            print("day exceeded 10_000")
+            print("--- day exceeded 10_000 ---")
         continue_run = False
 
     elif step_number > 100_000_000 :
         if verbose :
-            print("step_number > 100_000_000")
+            print("=== step_number > 100_000_000 === ")
         continue_run = False
 
-    elif (g.total_sum_infections + g.total_sum_of_state_changes < 0.0001) and (
-        g.total_sum_of_state_changes + g.total_sum_infections > -0.00001
-    ) :
+    elif (g.total_sum_infections + g.total_sum_of_state_changes < 0.0001) and (g.total_sum_of_state_changes + g.total_sum_infections > -0.00001) :
         continue_run = False
         if verbose :
             print("Equilibrium")
@@ -1720,9 +1718,8 @@ def run_simulation(
                     *("\naccept :", accept),
                     *("\nagent_getting_infected : ", agent_getting_infected),
                     *("\nstep_number", step_number),
-                    "\ncfg :",
-                )
-                # my.cfg.print()
+                    "\ncfg :")
+
                 break
 
             # Here we update infection lists so that newly infected cannot be infected again
@@ -1776,15 +1773,15 @@ def run_simulation(
                         agents_in_state,
                         state_total_counts,
                         SIR_transition_rates,
-                        where_infections_happened_counter,
-                    )
+                        where_infections_happened_counter)
 
 
                 if verbose :
-                    print("day", day, "n_inf", np.sum(where_infections_happened_counter) )
-                    print("R_true", intervention.R_true_list[-1])
-                    print("freedom_impact", intervention.freedom_impact_list[-1])
-                    print("R_true_list_brit", intervention.R_true_list_brit[-1])
+                    print("--- day : ", day, " ---")
+                    print("n_infected : ", np.round(np.sum(where_infections_happened_counter)))
+                    print("R_true : ", np.round(intervention.R_true_list[-1], 3))
+                    print("freedom_impact : ", np.round(intervention.freedom_impact_list[-1], 3))
+                    print("R_true_list_brit : ", np.round(intervention.R_true_list_brit[-1], 3))
 
 
                 if day >= 0 :
@@ -1809,8 +1806,7 @@ def run_simulation(
             accept,
             ra1,
             s,
-            x,
-        )
+            x)
 
         s_counter[s] += 1
 

@@ -25,9 +25,11 @@ if utils.is_local_computer():
     # Fraction of population to simulate
     f = 0.01
 
-    noise = lambda d : 0
+    #noise = lambda m, d : 0
+    noise = lambda m, d : np.round(m + np.linspace(-d, d, 3), 5)
+    linspace = lambda start, stop : np.round(np.linspace(start, stop, 3), 5)
 
-    verbose = True
+    verbose = False
     num_cores_max = 1
 
 else :
@@ -37,7 +39,8 @@ else :
     # Fraction of population to simulate
     f = 0.1
 
-    noise = lambda d : np.linspace(-d, d, 5)
+    noise = lambda m, d : np.round(m + np.linspace(-d, d, 5), 5)
+    linspace = lambda start, stop : np.round(np.linspace(start, stop, 3), 5)
 
     verbose = False
     num_cores_max = 20
@@ -48,26 +51,26 @@ all_simulation_parameters = [
         "N_tot": int(5_800_000 * f),
         "rho": 0.1,
         #"epsilon_rho": 1,
-        "contact_matrices_name": "basis",                  # The target activity in the society
+        "contact_matrices_name": "2021_fase1_sce1",                  # The target activity in the society
         #
-        "Intervention_contact_matrices_name": [["ned2021jan",         # Nedlukningen i januar
-                                                "2021_fase1_sce1" ]], # Genåbning af 0-4 klasse
+        "Intervention_contact_matrices_name": [["ned2021jan"]],         # Nedlukningen i januar
         #
-        "restriction_thresholds": [[                                       0, (datetime(2021, 2, 8) - start_date).days,
-                                    (datetime(2021, 2, 8) - start_date).days, (datetime(2021, 2, 15) - start_date).days]],
+        "restriction_thresholds": [[ 0, (datetime(2021, 2, 8) - start_date).days]],
         #
-        "threshold_interventions_to_apply": [[3, 3]],          # 3: Matrix intervention
+        "threshold_interventions_to_apply": [[3]],          # 3: Matrix intervention
         #
         "start_date_offset" : (start_date - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date
         "day_max": (end_date - start_date).days,
         #
-        "beta": 0.0125 + noise(0.0005),
-        "beta_UK_multiplier": 1.5 + noise(0.2),
+        #"beta": 0.0125,
+        #"beta": linspace(0.01, 0.02),
+        "beta": noise(0.0125, 0.0005),
+        "beta_UK_multiplier": noise(1.5, 0.2),
         "lambda_I": 4 / 2.52,
         "lambda_E": 4 / 2.5,
         #
-        "N_init": (2300 + noise(200)) * f,
-        "N_init_UK_frac": 0.03 + noise(0.01),
+        "N_init": noise(2300 * f, 200 * f),
+        "N_init_UK_frac": noise(0.03, 0.01),
         #
         "Intervention_vaccination_effect_delays" : [[10, 21]],
         #

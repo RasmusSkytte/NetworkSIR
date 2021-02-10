@@ -159,8 +159,10 @@ class ABM_simulations:
             yield cfg
 
     def cfg_to_filenames(self, cfg):
+
         cfg = utils.DotDict(cfg)
         cfg_list = utils.query_cfg(cfg)
+
         if not len(cfg_list) == 1:
             raise AssertionError(
                 f"cfg did not give unique results in the database",

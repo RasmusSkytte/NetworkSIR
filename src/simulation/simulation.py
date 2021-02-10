@@ -302,6 +302,11 @@ class Simulation:
         vaccination_schedule = self.cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + 10
 
         self.intervention = nb_simulation.Intervention(
+            other_matrix_restrict = other_matrix_restrict,
+            verbose=verbose_interventions,
+        )
+
+        res = nb_simulation.run_simulation(
             self.my.cfg,
             labels = labels,
             vaccinations_per_age_group = vaccinations_per_age_group,
@@ -309,11 +314,6 @@ class Simulation:
             work_matrix_init = work_matrix_init,
             work_matrix_restrict = work_matrix_restrict,
             other_matrix_init = other_matrix_init,
-            other_matrix_restrict = other_matrix_restrict,
-            verbose=verbose_interventions,
-        )
-
-        res = nb_simulation.run_simulation(
             self.my,
             self.g,
             self.intervention,

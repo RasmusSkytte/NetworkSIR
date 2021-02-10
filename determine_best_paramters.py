@@ -75,7 +75,7 @@ lls     = []
 
 for cfg in tqdm(
     abm_files.iter_cfgs(),
-    desc="Getting the log-likelihoods for the individual ABM simulations",
+    desc="Calculating log-likelihoods",
     total=len(abm_files.cfgs)) :
 
     # Plot and compute loglikelihoods
@@ -88,7 +88,8 @@ for cfg in tqdm(
 cfgs = [cfg for cfg in abm_files.iter_cfgs()]
 cfg = cfgs[np.nanargmax(lls)]
 print("--- Best parameters ---")
-print(f"beta : {cfg.beta}")
-print(f"beta_UK_multiplier : {cfg.beta_UK_multiplier}")
-print(f"N_init : {cfg.N_init}")
-print(f"N_init_UK_frac : {cfg.N_init_UK_frac}")
+print(f"loglikelihood : {lls[np.nanargmax(lls)]:.3f}")
+print(f"beta : {cfg.beta:.5f}")
+print(f"beta_UK_multiplier : {cfg.beta_UK_multiplier:.3f}")
+print(f"N_init : {cfg.N_init:.0f}")
+print(f"N_init_UK_frac : {cfg.N_init_UK_frac:.3f}")

@@ -77,8 +77,6 @@ class Simulation :
         if self.verbose :
             print("Importing work and other matrices")
 
-        # TODO : fix the DotDict indexing
-        self.cfg["network"]["work_matrix"], self.cfg["network"]["other_matrix"], self.cfg.network.work_other_ratio, _ = utils.load_contact_matrices(scenario = self.cfg.network.contact_matrices_name)
 
     def _initialize_network(self) :
         """ Initializing the network for the simulation

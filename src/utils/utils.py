@@ -1173,6 +1173,12 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                 elif key in spec_network.keys() :
                     cfg["network"].update(d)
 
+                    if key == "contact_matrices_name" :
+                        # TODO : fix the DotDict indexing
+                        work_matix, other_matrix, work_other_ratio, _ = load_contact_matrices(scenario = d[key])
+                        cfg["network"].update({"work_matrix" : work_matix, "other_matrix" : other_matrix, "work_other_ratio" : work_other_ratio})
+
+
                 #elif key in spec_intervention.keys() :
                 #    cfg["intervention"].update(d)
 

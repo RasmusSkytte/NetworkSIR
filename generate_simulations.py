@@ -26,7 +26,7 @@ if utils.is_local_computer():
     f = 0.01
 
     #noise = lambda m, d : 0
-    noise = lambda m, d : np.round(m + np.linspace(-d, d, 3), 5)
+    noise = lambda m, d : np.round(m + np.linspace(-d, d, 1), 5)
     linspace = lambda start, stop : np.round(np.linspace(start, stop, 3), 5)
 
     verbose = False
@@ -53,11 +53,11 @@ all_simulation_parameters = [
         #"epsilon_rho": 1,
         "contact_matrices_name": "2021_fase1_sce1",                  # The target activity in the society
         #
-        "Intervention_contact_matrices_name": [["ned2021jan"]],         # Nedlukningen i januar
+        "Intervention_contact_matrices_name": [["ned2021jan", "ned2021jan"]],         # Nedlukningen i januar
         #
-        "restriction_thresholds": [[ 0, (datetime(2021, 2, 8) - start_date).days]],
+        "restriction_thresholds": [[ 0, (datetime(2021, 2, 8) - start_date).days,(datetime(2021, 2, 8) - start_date).days,(datetime(2021, 2, 25) - start_date).days]],
         #
-        "threshold_interventions_to_apply": [[3]],          # 3: Matrix intervention
+        "threshold_interventions_to_apply": [[3,3]],          # 3: Matrix intervention
         #
         "start_date_offset" : (start_date - datetime(2020, 12, 28)).days,    # Simulation start date - vaccination start date
         "day_max": (end_date - start_date).days,
@@ -73,6 +73,7 @@ all_simulation_parameters = [
         "N_init_UK_frac": noise(0.03, 0.01),
         #
         "Intervention_vaccination_effect_delays" : [[10, 21]],
+        "Intervention_vaccination_efficacies" : [[0.95, 0.65]],
         #
         "do_interventions": True,
         "continuous_interventions_to_apply":  [[1, 2, 3, 4, 5]],

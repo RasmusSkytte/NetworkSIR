@@ -80,6 +80,7 @@ spec_cfg = {
     "Intervention_contact_matrices_name" : ListType(nb.types.unicode_type),
     "Intervention_vaccination_schedule_name" : nb.types.unicode_type,
     "Intervention_vaccination_effect_delays" : nb.int16[:],
+    "Intervention_vaccination_efficacies" : nb.float32[:],
     # ID
     "ID" : nb.uint16,
 }
@@ -1886,15 +1887,17 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, ver
                     if my.agent_is_susceptable(agent) :
                         # "vaccinate agent"
                         my.vaccination_type[agent] = i
+                        rate_reduc = np.array([1,1,1]) * my.cfg.Intervention_vaccination_efficacies[i-1] 
+                        cut_rates_of_agent(my, g, intervention, agent, rate_reduc)
 
                         # set agent to recovered, instantly
-                        my.state[agent] = R_state
+                        #my.state[agent] = R_state
 
-                        agents_in_state[R_state].append(np.uint32(agent))
-                        state_total_counts[R_state] += 1
+                        #agents_in_state[R_state].append(np.uint32(agent))
+                        #state_total_counts[R_state] += 1
 
                         # remove rates into agent from its infectios contacts
-                        update_infection_list_for_newly_infected_agent(my, g, agent)
+                        #update_infection_list_for_newly_infected_agent(my, g, agent)
 
 @njit
 def calculate_R_True(my, g) :

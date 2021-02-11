@@ -2575,7 +2575,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                     )
 
     elif intervention.start_interventions_by_day :
-        if day in intervention.cfg.restriction_thresholds :
+        if day in list(intervention.cfg.restriction_thresholds) :
             for i, intervention_date in enumerate(intervention.cfg.restriction_thresholds) :
                 if day == intervention_date :
                     if i % 2 == 0 :

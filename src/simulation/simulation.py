@@ -307,15 +307,9 @@ class Simulation :
             other_matrix_restrict.append(tmp_other_matrix_restrict)
 
         self.intervention = nb_simulation.Intervention(
-            other_matrix_restrict = other_matrix_restrict,
-            verbose=verbose_interventions,
-        )
-
-        res = nb_simulation.run_simulation(
             self.my.cfg,
             self.my.cfg_network,
             labels = labels,
-
             vaccinations_per_age_group = np.array(vaccinations_per_age_group),
             vaccination_schedule = np.array(vaccination_schedule),
             work_matrix_restrict = np.array(work_matrix_restrict),
@@ -324,7 +318,6 @@ class Simulation :
         )
 
         res = nb_simulation.run_simulation(
-
             self.my,
             self.g,
             self.intervention,

@@ -73,6 +73,7 @@ all_simulation_parameters = [
         "N_init_UK_frac": noise(0.03, 0.01),
         #
         "Intervention_vaccination_effect_delays" : [[10, 21]],
+        "Intervention_vaccination_efficacies" : [[0.95, 0.65]],
         #
         "do_interventions": True,
         "continuous_interventions_to_apply":  [[1, 2, 3, 4, 5]],

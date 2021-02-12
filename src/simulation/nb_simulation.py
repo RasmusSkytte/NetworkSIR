@@ -1458,7 +1458,7 @@ def do_bug_check(
     x,
 ) :
 
-    if my.cfg.day_max > 0 and day >= my.cfg.day_max :
+    if my.cfg.day_max > 0 and day > my.cfg.day_max :
         if verbose :
             print("--- day exceeded day_max ---")
         continue_run = False
@@ -1571,18 +1571,20 @@ def run_simulation(
     SIR_transition_rates,
     N_infectious_states,
     nts,
-    verbose=False,
-) :
+    verbose=False) :
+
     if verbose :
         print("Apply intervention", intervention.apply_interventions)
 
-    out_time = List()
-    out_state_counts = List()
+    # Define outputs
+    out_time = List()                       # Sampled times
+    out_state_counts = List()               # Tne counts of the SEIR states
+    out_variant_counts = List()             # The counts of viral strains
+    out_infected_per_age_group = List()     # The counts of infected per age group
     out_my_state = List()
 
     daily_counter = 0
     day = 0
-    #day = 0
     click = 0
     step_number = 0
 
@@ -1729,12 +1731,15 @@ def run_simulation(
         ################
 
         while nts * click  < real_time :
-            # if nts * click < real_time :
 
             daily_counter += 1
             if ((len(out_time) == 0) or (real_time != out_time[-1])) and day >= 0 :
+
+                # Update the output variables
                 out_time.append(real_time)
                 out_state_counts.append(state_total_counts.copy())
+                out_variant_counts.append(1)
+                out_infected_per_age_group.append(1)
 
             if daily_counter >= 10 :
 
@@ -1828,7 +1833,7 @@ def run_simulation(
         # print("N_daily_tests", intervention.N_daily_tests)
         # print("N_positive_tested", N_positive_tested)
 
-    return out_time, out_state_counts, out_my_state, intervention
+    return out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention
 
 
 #%%

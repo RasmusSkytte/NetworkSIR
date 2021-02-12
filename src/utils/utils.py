@@ -650,32 +650,50 @@ class DotDict(AttrDict) :
     >>> dotdict.last_name
     'Michelsen'
     """
+    
+    def deepcopy(self) :
+        copy = DotDict()
+
+        for key, val in self.items() :
+
+            if isinstance(val, type(self)) :
+                copy[key] = val.deepcopy()
+
+            else :
+                copy[key] = val
+
+        return copy
+
+    def to_dict(self, exclude='') :
+        out = {}
+        
+        if not isinstance(exclude, list) :
+            exclude = [exclude]                    
+
+        for key, val in self.items() :
+
+            if key in exclude :
+                continue
+
+            if isinstance(val, type(self)) :
+                out[key] = val.to_dict(exclude=exclude)
+
+            elif isinstance(val, set) :
+                out[key] = list(val)
+
+            elif isinstance(val, np.ndarray) :
+                out[key] = val.tolist()
+            else :
+                out[key] = val
+
+        return out
 
     def dump_to_file(self, filename, exclude=None) :
         if any(substring in filename for substring in ["yaml", "yml"]) :
             make_sure_folder_exist(filename)
 
-            out = self.copy
-            if exclude is not None :
-                if not isinstance(exclude, list) :
-                    exclude = [exclude]
-                out = self.copy()
-                for key in exclude :
-                    out.pop(key)
-
-            for key, val in out.items() :
-
-                if isinstance(val, type(self)) :
-                    out[key] = dict(val)
-
-                elif isinstance(val, set) :
-                    out[key] = list(val)
-
-                elif isinstance(val, np.ndarray) :
-                    out[key] = val.tolist()
-
             with open(filename, "w") as yaml_file :
-                yaml.dump(out, yaml_file, default_flow_style=False, sort_keys=False)
+                yaml.dump(self.to_dict(exclude="ID"), yaml_file, default_flow_style=False, sort_keys=False)
         else :
             raise AssertionError("This filetype is not yet implemented. Currently only yamls")
 
@@ -2101,6 +2119,12 @@ def query_cfg(cfg) :
     cfgs = db_cfg.search(dict_to_query(cfg))
     return [DotDict(cfg) for cfg in cfgs]
 
+
+def hash_to_seed(hash_) :
+    seed = int(hash_, 16)
+    while seed > 2**32 - 1 :
+        seed = int(seed / 2)
+    return seed
 
 # ls -R | grep 7274ac6030 | xargs rm -f
 

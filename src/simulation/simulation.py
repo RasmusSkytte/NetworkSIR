@@ -57,7 +57,7 @@ np.set_printoptions(linewidth=200)
 
 class Simulation :
 
-    def __init__(self, cfg, cfg_hash, verbose=False) :
+    def __init__(self, cfg, cfg_hash, verbose=False)½ :
 
         self.verbose = verbose
 
@@ -68,7 +68,7 @@ class Simulation :
         self.hash = cfg_hash
 
         self.my = nb_simulation.initialize_My(self.cfg)
-        utils.set_numba_random_seed(self.cfg.ID)
+        utils.set_numba_random_seed(int(cfg_hash, 16))
 
         if self.cfg.version == 1 :
             if self.cfg.do_interventions :
@@ -163,7 +163,6 @@ class Simulation :
             f.create_dataset("N_ages", data=self.N_ages)
             self._add_cfg_to_hdf5_file(f)
 
-
     def _load_initialized_network(self, filename) :
         if self.verbose :
             print(f"Loading previously initialized network, please wait", flush=True)
@@ -177,10 +176,12 @@ class Simulation :
             self.my = nb_load_jitclass.load_My_from_dict(my_hdf5ready, self.cfg)
         self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.ID)
 
+        # Update connection weights
+        for agent in range(self.cfg.network.N_tot) :
+            nb_simulation.set_infection_weight(self.my, agent)
 
-    def initialize_network(
-        self, force_rerun=False, save_initial_network=False, only_initialize_network=False, force_load_initial_network=False
-    ) :
+    def initialize_network(self, force_rerun=False,
+         save_initial_network=False, only_initialize_network=False, force_load_initial_network=False) :
         filename = "Initialized_networks/"
         #filename += f"{network_hash}__ID__{self.cfg.ID}.hdf5"
         filename += f"{utils.cfg_to_hash(self.cfg.network)}.hdf5"
@@ -288,11 +289,8 @@ class Simulation :
         if verbose_interventions is None :
             verbose_interventions = self.verbose
 
-
         # Load the projected vaccination schedule
         vaccinations_per_age_group, vaccination_schedule = utils.load_vaccination_schedule(self.cfg)
-
-
 
         # Load the restriction contact matrices
         work_matrix_restrict = []

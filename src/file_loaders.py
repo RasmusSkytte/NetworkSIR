@@ -170,7 +170,6 @@ class ABM_simulations :
         # Get the hashes for the relevent subset
         # Only load these
 
-
         self.cfgs = get_cfgs(self.all_folders, subset=self.subset)  # TODO: This function is slow
         self.d = self._convert_all_files_to_dict(filetype)
 

@@ -17,13 +17,14 @@ def pandas_load_file(filename) :
     with h5py.File(filename, "r") as f :
         df_raw = pd.DataFrame(f["df"][()])
 
+    df = df_raw.copy()
+
     for state in ["E", "I"] :
-        df_raw[state] = sum(
-            (df_raw[col] for col in df_raw.columns if state in col and len(col) == 2)
-        )
+        cols = [col for col in df_raw.columns if state in col and len(col) == 2]
+        df[state] = sum((df_raw[col] for col in cols))
+        df = df.drop(columns=cols)
 
     # only keep relevant columns
-    df = df_raw[["Time", "E", "I", "R"]].copy()
     df.rename(columns={"Time" : "time"}, inplace=True)
 
     # remove duplicate timings
@@ -191,11 +192,10 @@ class ABM_simulations :
         for cfg in self.cfgs :
             filenames = self.d[cfg.hash]
             yield cfg, filenames
-
+    
     def iter_cfgs(self) :
         for cfg in self.cfgs :
             yield cfg
-
 
     def cfg_to_filenames(self, cfg) :
 

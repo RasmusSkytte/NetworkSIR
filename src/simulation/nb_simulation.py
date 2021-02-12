@@ -1276,7 +1276,15 @@ def initialize_states(
     for _, agent in enumerate(initial_agents_to_immunize) :
         my.state[agent] = N_states
 
+        if np.random.rand() < my.cfg.N_init_UK_frac :
+            my.corona_type[agent] = 1 
 
+        agents_in_state[N_states].append(np.uint32(agent))
+        state_total_counts[N_states] += 1
+
+        update_infection_list_for_newly_infected_agent(my, g, agent)
+
+        
     #  Now make initial infections
     for _, agent in enumerate(initial_agents_to_infect) :
         weights = calc_E_I_dist(my, 1)

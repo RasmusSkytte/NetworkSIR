@@ -110,6 +110,28 @@ def hash_to_cfg(hash_, cfgs_dir="./Output/cfgs") :
     cfg = utils.DotDict(q_result[0])
     return cfg
 
+def query_to_hashes(subset=None, base_dir="Output") :
+    db_cfg = utils.get_db_cfg(path=os.path.join(base_dir, "db.json"))
+    q = Query()
+
+    if subset is None :
+        q_result = db_cfg.all()
+    else :
+        q_result = db_cfg.search(utils.dict_to_query(subset))
+
+    return q_result
+    # if len(q_result) == 0 :
+    #     cfgs = [str(file) for file in Path(cfgs_dir).rglob(f"*{hash_}.yaml")]
+    #     if len(cfgs) == 1 :
+    #         cfg = utils.load_yaml(cfgs[0])
+    #         cfg.hash = utils.cfg_to_hash(cfg)
+    #         return cfg
+    #     else :
+    #         return None
+    # assert len(q_result) == 1
+    # cfg = utils.DotDict(q_result[0])
+    # return cfg
+
 
 def get_cfgs(all_folders, subset=None) :
     hashes = set()
@@ -142,7 +164,13 @@ class ABM_simulations :
             print("Loading ABM_simulations \n", flush=True)
         self.all_filenames = get_all_ABM_filenames(base_dir, filetype)
         self.all_folders = get_all_ABM_folders(self.all_filenames)
-        self.cfgs = get_cfgs(self.all_folders, subset=self.subset)
+
+        # Steps:
+        # Connect to data base
+        # Get the hashes for the relevent subset
+        # Only load these
+
+        self.cfgs = get_cfgs(self.all_folders, subset=self.subset)  # TODO: This function is slow
         self.d = self._convert_all_files_to_dict(filetype)
 
     def _convert_all_files_to_dict(self, filetype) :

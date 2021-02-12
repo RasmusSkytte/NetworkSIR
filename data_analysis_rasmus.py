@@ -18,7 +18,8 @@ from src import rc_params
 
 
 # Define the subset to plot on
-subset = {"beta" : 0.0125, "N_init" : 210}
+subset = None
+#subset = {"beta" : 0.0125, "N_init" : 210}
 
 # Number of plots to keep
 N = 25
@@ -78,8 +79,8 @@ reload(plot)
 reload(file_loaders)
 
 # Prepare output file
-pdf_name = Path(f"Figures/data_analysis_rasmus_HEP.png")
-utils.make_sure_folder_exist(pdf_name)
+fig_name = Path(f"Figures/data_analysis_rasmus_HEP.png")
+utils.make_sure_folder_exist(fig_name)
 
 # Load the covid index data
 df_index = pd.read_feather("Data/covid_index.feather")
@@ -114,16 +115,12 @@ for cfg in tqdm(
     abm_files.iter_cfgs(),
     total=len(abm_files.cfgs)) :
 
-    if cfg["network"]["N_tot"] < 60_000 :
-        continue
-
     # Plot and compute loglikelihoods
     tmp_lls, tmp_handles = plot_with_loglikelihood(cfg, abm_files, logK, logK_sigma, covid_index_offset, 0, 0, 0, axes)
 
     # Store the plot handles and loglikelihoods
     lls.extend(tmp_lls)
     handles.extend(tmp_handles)
-
 
 
 cfgs = [cfg for cfg in abm_files.iter_cfgs()]
@@ -183,4 +180,5 @@ plt.ylabel('Daglige positive tests')
 
 axes[1].set_xlim([datetime(2021, 1, 1), datetime(2021, 3, 1)])
 
+plt.savefig(fig_name)
 plt.show()

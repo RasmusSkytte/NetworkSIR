@@ -1737,8 +1737,8 @@ def run_simulation(
                 # Update the output variables
                 out_time.append(real_time)
                 out_state_counts.append(state_total_counts.copy())
-                out_variant_counts.append()
-                out_infected_per_age_group.append()
+                out_variant_counts.append(1)
+                out_infected_per_age_group.append(1)
 
             if daily_counter >= 10 :
 
@@ -1832,7 +1832,7 @@ def run_simulation(
         # print("N_daily_tests", intervention.N_daily_tests)
         # print("N_positive_tested", N_positive_tested)
 
-    return out_time, out_state_counts, (out_my_state, out_my_), intervention
+    return out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention
 
 
 #%%

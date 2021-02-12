@@ -81,8 +81,6 @@ spec_cfg = {
     "Intervention_vaccination_schedule_name" : nb.types.unicode_type,
     "Intervention_vaccination_effect_delays" : nb.int16[:],
     "Intervention_vaccination_efficacies" : nb.float32[:],
-    # ID
-    "ID" : nb.uint16,
 }
 
 @jitclass(spec_cfg)
@@ -117,8 +115,6 @@ class Config(object) :
         # Interventions / Lockdown
         self.do_interventions = True
 
-        self.ID = 0
-
 
 nb_cfg_type = Config.class_type.instance_type
 
@@ -134,6 +130,8 @@ spec_network = {
     "other_matrix" : nb.float64[:, :],
     "work_other_ratio" : nb.float32,  # 0.2 = 20% work, 80% other
     "N_contacts_max" : nb.uint16,
+    # ID
+    "ID" : nb.uint16,
 }
 
 @jitclass(spec_network)
@@ -150,6 +148,7 @@ class Network(object) :
         self.other_matrix = np.ones((8, 8), dtype=np.float64)
         self.work_other_ratio = 0.5
         self.N_contacts_max = 0
+        self.ID = 0
 
 nb_cfg_network_type = Network.class_type.instance_type
 
@@ -1276,6 +1275,7 @@ def make_initial_infections(
         states = np.arange(N_states - 1, dtype=np.int8)
         new_state = nb_random_choice(states, weights, verbose=verbose)[0]  # E1-E4 or I1-I4, uniformly distributed
         my.state[agent] = new_state
+
         if np.random.rand() < my.cfg.N_init_UK_frac :
             my.corona_type[agent] = 1  # IMPORTANT LINE!
 

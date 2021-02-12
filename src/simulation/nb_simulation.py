@@ -41,6 +41,7 @@ spec_cfg = {
     "algo" : nb.uint8,
     "N_init" : nb.uint16,
     "N_init_UK_frac" : nb.float32,
+    "R_init" : nb.uint16,
     "lambda_E" : nb.float32,
     "lambda_I" : nb.float32,
     # other
@@ -94,6 +95,7 @@ class Config(object) :
         self.algo = 2
         self.N_init = 100
         self.N_init_UK_frac = 0
+        self.R_init = 0
         self.lambda_E = 1.0
         self.lambda_I = 1.0
 
@@ -1141,7 +1143,7 @@ def make_random_initial_infections(my, possible_agents) :
 
 
 @njit
-def compute_initial_agents_to_infect(my, possible_agents) :
+def choose_initial_agents(my, possible_agents, N) :
 
     ##  Standard outbreak type, infecting randomly
     if my.cfg.make_random_initial_infections :
@@ -1154,16 +1156,16 @@ def compute_initial_agents_to_infect(my, possible_agents) :
 
         outbreak_agent = single_random_choice(possible_agents)  # this is where the outbreak starts
 
-        initial_agents_to_infect = List()
-        initial_agents_to_infect.append(outbreak_agent)
+        initial_agents = List()
+        initial_agents.append(outbreak_agent)
 
-        while len(initial_agents_to_infect) < (my.cfg.N_init) :
+        while len(initial_agents) < N :
             proposed_agent = single_random_choice(possible_agents)
 
             if my.dist_accepted(outbreak_agent, proposed_agent, rho_init_local_outbreak) :
-                if proposed_agent not in initial_agents_to_infect :
-                    initial_agents_to_infect.append(proposed_agent)
-        return np.asarray(initial_agents_to_infect, dtype=np.uint32)
+                if proposed_agent not in initial_agents :
+                    initial_agents.append(proposed_agent)
+        return np.asarray(initial_agents, dtype=np.uint32)
 
 
 @njit
@@ -1242,7 +1244,7 @@ def calc_E_I_dist(my, r_guess) :
 
 
 @njit
-def make_initial_infections(
+def initialize_states(
     my,
     g,
     SIR_transition_rates,
@@ -1252,7 +1254,7 @@ def make_initial_infections(
     agents_in_state,
     agents_in_age_group,
     initial_ages_exposed,
-    N_infectious_states,
+    #N_infectious_states,
     N_states,
     verbose=False) :
 
@@ -1267,9 +1269,15 @@ def make_initial_infections(
     else :
         possible_agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
 
-    initial_agents_to_infect = compute_initial_agents_to_infect(my, possible_agents)
+    initial_agents_to_immunize = choose_initial_agents(my, possible_agents, my.cfg.R_init)
+    initial_agents_to_infect   = choose_initial_agents(my, possible_agents, my.cfg.N_init)
 
-    ##  Now make initial infections
+    #  Now make initial immunizations
+    for _, agent in enumerate(initial_agents_to_immunize) :
+        my.state[agent] = N_states
+
+
+    #  Now make initial infections
     for _, agent in enumerate(initial_agents_to_infect) :
         weights = calc_E_I_dist(my, 1)
         states = np.arange(N_states - 1, dtype=np.int8)

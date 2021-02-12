@@ -199,10 +199,9 @@ if not utils.is_local_computer() :
     plt.savefig('Figures/test.png')
 
 else :
-    print("--- Maximum for marginal distributions ---")
-    def terminal_printer(name, arr) :
+    def terminal_printer(name, arr, val) :
     
-        I = np.argmax(arr)
+        I = np.argmax(np.unique(arr) == val)
         out_string = "["
         for i in range(len(arr)) :
             if i == I :
@@ -211,9 +210,10 @@ else :
                 out_string += " -"
         out_string += " ]"
         print(name + "\t" + out_string)
-    
-    terminal_printer("beta :    ", best(betas))
-    terminal_printer("rel_beta :", best(rel_betas))
-    terminal_printer("N_init :  ", best(N_init))
-    terminal_printer("N_UK :    ", best(N_init_UK_frac))
+
+    print("--- Maximum likelihood value locations ---")
+    terminal_printer("beta* :    ", betas,          cfg_best.beta)
+    terminal_printer("rel_beta* :", rel_betas,      cfg_best.beta_UK_multiplier)
+    terminal_printer("N_init* :  ", N_init,         cfg_best.N_init)
+    terminal_printer("N_UK* :    ", N_init_UK_frac, cfg_best.N_init_UK_frac)
     

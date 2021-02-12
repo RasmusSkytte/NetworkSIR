@@ -6,5 +6,5 @@ def set_rc_params(dpi=300):
     plt.rcParams["figure.figsize"] = (16, 10)
     plt.rcParams["figure.dpi"] = dpi
     plt.rcParams["text.usetex"] = False
-    plt.rcParams["font.size"] = 10
+    plt.rcParams["font.size"] = 8
     mpl.rc("axes", edgecolor="k", linewidth=2)

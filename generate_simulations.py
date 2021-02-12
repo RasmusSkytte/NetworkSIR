@@ -16,7 +16,7 @@ dry_run = False
 force_rerun = False
 
 start_date = datetime(2020, 12, 8)
-end_date   = datetime(2021, 3, 1)
+end_date   = datetime(2021, 2, 1)
 
 if utils.is_local_computer():
 
@@ -29,7 +29,7 @@ if utils.is_local_computer():
     noise = lambda m, d : np.round(m + np.linspace(-d, d, 1), 5)
     linspace = lambda start, stop : np.round(np.linspace(start, stop, 3), 5)
 
-    verbose = False
+    verbose = True
     num_cores_max = 1
 
 else :
@@ -70,7 +70,7 @@ all_simulation_parameters = [
         "lambda_E": 4 / 2.5,
         #
         "N_init": noise(2300 * f, 200 * f),
-        "N_init_UK_frac": noise(0.03, 0.01),
+        "N_init_UK_frac": noise(0.13, 0.01),
         #
         "Intervention_vaccination_effect_delays" : [[10, 21]],
         "Intervention_vaccination_efficacies" : [[0.95, 0.65]],
@@ -79,6 +79,7 @@ all_simulation_parameters = [
         "continuous_interventions_to_apply":  [[1, 2, 3, 4, 5]],
         "intervention_removal_delay_in_clicks": [0],
         "make_restrictions_at_kommune_level": [False],
+       
     },
 ]
 

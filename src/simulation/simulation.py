@@ -306,6 +306,7 @@ class Simulation :
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
 
+        
         self.intervention = nb_simulation.Intervention(
             self.my.cfg,
             self.my.cfg_network,

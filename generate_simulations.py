@@ -25,12 +25,11 @@ if utils.is_local_computer():
     # Fraction of population to simulate
     f = 0.01
 
-    #noise = lambda m, d : 0
     noise = lambda m, d : np.round(m + np.linspace(-d, d, 3), 5)
     linspace = lambda start, stop : np.round(np.linspace(start, stop, 3), 5)
 
     verbose = False
-    num_cores_max = 1
+    num_cores_max = 3
 
 else :
 

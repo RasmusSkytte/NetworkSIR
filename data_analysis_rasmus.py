@@ -21,7 +21,7 @@ from src import rc_params
 subset = {"beta" : 0.0125, "N_init" : 210}
 
 # Number of plots to keep
-N = 625
+N = 25
 
 def plot_with_loglikelihood(cfg, abm_files, covid_index, covid_index_sigma, covid_index_offset, axes):
 
@@ -76,7 +76,7 @@ reload(plot)
 reload(file_loaders)
 
 # Prepare output file
-pdf_name = Path(f"Figures/data_analysis_rasmus_HEP.pdf")
+pdf_name = Path(f"Figures/data_analysis_rasmus_HEP.png")
 utils.make_sure_folder_exist(pdf_name)
 
 # Load the covid index data
@@ -119,19 +119,40 @@ for cfg in tqdm(
     lls.extend(tmp_lls)
     handles.extend(tmp_handles)
 
+cfgs = [cfg for cfg in abm_files.iter_cfgs()]
+cfg = cfgs[np.nanargmax(lls)]
+print("--- Best parameters ---")
+print(f"loglikelihood : {lls[np.nanargmax(lls)]:.3f}")
+print(f"beta : {cfg.beta:.5f}")
+print(f"beta_UK_multiplier : {cfg.beta_UK_multiplier:.3f}")
+print(f"N_init : {cfg.N_init:.0f}")
+print(f"N_init_UK_frac : {cfg.N_init_UK_frac:.3f}")
+
+
+# Filter out "bad" runs
+lls = np.array(lls)
+ulls = lls[~np.isnan(lls)] # Only non-nans
+ulls = np.unique(ulls)     # Only unique values
+ulls = sorted(ulls)[-N:]   # Keep N best
+
+for i in reversed(range(len(lls))) :
+    if lls[i] in ulls :
+        ulls.remove(lls[i])
+    else :
+        handles.pop(i).remove()
+
+print(ulls)
+print(lls)
+lls = np.array(ulls)
+print(lls)
 # Rescale lls for plotting
-lls -= np.nanmin(lls)
-lls /= np.nanmax(lls) / 0.8
+lls -= np.min(lls)
+lls /= np.max(lls) / 0.8
 lls += 0.2
 
 # Color according to lls
 for ll, line in zip(lls, handles) :
     line.set_alpha(ll)
-
-# Keep only the N best lines
-for ind in sorted(lls.argsort()[:-N], reverse = True) :
-    handles.pop(ind).remove()
-
 
 months = mdates.MonthLocator()  # every month
 months_fmt = mdates.DateFormatter('%b')
@@ -140,13 +161,6 @@ axes.xaxis.set_major_locator(months)
 axes.xaxis.set_major_formatter(months_fmt)
 
 plt.ylim(0, 5000)
-
-print(lls)
-cfgs = [cfg for cfg in abm_files.iter_cfgs()]
-cfg = cfgs[np.nanargmax(lls)]
-print(cfg.beta)
-print(cfg.beta_UK_multiplier)
-print(cfg.N_init)
 
 #plt.show()
 plt.savefig(pdf_name, dpi=100)

@@ -68,7 +68,7 @@ class Simulation :
         self.hash = cfg_hash
 
         self.my = nb_simulation.initialize_My(self.cfg)
-        utils.set_numba_random_seed(self.cfg.ID)
+        utils.set_numba_random_seed(int(cfg_hash, 16))
 
         if self.cfg.version == 1 :
             if self.cfg.do_interventions :
@@ -77,8 +77,6 @@ class Simulation :
         if self.verbose :
             print("Importing work and other matrices")
 
-        # TODO : fix the DotDict indexing
-        self.cfg["network"]["work_matrix"], self.cfg["network"]["other_matrix"], self.cfg.network.work_other_ratio, _ = utils.load_contact_matrices(scenario = self.cfg.network.contact_matrices_name)
 
     def _initialize_network(self) :
         """ Initializing the network for the simulation
@@ -165,7 +163,6 @@ class Simulation :
             f.create_dataset("N_ages", data=self.N_ages)
             self._add_cfg_to_hdf5_file(f)
 
-
     def _load_initialized_network(self, filename) :
         if self.verbose :
             print(f"Loading previously initialized network, please wait", flush=True)
@@ -179,10 +176,12 @@ class Simulation :
             self.my = nb_load_jitclass.load_My_from_dict(my_hdf5ready, self.cfg)
         self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.ID)
 
+        # Update connection weights
+        for agent in range(self.cfg.network.N_tot) :
+            nb_simulation.set_infection_weight(self.my, agent)
 
-    def initialize_network(
-        self, force_rerun=False, save_initial_network=False, only_initialize_network=False, force_load_initial_network=False
-    ) :
+    def initialize_network(self, force_rerun=False,
+         save_initial_network=False, only_initialize_network=False, force_load_initial_network=False) :
         filename = "Initialized_networks/"
         #filename += f"{network_hash}__ID__{self.cfg.ID}.hdf5"
         filename += f"{utils.cfg_to_hash(self.cfg.network)}.hdf5"
@@ -290,13 +289,12 @@ class Simulation :
         if verbose_interventions is None :
             verbose_interventions = self.verbose
 
-
         # Load the projected vaccination schedule
+        # TODO: This should properably be done at cfg generation for consistent hashes
         vaccinations_per_age_group, vaccination_schedule = utils.load_vaccination_schedule(self.cfg)
 
-
-
         # Load the restriction contact matrices
+        # TODO: This should properably be done at cfg generation for consistent hashes
         work_matrix_restrict = []
         other_matrix_restrict = []
 
@@ -331,7 +329,7 @@ class Simulation :
             self.verbose,
         )
 
-        out_time, out_state_counts, out_my_state, intervention = res
+        out_time, out_state_counts, _, _, out_my_state, intervention = res
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
         self.df = utils.state_counts_to_df(np.array(out_time), np.array(out_state_counts))
@@ -469,8 +467,6 @@ def run_simulations(
         dry_run=False,
         **kwargs) :
 
-    db_cfg = utils.get_db_cfg()
-    q = Query()
 
     d_simulation_parameters = utils.format_simulation_paramters(d_simulation_parameters)
 
@@ -479,6 +475,9 @@ def run_simulations(
     if len(cfgs_all) == 0 :
         N_files = 0
         return N_files
+
+    db_cfg = utils.get_db_cfg()
+    q = Query()
 
     db_counts = np.array([db_cfg.count(q.hash == cfg.hash) for cfg in cfgs_all])
     assert np.max(db_counts) <= 1

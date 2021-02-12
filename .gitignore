@@ -11,9 +11,7 @@ Figures/
 
 Initialized_networks/
 
-Output/
-Output_HEP/
-Output_local/
+Output*/
 
 _Plot_tester.ipynb
 

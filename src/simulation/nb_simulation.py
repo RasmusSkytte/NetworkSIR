@@ -1246,15 +1246,16 @@ def calc_E_I_dist(my, r_guess) :
 def make_initial_infections(
     my,
     g,
-    state_total_counts,
-    agents_in_state,
     SIR_transition_rates,
+    state_total_counts,
+    variant_counts,
+    infected_per_age_group,
+    agents_in_state,
     agents_in_age_group,
     initial_ages_exposed,
-    # N_infectious_states,
+    N_infectious_states,
     N_states,
-    verbose=False
-) :
+    verbose=False) :
 
     # version 2 has age groups
     if my.cfg.version >= 2 :
@@ -1284,12 +1285,18 @@ def make_initial_infections(
         g.total_sum_of_state_changes += SIR_transition_rates[new_state]
         g.cumulative_sum_of_state_changes[new_state :] += SIR_transition_rates[new_state]
 
-        # Moves TO infectious State from non-infectious
+        # Moves into a infectious State
         if my.agent_is_infectious(agent) :
             for contact, rate in zip(my.connections[agent], g.rates[agent]) :
                 # update rates if contact is susceptible
                 if my.agent_is_susceptable(contact) :
                     g.update_rates(my, +rate, agent)
+
+
+            # Update the counters
+            variant_counts[my.corona_type[agent]] += 1
+            infected_per_age_group[my.age[agent]] += 1
+
 
         update_infection_list_for_newly_infected_agent(my, g, agent)
 
@@ -1565,10 +1572,12 @@ def run_simulation(
     my,
     g,
     intervention,
+    SIR_transition_rates,
     state_total_counts,
+    variant_counts,
+    infected_per_age_group,
     agents_in_state,
     N_states,
-    SIR_transition_rates,
     N_infectious_states,
     nts,
     verbose=False) :
@@ -1631,7 +1640,7 @@ def run_simulation(
 
             my.state[agent] += 1
 
-            state_total_counts[state_now] -= 1
+            state_total_counts[state_now]   -= 1
             state_total_counts[state_after] += 1
 
             g.total_sum_of_state_changes -= SIR_transition_rates[state_now]
@@ -1660,6 +1669,10 @@ def run_simulation(
                         rate = g.rates[agent][i]
                         g.update_rates(my, +rate, agent)
 
+                # Update the counters
+                infected_per_age_group[my.age[agent]] += 1
+                variant_counts[my.corona_type[agent]] += 1
+
             # If this moves to Recovered state
             if my.state[agent] == N_states - 1 :
                 for contact, rate in zip(my.connections[agent], g.rates[agent]) :
@@ -1667,6 +1680,10 @@ def run_simulation(
                     if my.agent_is_susceptable(contact) :
                         g.update_rates(my, -rate, agent)
 
+                # Update counters
+                variant_counts[my.corona_type[agent]] -= 1
+                infected_per_age_group[my.age[agent]] -= 1
+            
         #######/ Here we infect new states
         else :
             s = 2
@@ -1738,8 +1755,8 @@ def run_simulation(
                 # Update the output variables
                 out_time.append(real_time)
                 out_state_counts.append(state_total_counts.copy())
-                out_variant_counts.append(1)
-                out_infected_per_age_group.append(1)
+                out_variant_counts.append(variant_counts.copy())
+                out_infected_per_age_group.append(infected_per_age_group.copy())
 
             if daily_counter >= 10 :
 

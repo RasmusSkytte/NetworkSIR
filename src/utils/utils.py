@@ -1423,27 +1423,43 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
 #%%
 
 
-def state_counts_to_df(time, state_counts) :  #
+def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  #
+
+    time = np.array(time)
+    state_counts = np.array(state_counts)
+    variant_counts = np.array(variant_counts)
+    infected_per_age_group = np.array(infected_per_age_group)
+
+    N_states     = np.size(state_counts, 1)
+    N_variants   = np.size(variant_counts, 1)
+    N_age_groups = np.size(infected_per_age_group, 1)
 
     header = [
         "Time",
-        "E1",
-        "E2",
-        "E3",
-        "E4",
-        "I1",
-        "I2",
-        "I3",
-        "I4",
-        "R",
-        # 'H1', 'H2', 'ICU1', 'ICU2', 'R_H', 'D',
-    ]
+        "E1", "E2", "E3", "E4",
+        "I1", "I2", "I3", "I4",
+        "R"]
 
-    df_time = pd.DataFrame(time, columns=header[0 :1])
-    df_states = pd.DataFrame(state_counts, columns=header[1 :])
-    # df_H_states = pd.DataFrame(H_state_total_counts, columns=header[10 :])
-    df = pd.concat([df_time, df_states], axis=1)  # .convert_dtypes()
-    # assert sum(df_H_states.sum(axis=1) == df_states['R'])
+    header.extend(["I^V_" + str(i) for i in range(N_variants)])    
+    header.extend(["I^A_" + str(i) for i in range(N_age_groups)])    
+
+    k_start = 0
+    k_stop  = 1
+    df_time     = pd.DataFrame(time, columns=header[k_start:k_stop])
+    
+    k_start = k_stop
+    k_stop  += N_states
+    df_states   = pd.DataFrame(state_counts, columns=header[k_start:k_stop])
+
+    k_start = k_stop
+    k_stop  += N_variants
+    df_variants = pd.DataFrame(variant_counts, columns=header[k_start:k_stop])
+
+    k_start = k_stop
+    k_stop  += N_age_groups
+    df_age_groups = pd.DataFrame(infected_per_age_group, columns=header[k_start:k_stop])
+
+    df = pd.concat([df_time, df_states, df_variants, df_age_groups], axis=1)  # .convert_dtypes()
     return df
 
 

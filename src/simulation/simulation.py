@@ -215,7 +215,7 @@ class Simulation :
         elif not only_initialize_network :
             self._load_initialized_network(filename)
 
-    def make_initial_infections(self) :
+    def initialize_states(self) :
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
         if self.verbose :
@@ -241,6 +241,9 @@ class Simulation :
         )
         if self.cfg.make_initial_infections_at_kommune :
             infected_per_kommune_ints, kommune_names, my_kommune = file_loaders.load_kommune_data(self.df_coordinates)
+            
+            if self.cfg.R_init > 0 :
+                raise ValueError("R_init not implemented when using kommune configuration")
 
             nb_simulation.make_initial_infections_from_kommune_data(
                 self.my,
@@ -258,7 +261,7 @@ class Simulation :
                 verbose=self.verbose)
 
         else :
-            nb_simulation.make_initial_infections(
+            nb_simulation.initialize_states(
                 self.my,
                 self.g,
                 self.SIR_transition_rates,
@@ -268,7 +271,7 @@ class Simulation :
                 self.agents_in_state,
                 self.agents_in_age_group,
                 self.initial_ages_exposed,
-                self.N_infectious_states,
+                #self.N_infectious_states,
                 self.N_states,
                 verbose=self.verbose)
 
@@ -435,7 +438,7 @@ def run_single_simulation(
         if only_initialize_network :
             return None
 
-        simulation.make_initial_infections()
+        simulation.initialize_states()
 
         simulation.run_simulation()
 

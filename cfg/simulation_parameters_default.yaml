@@ -12,7 +12,7 @@ N_init_UK_frac: 0
 beta_UK_multiplier: 1.7
 outbreak_position_UK: random
 
-
+R_init : 0 
 
 lambda_E: 1.0  # E->I, Lambda(from E states)
 lambda_I: 1.0  # I->R, Lambda(from I states)

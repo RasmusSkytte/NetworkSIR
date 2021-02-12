@@ -1269,24 +1269,30 @@ def initialize_states(
     else :
         possible_agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
 
-    initial_agents_to_immunize = choose_initial_agents(my, possible_agents, my.cfg.R_init)
-    initial_agents_to_infect   = choose_initial_agents(my, possible_agents, my.cfg.N_init)
+    if my.cfg.R_init > 0 :
 
-    #  Now make initial immunizations
-    for _, agent in enumerate(initial_agents_to_immunize) :
-        my.state[agent] = N_states
+        initial_agents_to_immunize = choose_initial_agents(my, possible_agents, my.cfg.R_init)
 
-        if np.random.rand() < my.cfg.N_init_UK_frac :
-            my.corona_type[agent] = 1 
+        #  Now make initial immunizations
+        for _, agent in enumerate(initial_agents_to_immunize) :
+            my.state[agent] = N_states
 
-        agents_in_state[N_states].append(np.uint32(agent))
-        state_total_counts[N_states] += 1
+            if np.random.rand() < my.cfg.N_init_UK_frac :
+                my.corona_type[agent] = 1 
+
+            state_total_counts[N_states] += 1
 
         update_infection_list_for_newly_infected_agent(my, g, agent)
 
-        
+    initial_agents_to_infect   = choose_initial_agents(my, possible_agents, my.cfg.N_init)
+
     #  Now make initial infections
     for _, agent in enumerate(initial_agents_to_infect) :
+
+        # If immune, do not infect # TODO: Discuss if this is the best way to immunize agents
+        if my.state[agent] == N_states :
+            continue
+
         weights = calc_E_I_dist(my, 1)
         states = np.arange(N_states - 1, dtype=np.int8)
         new_state = nb_random_choice(states, weights, verbose=verbose)[0]  # E1-E4 or I1-I4, uniformly distributed

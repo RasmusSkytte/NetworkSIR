@@ -232,7 +232,10 @@ class Simulation :
         self.N_infectious_states = 4  # This means the 5'th state
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
-        self.state_total_counts = np.zeros(self.N_states, dtype=np.uint32)
+        self.state_total_counts     = np.zeros(self.N_states, dtype=np.uint32)
+        self.variant_counts         = np.zeros(2, dtype=np.uint32)  # TODO: Generalize this sta
+        self.infected_per_age_group = np.zeros(self.N_ages, dtype=np.uint32)
+
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
         self.g = nb_simulation.Gillespie(self.my, self.N_states)
@@ -265,15 +268,16 @@ class Simulation :
             nb_simulation.make_initial_infections(
                 self.my,
                 self.g,
-                self.state_total_counts,
-                self.agents_in_state,
                 self.SIR_transition_rates,
+                self.state_total_counts,
+                self.variant_counts,
+                self.infected_per_age_group,
+                self.agents_in_state,
                 self.agents_in_age_group,
                 self.initial_ages_exposed,
-                # self.N_infectious_states,
+                self.N_infectious_states,
                 self.N_states,
-                verbose=self.verbose
-            )
+                verbose=self.verbose)
 
     def run_simulation(self, verbose_interventions=None) :
         utils.set_numba_random_seed(self.cfg.ID)
@@ -320,20 +324,24 @@ class Simulation :
             self.my,
             self.g,
             self.intervention,
+            self.SIR_transition_rates,
             self.state_total_counts,
+            self.variant_counts,
+            self.infected_per_age_group,
             self.agents_in_state,
             self.N_states,
-            self.SIR_transition_rates,
             self.N_infectious_states,
             self.nts,
-            self.verbose,
-        )
+            self.verbose)
 
-        out_time, out_state_counts, _, _, out_my_state, intervention = res
+
+        out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention = res
+
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
-        self.df = utils.state_counts_to_df(np.array(out_time), np.array(out_state_counts))
+        self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts, out_infected_per_age_group)
         self.intervention = intervention
+
         return self.df
 
     def _get_filename(self, name="ABM", filetype="hdf5") :

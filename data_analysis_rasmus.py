@@ -23,7 +23,11 @@ subset = {"beta" : 0.0125, "N_init" : 210}
 # Number of plots to keep
 N = 25
 
-def plot_with_loglikelihood(cfg, abm_files, covid_index, covid_index_sigma, covid_index_offset, axes):
+def plot_with_loglikelihood(cfg, abm_files,
+                            covid_index, covid_index_sigma, covid_index_offset,
+                            fraction, fraction_sigma, fraction_offset,
+                            axes):
+
 
     # Store the loglikelihood and function handles
     lls = []
@@ -46,7 +50,7 @@ def plot_with_loglikelihood(cfg, abm_files, covid_index, covid_index_sigma, covi
         I_m = I[:days]
 
         # Plot the simulation prediction
-        lines.extend(axes.plot(pd.date_range(start=datetime(2020, 12, 8), periods = len(I_m), freq="D"), I_m, lw = 4, c = "k"))
+        lines.extend(axes[0].plot(pd.date_range(start=datetime(2020, 12, 8), periods = len(I_m), freq="D"), I_m, lw = 4, c = "k"))
 
         if days >= len(covid_index) + covid_index_offset :
 
@@ -69,8 +73,6 @@ def plot_with_loglikelihood(cfg, abm_files, covid_index, covid_index_sigma, covi
 
 
 rc_params.set_rc_params()
-
-#%%
 
 reload(plot)
 reload(file_loaders)
@@ -100,24 +102,29 @@ covid_index_offset = (datetime(2021, 1, 1) - datetime(2020, 12, 8)).days
 abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=None, verbose=True)
 
 
+
 handles = []
 lls     = []
 
 # Prepare figure
-fig = plt.figure()
-axes = plt.gca()
+fig, axes = plt.subplots(2, sharex=True, figsize=(12, 12))
 
+print("Plotting the individual ABM simulations. Please wait", flush=True)
 for cfg in tqdm(
     abm_files.iter_cfgs(),
-    desc="Plotting the individual ABM simulations",
     total=len(abm_files.cfgs)) :
 
+    if cfg["network"]["N_tot"] < 60_000 :
+        continue
+
     # Plot and compute loglikelihoods
-    tmp_lls, tmp_handles = plot_with_loglikelihood(cfg, abm_files, logK, logK_sigma, covid_index_offset, axes)
+    tmp_lls, tmp_handles = plot_with_loglikelihood(cfg, abm_files, logK, logK_sigma, covid_index_offset, 0, 0, 0, axes)
 
     # Store the plot handles and loglikelihoods
     lls.extend(tmp_lls)
     handles.extend(tmp_handles)
+
+
 
 cfgs = [cfg for cfg in abm_files.iter_cfgs()]
 cfg = cfgs[np.nanargmax(lls)]
@@ -134,6 +141,7 @@ lls = np.array(lls)
 ulls = lls[~np.isnan(lls)] # Only non-nans
 ulls = np.unique(ulls)     # Only unique values
 ulls = sorted(ulls)[-N:]   # Keep N best
+lls_new = np.array(ulls)
 
 for i in reversed(range(len(lls))) :
     if lls[i] in ulls :
@@ -141,27 +149,38 @@ for i in reversed(range(len(lls))) :
     else :
         handles.pop(i).remove()
 
-print(ulls)
-print(lls)
-lls = np.array(ulls)
-print(lls)
+lls = lls_new
 # Rescale lls for plotting
 lls -= np.min(lls)
 lls /= np.max(lls) / 0.8
-lls += 0.2
 
 # Color according to lls
 for ll, line in zip(lls, handles) :
-    line.set_alpha(ll)
+    line.set_alpha(1-ll)
+
+
+
+t = pd.date_range(start = datetime(2021, 1, 1), periods = len(logK), freq = "D")
+
+m  = np.exp(logK) * (80_000 ** beta)
+ub = np.exp(logK + logK_sigma) * (80_000 ** beta)
+lb = np.exp(logK - logK_sigma) * (80_000 ** beta)
+s  = np.stack((lb.to_numpy(), ub.to_numpy()))
+
+axes[0].errorbar(t, m, yerr=s, fmt='o', lw=2)
+
+
 
 months = mdates.MonthLocator()  # every month
 months_fmt = mdates.DateFormatter('%b')
 
-axes.xaxis.set_major_locator(months)
-axes.xaxis.set_major_formatter(months_fmt)
+axes[1].xaxis.set_major_locator(months)
+axes[1].xaxis.set_major_formatter(months_fmt)
 
-plt.ylim(0, 5000)
 
-#plt.show()
-plt.savefig(pdf_name, dpi=100)
-plt.close("all")
+plt.ylim(0, 4000)
+plt.ylabel('Daglige positive tests')
+
+axes[1].set_xlim([datetime(2021, 1, 1), datetime(2021, 3, 1)])
+
+plt.show()

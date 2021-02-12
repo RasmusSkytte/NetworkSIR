@@ -6,6 +6,7 @@ Data/*
 !Data/vaccination_schedule/
 !Data/age_dist.csv
 !Data/household_dist.csv
+!Data/covid_index.feather
 
 Figures/
 

@@ -57,7 +57,7 @@ np.set_printoptions(linewidth=200)
 
 class Simulation :
 
-    def __init__(self, cfg, cfg_hash, verbose=False)½ :
+    def __init__(self, cfg, cfg_hash, verbose=False) :
 
         self.verbose = verbose
 
@@ -290,9 +290,11 @@ class Simulation :
             verbose_interventions = self.verbose
 
         # Load the projected vaccination schedule
+        # TODO: This should properably be done at cfg generation for consistent hashes
         vaccinations_per_age_group, vaccination_schedule = utils.load_vaccination_schedule(self.cfg)
 
         # Load the restriction contact matrices
+        # TODO: This should properably be done at cfg generation for consistent hashes
         work_matrix_restrict = []
         other_matrix_restrict = []
 
@@ -326,7 +328,7 @@ class Simulation :
             self.verbose,
         )
 
-        out_time, out_state_counts, out_my_state, intervention = res
+        out_time, out_state_counts, _, _, out_my_state, intervention = res
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
         self.df = utils.state_counts_to_df(np.array(out_time), np.array(out_state_counts))
@@ -464,8 +466,6 @@ def run_simulations(
         dry_run=False,
         **kwargs) :
 
-    db_cfg = utils.get_db_cfg()
-    q = Query()
 
     d_simulation_parameters = utils.format_simulation_paramters(d_simulation_parameters)
 
@@ -474,6 +474,9 @@ def run_simulations(
     if len(cfgs_all) == 0 :
         N_files = 0
         return N_files
+
+    db_cfg = utils.get_db_cfg()
+    q = Query()
 
     db_counts = np.array([db_cfg.count(q.hash == cfg.hash) for cfg in cfgs_all])
     assert np.max(db_counts) <= 1

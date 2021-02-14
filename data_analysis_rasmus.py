@@ -147,7 +147,9 @@ axes[2].errorbar(t, fraction, yerr=fraction_sigma, fmt='s', lw=2)
 
 
 
-#axes[0].set_ylim(0, 4000)
+
+
+axes[0].set_ylim(0, 4000)
 axes[0].set_ylabel('Daglige positive')
 
 

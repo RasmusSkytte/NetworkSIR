@@ -39,7 +39,7 @@ event_weekend_multiplier: 2.0 # ratio of how many more events are happening in w
 
 
 #  Define default intervention parameters
-
+do_interventions: True
 # [[kind of interventions], [start, stop intervention 0],[start, stop intervention 1] etc ]
 restriction_thresholds: [1, 39]
 
@@ -87,5 +87,6 @@ tracking_delay: 10 #
 Intervention_contact_matrices_name : [reference]
 
 # Vaccination related parameters
-Intervention_vaccination_schedule_name : reference
-Intervention_vaccination_effect_delays : [10]
+Intervention_vaccination_schedule_name : None
+Intervention_vaccination_effect_delays : [0]
+Intervention_vaccination_efficacies : [0]

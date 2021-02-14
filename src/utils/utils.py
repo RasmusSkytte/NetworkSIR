@@ -2283,3 +2283,25 @@ def get_random_samples(simulation_parameter, random_state=0) :
     rounded_list = _round_param_list(param_list, param_grid)
     cfgs = _append_remaining_parameters(simulation_parameter, rounded_list)
     return cfgs
+
+
+from sympy.parsing.sympy_parser import parse_expr
+def load_params(filename) :
+    params = load_yaml(filename)
+    params = params.to_dict()
+
+    # Parse inputs
+    params["lambda_E"] = float(parse_expr(params["lambda_E"]))
+    params["lambda_I"] = np.round(float(parse_expr(params["lambda_I"])), 5)
+
+    start_date = params["start_date"]
+    params.pop("start_date")
+
+    end_date = params["end_date"]
+    params.pop("end_date")
+
+    params["day_max"] = (end_date - start_date).days
+    params["start_date_offset"] = (start_date - params["start_date_offset"]).days
+    params["restriction_thresholds"] =  [[ 0, (params["restriction_thresholds"] - start_date).days]]
+
+    return (params, start_date)

@@ -29,9 +29,9 @@ else :
 
 # Sweep around parameter set
 params["beta"]               = noise(params["beta"], 0.0005)
-#params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.2)
+params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.2)
 params["N_init"]             = noise(params["N_init"] * f, 2000 * f)
-#params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.01)
+params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.01)
 
 # Scale the population
 params["N_tot"]  = int(params["N_tot"] * f)

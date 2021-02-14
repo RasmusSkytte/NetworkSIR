@@ -80,6 +80,7 @@ all_simulation_parameters = [
         "continuous_interventions_to_apply":  [[1, 2, 3, 4, 5]],
         "intervention_removal_delay_in_clicks": [0],
         "make_restrictions_at_kommune_level": [False],
+
     },
 ]
 

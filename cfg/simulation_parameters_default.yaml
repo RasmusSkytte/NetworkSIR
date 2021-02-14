@@ -68,9 +68,9 @@ continuous_interventions_to_apply: [1, 2, 3, 4, 5]
     # 5: vaccinations
 
 
-f_daily_tests: 0.01 # Daily tests as fraction of full population
+f_daily_tests: 0.016 # Daily tests as fraction of full population
 
-test_delay_in_clicks: [0, 0, 25] #clicks until test. [symptoms, random_test, tracing]
+test_delay_in_clicks: [1, 1, 5] #clicks until test. [symptoms, random_test, tracing]
 results_delay_in_clicks: [5, 10, 5] #clicks from test until results. [symptoms, random_test, tracing]
 intervention_removal_delay_in_clicks: 1
 chance_of_finding_infected: [0.0, 0.15, 0.15, 0.15, 0.0] # chance of being detected in test in I_th state

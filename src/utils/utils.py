@@ -650,7 +650,7 @@ class DotDict(AttrDict) :
     >>> dotdict.last_name
     'Michelsen'
     """
-    
+
     def deepcopy(self) :
         copy = DotDict()
 
@@ -666,9 +666,9 @@ class DotDict(AttrDict) :
 
     def to_dict(self, exclude='') :
         out = {}
-        
+
         if not isinstance(exclude, list) :
-            exclude = [exclude]                    
+            exclude = [exclude]
 
         for key, val in self.items() :
 
@@ -1458,13 +1458,13 @@ def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  
         "I1", "I2", "I3", "I4",
         "R"]
 
-    header.extend(["I^V_" + str(i) for i in range(N_variants)])    
-    header.extend(["I^A_" + str(i) for i in range(N_age_groups)])    
+    header.extend(["I^V_" + str(i) for i in range(N_variants)])
+    header.extend(["I^A_" + str(i) for i in range(N_age_groups)])
 
     k_start = 0
     k_stop  = 1
     df_time     = pd.DataFrame(time, columns=header[k_start:k_stop])
-    
+
     k_start = k_stop
     k_stop  += N_states
     df_states   = pd.DataFrame(state_counts, columns=header[k_start:k_stop])
@@ -2283,3 +2283,26 @@ def get_random_samples(simulation_parameter, random_state=0) :
     rounded_list = _round_param_list(param_list, param_grid)
     cfgs = _append_remaining_parameters(simulation_parameter, rounded_list)
     return cfgs
+
+
+from sympy.parsing.sympy_parser import parse_expr
+def load_params(filename) :
+    params = load_yaml(filename)
+    params = params.to_dict()
+
+    # Parse inputs
+    params["R_init"]   = float(parse_expr(params["R_init"]))
+    params["lambda_E"] = float(parse_expr(params["lambda_E"]))
+    params["lambda_I"] = np.round(float(parse_expr(params["lambda_I"])), 5)
+
+    start_date = params["start_date"]
+    params.pop("start_date")
+
+    end_date = params["end_date"]
+    params.pop("end_date")
+
+    params["day_max"] = (end_date - start_date).days
+    params["start_date_offset"] = (start_date - params["start_date_offset"]).days
+    params["restriction_thresholds"] =  [[ 0, (params["restriction_thresholds"] - start_date).days]]
+
+    return (params, start_date)

@@ -5,6 +5,7 @@ from datetime import datetime
 from tqdm import tqdm
 
 from src.utils import utils
+from src.simulation import simulation
 from src import file_loaders
 
 
@@ -15,7 +16,7 @@ if utils.is_local_computer() :
 from contexttimer import Timer
 
 
-params, start_date = utils.load_params("cfg/simulation_parameters_fase_2.yaml")
+params, start_date = utils.load_params("cfg/simulation_parameters_2021_fase_1.yaml")
 
 if utils.is_local_computer():
     f = 0.1
@@ -23,8 +24,8 @@ if utils.is_local_computer():
     noise = lambda m, d : np.round(m + np.linspace(-d, d, 3), 5)
     num_cores_max = 3
 else :
-    f = 0.5
-    noise = lambda m, d : np.round(m + np.linspace(-d, d, 5), 5)
+    f = 0.1
+    noise = lambda m, d : np.round(m + np.linspace(-d, d, 3), 5)
     num_cores_max = 20
 
 # Sweep around parameter set
@@ -171,7 +172,7 @@ def terminal_printer(name, arr, val) :
     print(name + "\t" + out_string)
 
 print("--- Maximum likelihood value locations ---")
-terminal_printer("beta* :    ", betas,          cfg_best.beta)
-terminal_printer("rel_beta* :", rel_betas,      cfg_best.beta_UK_multiplier)
-terminal_printer("N_init* :  ", N_init,         cfg_best.N_init)
-terminal_printer("N_UK* :    ", N_init_UK_frac, cfg_best.N_init_UK_frac)
+terminal_printer("beta* :      ", betas,          cfg_best.beta)
+terminal_printer("rel_beta* :  ", rel_betas,      cfg_best.beta_UK_multiplier)
+terminal_printer("N_init* :    ", N_init,         cfg_best.N_init)
+terminal_printer("N_UK_frac* : ", N_init_UK_frac, cfg_best.N_init_UK_frac)

@@ -21,11 +21,12 @@ from src.analysis.helpers import *
 
 
 # Define the subset to plot on
-subset = None
-#subset = {"beta" : 0.0125, "N_init" : 210}
+#subset = None
+subset = {"contact_matrices_name" : "2021_fase1_sce2"}
+fig_name = Path(f"Figures/2021_fase1_sce2.png")
 
 # Number of plots to keep
-N = 25
+N = 625
 
 start_date = datetime(2020, 12, 21)
 
@@ -43,7 +44,6 @@ reload(plot)
 reload(file_loaders)
 
 # Prepare output file
-fig_name = Path(f"Figures/data_analysis_rasmus_HEP.png")
 utils.make_sure_folder_exist(fig_name)
 
 
@@ -76,7 +76,7 @@ fraction_offset = 2
 
 
 # Load the ABM simulations
-abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=None, verbose=True)
+abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=subset, verbose=True)
 
 
 plot_handles = []

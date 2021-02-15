@@ -26,13 +26,13 @@ if utils.is_local_computer():
 else :
     f = 0.1
     noise = lambda m, d : np.round(m + np.linspace(-d, d, 3), 5)
-    num_cores_max = 20
+    num_cores_max = 30
 
 # Sweep around parameter set
-params["beta"]               = noise(params["beta"], 0.0005)
-params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.2)
-params["N_init"]             = noise(params["N_init"] * f, 2000 * f)
-params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.01)
+#params["beta"]               = noise(params["beta"], 0.0005)
+#params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.2)
+#params["N_init"]             = noise(params["N_init"] * f, 2000 * f)
+#params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.01)
 
 # Scale the population
 params["N_tot"]  = int(params["N_tot"] * f)
@@ -43,7 +43,7 @@ N_files_total = 0
 if __name__ == "__main__":
     with Timer() as t:
 
-        N_files_total +=  simulation.run_simulations(params, N_runs=1, num_cores_max=num_cores_max)
+        N_files_total +=  simulation.run_simulations(params, N_runs=25, num_cores_max=num_cores_max)
 
     print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
     print("Finished simulating!")

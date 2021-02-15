@@ -69,8 +69,8 @@ logK_sigma = df_index["logI_sd"][ind:]
 # Determine the covid_index_offset
 covid_index_offset = (datetime(2021, 1, 1).date() - start_date).days
 
-s = np.array([148,  227,  457,  509,  604])
-n = np.array([3946,3843, 3545, 2560, 1954])
+s = np.array([  76,  148,  275,  460,  510,  617, 101])
+n = np.array([3654, 4020, 3901, 3579, 2570, 2003, 225])
 p = s / n
 p_var = p * (1 - p) / n
 
@@ -78,7 +78,7 @@ p_var = p * (1 - p) / n
 #fraction_sigma  = np.array([0.006, 0.0075, 0.015, 0.016])
 fraction = p
 fraction_sigma = 2 * np.sqrt(p)
-fraction_offset = 2
+fraction_offset = 1
 
 
 for subset in [{"contact_matrices_name" : "2021_fase1_sce1"}, {"contact_matrices_name" : "2021_fase1_sce2"}] :
@@ -116,7 +116,7 @@ for subset in [{"contact_matrices_name" : "2021_fase1_sce1"}, {"contact_matrices
     cfg_best = cfgs[np.nanargmax(lls)]
     ll_best = lls[np.nanargmax(lls)]
     print("--- Best parameters ---")
-    print(f"loglikelihood : {ll_best:.3f}")
+    print(f"Weighted loglikelihood : {ll_best:.3f}")
     print(f"beta : {cfg_best.beta:.5f}")
     print(f"beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}")
     print(f"N_init : {cfg_best.N_init:.0f}")

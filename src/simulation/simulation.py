@@ -12,6 +12,7 @@ import warnings
 import os
 from IPython.display import display
 from contexttimer import Timer
+
 # import yaml TODO : Delete line
 
 # conda install -c numba/label/dev numba
@@ -57,18 +58,19 @@ np.set_printoptions(linewidth=200)
 
 class Simulation :
 
-    def __init__(self, cfg, cfg_hash, verbose=False) :
+    def __init__(self, cfg, verbose=False) :
 
         self.verbose = verbose
 
-        self.cfg = cfg
+        self.cfg = cfg.deepcopy()
+        self.cfg.pop("hash")
 
         self.N_tot = cfg.network.N_tot
 
-        self.hash = cfg_hash
+        self.hash = cfg.hash
 
         self.my = nb_simulation.initialize_My(self.cfg)
-        utils.set_numba_random_seed(self.cfg.ID)
+        utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
         if self.cfg.version == 1 :
             if self.cfg.do_interventions :
@@ -77,15 +79,12 @@ class Simulation :
         if self.verbose :
             print("Importing work and other matrices")
 
-        # TODO : fix the DotDict indexing
-        self.cfg["network"]["work_matrix"], self.cfg["network"]["other_matrix"], self.cfg.network.work_other_ratio, _ = utils.load_contact_matrices(scenario = self.cfg.network.contact_matrices_name)
-
     def _initialize_network(self) :
         """ Initializing the network for the simulation
         """
 
         # generate coordinates based on population density
-        self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.ID)
+        self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.network.ID)
         coordinates_raw = utils.df_coordinates_to_coordinates(self.df_coordinates)
 
         if self.verbose :
@@ -165,7 +164,6 @@ class Simulation :
             f.create_dataset("N_ages", data=self.N_ages)
             self._add_cfg_to_hdf5_file(f)
 
-
     def _load_initialized_network(self, filename) :
         if self.verbose :
             print(f"Loading previously initialized network, please wait", flush=True)
@@ -177,40 +175,37 @@ class Simulation :
 
             my_hdf5ready = nb_load_jitclass.load_jitclass_to_dict(f["my"])
             self.my = nb_load_jitclass.load_My_from_dict(my_hdf5ready, self.cfg)
-        self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.ID)
+        self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.network.ID)
 
+        # Update connection weights
+        for agent in range(self.cfg.network.N_tot) :
+            nb_simulation.set_infection_weight(self.my, agent)
 
-    def initialize_network(
-        self, force_rerun=False, save_initial_network=False, only_initialize_network=False, force_load_initial_network=False
-    ) :
+    def initialize_network(self, force_rerun=False, save_initial_network=False, only_initialize_network=False, force_load_initial_network=False) :
         filename = "Initialized_networks/"
-        #filename += f"{network_hash}__ID__{self.cfg.ID}.hdf5"
-        filename += f"{utils.cfg_to_hash(self.cfg.network)}.hdf5"
+        filename += f"{utils.cfg_to_hash(self.cfg.network, exclude_ID=False)}.hdf5"
 
         if force_load_initial_network :
             initialize_network = False
             if self.verbose :
                 print("Force loading initialized network")
+
+        elif force_rerun :
+            initialize_network = True
+            if self.verbose :
+                print("Initializing network since it was forced to")
+
         elif not utils.file_exists(filename) :
             initialize_network = True
             if self.verbose :
                 print("Initializing network since the hdf5-file does not exist")
 
-        # TODO : Find out why it does not exist in the database
-        #elif len(utils.query_cfg(utils.get_cfg_network_initialized(self.cfg))) == 0 :
-        #    initialize_network = True
-        #    if self.verbose :
-        #        print("Initializing network since it does not exist in database")
-        elif force_rerun :
-            initialize_network = True
-            if self.verbose :
-                print("Initializing network since it was forced to")
         else :
             initialize_network = False
 
         # Initalizing network and (optionally) saving it
         if initialize_network :
-            utils.set_numba_random_seed(self.cfg.ID)
+            utils.set_numba_random_seed(self.cfg.network.ID)
 
             self._initialize_network()
             if save_initial_network :
@@ -220,20 +215,23 @@ class Simulation :
         elif not only_initialize_network :
             self._load_initialized_network(filename)
 
-    def make_initial_infections(self) :
-        utils.set_numba_random_seed(self.cfg.ID)
+    def initialize_states(self) :
+        utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
         if self.verbose :
             print("\nINITIAL INFECTIONS")
 
-        np.random.seed(self.cfg.ID)
+        np.random.seed(utils.hash_to_seed(self.hash))
 
         self.nts = 0.1  # Time step (0.1 - ten times a day)
         self.N_states = 9  # number of states
         self.N_infectious_states = 4  # This means the 5'th state
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
-        self.state_total_counts = np.zeros(self.N_states, dtype=np.uint32)
+        self.state_total_counts     = np.zeros(self.N_states, dtype=np.uint32)
+        self.variant_counts         = np.zeros(2, dtype=np.uint32)  # TODO: Generalize this sta
+        self.infected_per_age_group = np.zeros(self.N_ages, dtype=np.uint32)
+
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
         self.g = nb_simulation.Gillespie(self.my, self.N_states)
@@ -242,9 +240,10 @@ class Simulation :
             self.N_states, self.N_infectious_states, self.cfg
         )
         if self.cfg.make_initial_infections_at_kommune :
-            infected_per_kommune_ints, kommune_names, my_kommune = file_loaders.load_kommune_data(
-                self.df_coordinates
-            )
+            infected_per_kommune_ints, kommune_names, my_kommune = file_loaders.load_kommune_data(self.df_coordinates)
+
+            if self.cfg.R_init > 0 :
+                raise ValueError("R_init not implemented when using kommune configuration")
 
             nb_simulation.make_initial_infections_from_kommune_data(
                 self.my,
@@ -259,25 +258,25 @@ class Simulation :
                 infected_per_kommune_ints,
                 kommune_names,
                 my_kommune,
-                verbose=self.verbose,
-            )
+                verbose=self.verbose)
 
         else :
-            nb_simulation.make_initial_infections(
+            nb_simulation.initialize_states(
                 self.my,
                 self.g,
-                self.state_total_counts,
-                self.agents_in_state,
                 self.SIR_transition_rates,
+                self.state_total_counts,
+                self.variant_counts,
+                self.infected_per_age_group,
+                self.agents_in_state,
                 self.agents_in_age_group,
                 self.initial_ages_exposed,
-                # self.N_infectious_states,
+                #self.N_infectious_states,
                 self.N_states,
-                verbose=self.verbose
-            )
+                verbose=self.verbose)
 
     def run_simulation(self, verbose_interventions=None) :
-        utils.set_numba_random_seed(self.cfg.ID)
+        utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
         if self.verbose :
             print("\nRUN SIMULATION")
@@ -290,13 +289,12 @@ class Simulation :
         if verbose_interventions is None :
             verbose_interventions = self.verbose
 
-
         # Load the projected vaccination schedule
+        # TODO: This should properably be done at cfg generation for consistent hashes
         vaccinations_per_age_group, vaccination_schedule = utils.load_vaccination_schedule(self.cfg)
 
-
-
         # Load the restriction contact matrices
+        # TODO: This should properably be done at cfg generation for consistent hashes
         work_matrix_restrict = []
         other_matrix_restrict = []
 
@@ -306,7 +304,7 @@ class Simulation :
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
 
-        
+
         self.intervention = nb_simulation.Intervention(
             self.my.cfg,
             self.my.cfg_network,
@@ -315,38 +313,41 @@ class Simulation :
             vaccination_schedule = np.array(vaccination_schedule),
             work_matrix_restrict = np.array(work_matrix_restrict),
             other_matrix_restrict = np.array(other_matrix_restrict),
-            verbose=verbose_interventions,
-        )
+            verbose=verbose_interventions)
 
         res = nb_simulation.run_simulation(
             self.my,
             self.g,
             self.intervention,
+            self.SIR_transition_rates,
             self.state_total_counts,
+            self.variant_counts,
+            self.infected_per_age_group,
             self.agents_in_state,
             self.N_states,
-            self.SIR_transition_rates,
             self.N_infectious_states,
             self.nts,
-            self.verbose,
-        )
+            self.verbose)
 
-        out_time, out_state_counts, out_my_state, intervention = res
+
+        out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention = res
+
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
-        self.df = utils.state_counts_to_df(np.array(out_time), np.array(out_state_counts))
+        self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts, out_infected_per_age_group)
         self.intervention = intervention
+
         return self.df
 
     def _get_filename(self, name="ABM", filetype="hdf5") :
         date = datetime.datetime.now().strftime("%Y-%m-%d")
-        filename = f"Output/{name}/{self.hash}/{name}_{date}_{self.hash}_ID__{self.cfg.ID}.{filetype}"
+        filename = f"Output/{name}/{self.hash}/{name}_{date}_{self.hash}_ID__{self.cfg.network.ID}.{filetype}"
         return filename
 
     def _save_cfg(self) :
         date = datetime.datetime.now().strftime("%Y-%m-%d")
         filename_cfg = f"Output/cfgs/cfg_{date}_{self.hash}.yaml"
-        self.cfg.dump_to_file(filename_cfg, exclude="ID")
+        self.cfg.dump_to_file(filename_cfg, exclude="network.ID")
         return None
 
     def _add_cfg_to_hdf5_file(self, f, cfg=None) :
@@ -374,7 +375,7 @@ class Simulation :
 
     def _save_simulation_results(self, save_only_ID_0=False, time_elapsed=None) :
 
-        if save_only_ID_0 and self.cfg.ID != 0 :
+        if save_only_ID_0 and self.cfg.network.ID != 0 :
             return None
 
         filename_hdf5 = self._get_filename(name="network", filetype="hdf5")
@@ -428,11 +429,7 @@ def run_single_simulation(
             warnings.simplefilter("ignore", NumbaTypeSafetyWarning)
             # warnings.simplefilter("ignore", NumbaPendingDeprecationWarning)
 
-        # TODO : Find a way to do this better
-        cfg_hash = cfg.hash
-        cfg.pop("hash")
-
-        simulation = Simulation(cfg, cfg_hash, verbose)
+        simulation = Simulation(cfg, verbose)
 
         simulation.initialize_network(
             force_rerun=force_rerun, save_initial_network=save_initial_network, only_initialize_network=only_initialize_network
@@ -441,20 +438,17 @@ def run_single_simulation(
         if only_initialize_network :
             return None
 
-        simulation.make_initial_infections()
+        simulation.initialize_states()
 
         simulation.run_simulation()
 
         simulation.save(time_elapsed=t.elapsed, save_hdf5=True, save_csv=save_csv)
 
-        # TODO : Find a way to do this better
-        cfg["hash"] = cfg_hash
-
     return cfg
 
 
 def update_database(db_cfg, q, cfg) :
-    cfg.pop("ID")
+    cfg.network.pop("ID")
     if not db_cfg.contains(q.hash == cfg.hash) :
         db_cfg.insert(cfg)
 
@@ -464,13 +458,11 @@ def run_simulations(
         N_runs=2,
         num_cores_max=None,
         N_tot_max=False,
-        verbose=True,
+        verbose=False,
         force_rerun=False,
         dry_run=False,
         **kwargs) :
 
-    db_cfg = utils.get_db_cfg()
-    q = Query()
 
     d_simulation_parameters = utils.format_simulation_paramters(d_simulation_parameters)
 
@@ -479,6 +471,9 @@ def run_simulations(
     if len(cfgs_all) == 0 :
         N_files = 0
         return N_files
+
+    db_cfg = utils.get_db_cfg()
+    q = Query()
 
     db_counts = np.array([db_cfg.count(q.hash == cfg.hash) for cfg in cfgs_all])
     assert np.max(db_counts) <= 1
@@ -520,12 +515,12 @@ def run_simulations(
         f_single_network = partial(run_single_simulation, only_initialize_network=True, save_initial_network=True, verbose=verbose, **kwargs)
 
         # Get the network hashes
-        network_hashes = set([utils.cfg_to_hash(cfg.network) for cfg in cfgs])
+        network_hashes = set([utils.cfg_to_hash(cfg.network, exclude_ID=False) for cfg in cfgs])
 
         # Get list of unique cfgs
         cfgs_network = []
         for cfg in cfgs :
-            network_hash = utils.cfg_to_hash(cfg.network)
+            network_hash = utils.cfg_to_hash(cfg.network, exclude_ID=False)
 
             if network_hash in network_hashes :
                 cfgs_network.append(cfg)

@@ -6,14 +6,13 @@ Data/*
 !Data/vaccination_schedule/
 !Data/age_dist.csv
 !Data/household_dist.csv
+!Data/covid_index.feather
 
 Figures/
 
 Initialized_networks/
 
-Output/
-Output_HEP/
-Output_local/
+Output*/
 
 _Plot_tester.ipynb
 

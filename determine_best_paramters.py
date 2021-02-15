@@ -87,15 +87,15 @@ for cfg in tqdm(
     total=len(abm_files.cfgs)) :
 
     ll = []
-    
+
     for filename in abm_files.cfg_to_filenames(cfg) :
-        
+
         # Load
         I_tot_scaled, f = load_from_file(filename)
 
         # Evaluate
-        tmp_ll = compute_likelihood(I_tot_scaled, f, 
-                                    (logK, logK_sigma, covid_index_offset, beta), 
+        tmp_ll = compute_likelihood(I_tot_scaled, f,
+                                    (logK, logK_sigma, covid_index_offset, beta),
                                     (fraction, fraction_sigma, fraction_offset))
 
         ll.append(tmp_ll)

@@ -1,14 +1,14 @@
 N_tot: 5_800_000
 rho: 0.1
 
-N_init: 30000 
+N_init: 30000
 beta: 0.0095
 
 # english type corona
 N_init_UK_frac: 0.02
 beta_UK_multiplier: 1.3
 
-R_init : 174000 
+R_init : 5_800_000 * 0.065
 
 lambda_E: 4 / 2.5
 lambda_I: 4 / 2.52

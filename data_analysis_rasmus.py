@@ -2,7 +2,7 @@ from os import stat
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from scipy.stats import norm
+
 
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -29,6 +29,7 @@ fig_name = Path(f"Figures/2021_fase1_sce2.png")
 N = 625
 
 start_date = datetime(2020, 12, 21)
+
 
 def plot_simulation(I_tot_scaled, f, start_date, axes) :
 
@@ -98,14 +99,12 @@ for filename in tqdm(
     h = plot_simulation(I_tot_scaled, f, start_date, axes)
 
     # Evaluate
-    ll = compute_likelihood(I_tot_scaled, f,
-                        (logK, logK_sigma, covid_index_offset, beta),
-                        (fraction, fraction_sigma, fraction_offset))
+    ll =  0.5 * compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
+    ll += 0.5 * compute_loglikelihood(f, (fraction, fraction_sigma, fraction_offset))
 
     # Store the plot handles and loglikelihoods
     plot_handles.append(h)
     lls.append(ll)
-
 
 # Filter out "bad" runs
 lls = np.array(lls)

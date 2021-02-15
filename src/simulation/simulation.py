@@ -241,7 +241,7 @@ class Simulation :
         )
         if self.cfg.make_initial_infections_at_kommune :
             infected_per_kommune_ints, kommune_names, my_kommune = file_loaders.load_kommune_data(self.df_coordinates)
-            
+
             if self.cfg.R_init > 0 :
                 raise ValueError("R_init not implemented when using kommune configuration")
 
@@ -304,7 +304,7 @@ class Simulation :
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
 
-        
+
         self.intervention = nb_simulation.Intervention(
             self.my.cfg,
             self.my.cfg_network,

@@ -83,7 +83,7 @@ fraction_sigma = 2 * np.sqrt(p)
 fraction_offset = 2
 
 
-for subset in [{{"contact_matrices_name" : "2021_fase1_sce1"}}, {{"contact_matrices_name" : "2021_fase1_sce2"}}] :
+for subset in [{"contact_matrices_name" : "2021_fase1_sce1"}, {"contact_matrices_name" : "2021_fase1_sce2"}] :
 
     print(subset)
 

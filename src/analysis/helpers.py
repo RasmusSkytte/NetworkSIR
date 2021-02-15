@@ -43,48 +43,17 @@ def load_from_file(filename) :
     return(I_tot_scaled, f)
 
 
-def compute_likelihood(I_tot_scaled, f, index, fraction) :
-
-    # Compute (scaled) the likelihood
-    ll =  0.5 * compute_loglikelihood_covid_index(I_tot_scaled, index)
-    ll += 0.5 * compute_loglikelihood_fraction_uk(f, fraction)
-
-    return ll
-
-
-def compute_loglikelihood_covid_index(I, index):
+def compute_loglikelihood(arr, data, transformation_function = lambda x : x) :
 
     # Unpack values
-    covid_index, covid_index_sigma, covid_index_offset, beta = index
-    if len(I) >= len(covid_index) + covid_index_offset :
+    data_values, data_sigma, data_offset = data
+    if len(arr) >= len(data_values) + data_offset :
 
         # Get the range corresponding to the tests
-        I_model = I[covid_index_offset:covid_index_offset+len(covid_index)]
-
-        # Model input is number of infected. We assume 80.000 daily tests in the model
-        logK_model = np.log(I_model) - beta * np.log(80_000)
+        arr_model = arr[data_offset:data_offset+len(data_values)]
 
         # Calculate (log) proability for every point
-        log_prop = norm.logpdf(logK_model, loc=covid_index, scale=covid_index_sigma)
-
-        # Determine scaled the log likelihood
-        return np.sum(log_prop) / len(log_prop)
-
-    else :
-        return np.nan
-
-def compute_loglikelihood_fraction_uk(f, fraction):
-
-    # Unpack values
-    fraction, fraction_sigma, fraction_offset = fraction
-
-    if len(f) >= len(fraction) + fraction_offset :
-
-        # Get the range corresponding to the tests
-        fraction_model = f[fraction_offset:fraction_offset+len(fraction)]
-
-        # Calculate (log) proability for every point
-        log_prop = norm.logpdf(fraction_model, loc=fraction, scale=fraction_sigma)
+        log_prop = norm.logpdf(transformation_function(arr_model), loc=data_values, scale=data_sigma)
 
         # Determine scaled the log likelihood
         return np.sum(log_prop) / len(log_prop)

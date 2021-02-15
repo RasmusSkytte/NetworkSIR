@@ -54,8 +54,6 @@ if __name__ == "__main__":
 
 from src.analysis.helpers import *
 
-rc_params.set_rc_params()
-
 # Load the covid index data
 df_index = pd.read_feather("Data/covid_index.feather")
 
@@ -108,9 +106,8 @@ for subset in [{{"contact_matrices_name" : "2021_fase1_sce1"}}, {{"contact_matri
             I_tot_scaled, f = load_from_file(filename)
 
             # Evaluate
-            tmp_ll = compute_likelihood(I_tot_scaled, f,
-                                        (logK, logK_sigma, covid_index_offset, beta),
-                                        (fraction, fraction_sigma, fraction_offset))
+            tmp_ll =  0.5 * compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
+            tmp_ll += 0.5 * compute_loglikelihood(f, (fraction, fraction_sigma, fraction_offset))
 
             ll.append(tmp_ll)
 

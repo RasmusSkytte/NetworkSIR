@@ -135,6 +135,7 @@ def query_to_hashes(subset=None, base_dir="Output") :
 
 
 def get_cfgs(all_folders, subset=None) :
+
     hashes = set()
     cfgs = []
     for folder in all_folders :
@@ -143,8 +144,10 @@ def get_cfgs(all_folders, subset=None) :
         # cfg must be loaded
         if cfg is not None :
 
+            cfg_flat = utils.flatten_cfg(cfg.deepcopy())
+
             # cfg must match the subset
-            if subset is not None and not subset.items() <= cfg.items() :
+            if subset is not None and not subset.items() <= cfg_flat.items() :
                 continue
 
             # cfg hash should not allredy be loaded
@@ -192,7 +195,7 @@ class ABM_simulations :
         for cfg in self.cfgs :
             filenames = self.d[cfg.hash]
             yield cfg, filenames
-    
+
     def iter_cfgs(self) :
         for cfg in self.cfgs :
             yield cfg

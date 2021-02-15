@@ -22,7 +22,7 @@ from src.analysis.helpers import *
 
 # Define the subset to plot on
 #subset = None
-subset = {"contact_matrices_name" : "2021_fase1_sce2"}
+subset = {"contact_matrices_name" : "2021_fase1_sce1"}
 fig_name = Path("Figures/" + subset["contact_matrices_name"] + ".png")
 
 # Number of plots to keep

@@ -17,7 +17,7 @@ start_date : 2020-12-21
 end_date : 2021-03-01
 
 
-contact_matrices_name: [2021_fase1_sce1, 2021_fase1_sce2]  # Target activity
+contact_matrices_name: [2021_fase1_sce1, 2021_fase1_sce2, basis]  # Target activity
 restriction_thresholds: 2021-02-08  # Opening date for fase 1
 
 

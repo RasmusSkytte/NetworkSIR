@@ -69,8 +69,7 @@ logK       = df_index["logI"][ind:]     # Renaming the index I to index K to avo
 logK_sigma = df_index["logI_sd"][ind:]
 
 # Determine the covid_index_offset
-covid_index_offset = (datetime(2021, 1, 1) - start_date).days
-#covid_index_offset = (datetime(2021, 1, 1).date() - start_date).days
+covid_index_offset = (datetime(2021, 1, 1).date() - start_date).days
 
 s = np.array([148,  227,  457,  509,  604])
 n = np.array([3946,3843, 3545, 2560, 1954])

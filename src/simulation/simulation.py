@@ -458,7 +458,7 @@ def run_simulations(
         N_runs=2,
         num_cores_max=None,
         N_tot_max=False,
-        verbose=True,
+        verbose=False,
         force_rerun=False,
         dry_run=False,
         **kwargs) :

@@ -5,11 +5,11 @@ from datetime import datetime
 from tqdm import tqdm
 
 from src.utils import utils
-from src.simulation import simulation
-from src import rc_params
+from src import file_loaders
 
 
 if utils.is_local_computer() :
+    from src import rc_params
     import matplotlib.pyplot as plt
 
 from contexttimer import Timer
@@ -68,11 +68,18 @@ logK       = df_index["logI"][ind:]     # Renaming the index I to index K to avo
 logK_sigma = df_index["logI_sd"][ind:]
 
 # Determine the covid_index_offset
-covid_index_offset = (datetime(2021, 1, 1) - datetime(2020, 12, 21)).days
+covid_index_offset = (datetime(2021, 1, 1) - start_date).days
 #covid_index_offset = (datetime(2021, 1, 1).date() - start_date).days
 
-fraction        = np.array([0.04,  0.074,  0.13,  0.2])
-fraction_sigma  = np.array([0.006, 0.0075, 0.015, 0.016])
+s = np.array([148,  227,  457,  509,  604])
+n = np.array([3946,3843, 3545, 2560, 1954])
+p = s / n
+p_var = p * (1 - p) / n
+
+#fraction        = np.array([0.04,  0.074,  0.13,  0.2])
+#fraction_sigma  = np.array([0.006, 0.0075, 0.015, 0.016])
+fraction = p
+fraction_sigma = 2 * np.sqrt(p)
 fraction_offset = 2
 
 
@@ -123,9 +130,11 @@ N_init         = np.array([cfg.N_init         for cfg in cfgs])
 N_init_UK_frac = np.array([cfg.N_init_UK_frac for cfg in cfgs])
 
 best = lambda arr : np.array([np.mean(lls[arr == v]) for v in np.unique(arr)])
-err  = lambda arr : np.array([np.std( lls[arr == v]) for v in np.unique(arr)])
+err = lambda arr :  np.array([np.std( lls[arr == v]) for v in np.unique(arr)])
 
-if not utils.is_local_computer() :
+if False:# utils.is_local_computer() :
+    rc_params.set_rc_params()
+
     fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 8))
     axes = axes.flatten()
 

@@ -26,7 +26,7 @@ if utils.is_local_computer():
 else :
     f = 0.1
     n_sigma = 1
-    num_cores_max = 30
+    num_cores_max = 5
 
 noise = lambda m, d : np.round(m + np.linspace(-(n_sigma * d), (n_sigma * d), 2*n_sigma + 1), 5)
 

@@ -979,7 +979,7 @@ def connect_work_and_others(
     progress_delta_print = 0.1  # 10 percent
     progress_counter = 1
 
-    matrix_work  = matrix_work / matrix_work.sum()
+    matrix_work   = matrix_work  / matrix_work.sum()
     matrix_other  = matrix_other / matrix_other.sum()
     mu_tot = my.cfg_network.mu / 2 * my.cfg_network.N_tot # total number of connections in the network, when done
     while mu_counter < mu_tot : # continue until all connections are made
@@ -987,10 +987,10 @@ def connect_work_and_others(
         # determining if next connections is work or other.
         ra_work_other = np.random.rand()
         if ra_work_other < my.cfg_network.work_other_ratio :
-            matrix = matrix_work
+            matrix   = matrix_work
             run_algo = run_algo_work
         else :
-            matrix = matrix_other
+            matrix   = matrix_other
             run_algo = run_algo_other
 
         #draw ages from connectivity matrix
@@ -1278,7 +1278,7 @@ def initialize_states(
             my.state[agent] = N_states
 
             if np.random.rand() < my.cfg.N_init_UK_frac :
-                my.corona_type[agent] = 1 
+                my.corona_type[agent] = 1
 
             state_total_counts[N_states] += 1
 
@@ -1620,7 +1620,7 @@ def run_simulation(
     step_number = 0
 
     real_time = 0.0
-    
+
 
     s_counter = np.zeros(4)
     where_infections_happened_counter = np.zeros(4)
@@ -1704,7 +1704,7 @@ def run_simulation(
                 # Update counters
                 variant_counts[my.corona_type[agent]] -= 1
                 infected_per_age_group[my.age[agent]] -= 1
-            
+
         #######/ Here we infect new states
         else :
             s = 2
@@ -1805,7 +1805,7 @@ def run_simulation(
 
                         vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, verbose=verbose)
 
-                
+
 
                 # Apply events
                 if my.cfg.N_events > 0 :
@@ -1834,7 +1834,7 @@ def run_simulation(
                     intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
                     intervention.R_true_list_brit.append(calculate_R_True_brit(my, g))
 
-            if intervention.apply_interventions:        
+            if intervention.apply_interventions:
                 test_tagged_agents(my, g, intervention, day, click)
 
             click += 1
@@ -1933,10 +1933,10 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, ver
                     if my.agent_is_susceptable(agent) :
                         # "vaccinate agent"
                         my.vaccination_type[agent] = i
-                        rate_reduc = np.array([1,1,1]) * my.cfg.Intervention_vaccination_efficacies[i-1] 
+                        rate_reduc = np.array([1,1,1]) * my.cfg.Intervention_vaccination_efficacies[i-1]
                         cut_rates_of_agent(my, g, intervention, agent, rate_reduc)
 
-                       
+
 
 @njit
 def calculate_R_True(my, g) :
@@ -2509,11 +2509,11 @@ def test_a_person(my, g, intervention, agent, click) :
         and click > intervention.clicks_when_isolated[agent]
     ) :
         reset_rates_of_agent(my, g, agent, intervention, connection_type_weight=None)
-    
+
     intervention.clicks_when_isolated[agent] = -1
     intervention.clicks_when_tested[agent] = -1
     intervention.reason_for_test[agent] = -1
-    
+
 
     return None
 

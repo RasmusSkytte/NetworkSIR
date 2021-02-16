@@ -118,8 +118,7 @@ class Simulation :
                 coordinates_raw,
                 kommune_ids,
                 self.N_ages,
-                verbose=self.verbose
-            )
+                verbose=self.verbose)
 
             if self.verbose :
                 print("Connecting work and others, currently slow, please wait")
@@ -131,8 +130,7 @@ class Simulation :
                 np.array(self.cfg.network.work_matrix),
                 np.array(self.cfg.network.other_matrix),
                 agents_in_age_group,
-                verbose=self.verbose,
-            )
+                verbose=self.verbose)
 
         else :
 

@@ -8,23 +8,23 @@ beta: 0.01
 N_init_UK_frac: 0.025
 beta_UK_multiplier: 1.5
 
-R_init : 5_800_000 * 0.03
+R_init : 5_800_000 * 0.065
 
 lambda_E: 4 / 2.5
 lambda_I: 4 / 2.52
 
 start_date : 2020-12-21
-end_date : 2021-03-01
+end_date : 2021-02-14
 
 
-contact_matrices_name: [2021_fase1_sce1, 2021_fase1_sce2, basis]  # Target activity
+contact_matrices_name: 2021_fase1  # Target activity
 restriction_thresholds: 2021-02-08  # Opening date for fase 1
 
 
 Intervention_contact_matrices_name : [[ned2021jan]]
 threshold_interventions_to_apply: [[3]]
 
-Intervention_vaccination_schedule_name : reference
+Intervention_vaccination_schedule_name : reference_2021_feb_15
 start_date_offset: 2020-12-28 # Start date for vaccinations
 Intervention_vaccination_effect_delays : [[10, 21]]
 Intervention_vaccination_efficacies : [[0.95, 0.65]]

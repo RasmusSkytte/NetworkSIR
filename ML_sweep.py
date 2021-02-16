@@ -31,10 +31,10 @@ else :
 noise = lambda m, d : np.round(m + np.linspace(-(n_sigma * d), (n_sigma * d), 2*n_sigma + 1), 5)
 
 # Sweep around parameter set
-#params["beta"]               = noise(params["beta"], 0.00025)
-#params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.1)
-#params["N_init"]             = noise(params["N_init"] * f, 1000 * f)
-#params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.005)
+params["beta"]               = noise(params["beta"], 0.00025)
+params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.1)
+params["N_init"]             = noise(params["N_init"] * f, 1000 * f)
+params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.005)
 
 # Scale the population
 params["N_tot"]  = int(params["N_tot"]  * f)

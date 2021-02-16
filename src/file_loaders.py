@@ -134,7 +134,8 @@ def query_to_hashes(subset=None, base_dir="Output") :
     # return cfg
 
 
-def get_cfgs(all_folders, subset=None) :
+def get_cfgs(all_folders) :
+
     hashes = set()
     cfgs = []
     for folder in all_folders :
@@ -143,13 +144,10 @@ def get_cfgs(all_folders, subset=None) :
         # cfg must be loaded
         if cfg is not None :
 
-            # cfg must match the subset
-            if subset is not None and not subset.items() <= cfg.items() :
-                continue
-
             # cfg hash should not allredy be loaded
             if not cfg.hash in hashes :
                 cfgs.append(cfg)
+
             hashes.add(cfg.hash)
 
     return cfgs
@@ -163,15 +161,32 @@ class ABM_simulations :
         self.verbose = verbose
         if verbose :
             print("Loading ABM_simulations \n", flush=True)
-        self.all_filenames = get_all_ABM_filenames(base_dir, filetype)
-        self.all_folders = get_all_ABM_folders(self.all_filenames)
 
-        # Steps:
-        # Connect to data base
-        # Get the hashes for the relevent subset
-        # Only load these
+        if self.subset is None:
+            self.all_filenames = get_all_ABM_filenames(base_dir, filetype)
+            self.all_folders   = get_all_ABM_folders(self.all_filenames)
+            self.cfgs          = get_cfgs(self.all_folders)
 
-        self.cfgs = get_cfgs(self.all_folders, subset=self.subset)  # TODO: This function is slow
+        else :
+            # Steps:
+            # Connect to data base
+            # Get the hashes for the relevent subset
+            # Only load these
+
+            db = utils.get_db_cfg()
+            q = Query()
+            cfgs = db.search(q.network.contact_matrices_name == subset["contact_matrices_name"])
+
+            self.all_filenames = []
+
+            for hash_ in [cfg["hash"] for cfg in cfgs] :
+
+                self.all_filenames.extend(utils.hash_to_filenames(hash_))
+
+            self.all_folders   = get_all_ABM_folders(self.all_filenames)
+            self.cfgs          = get_cfgs(self.all_folders)
+
+
         self.d = self._convert_all_files_to_dict(filetype)
 
     def _convert_all_files_to_dict(self, filetype) :
@@ -192,7 +207,7 @@ class ABM_simulations :
         for cfg in self.cfgs :
             filenames = self.d[cfg.hash]
             yield cfg, filenames
-    
+
     def iter_cfgs(self) :
         for cfg in self.cfgs :
             yield cfg

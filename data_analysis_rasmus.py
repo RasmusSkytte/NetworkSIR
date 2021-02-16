@@ -22,11 +22,11 @@ from src.analysis.helpers import *
 
 # Define the subset to plot on
 #subset = None
-subset = {"contact_matrices_name" : "2021_fase1_sce1"}
+subset = {"contact_matrices_name" : "2021_fase1_sce2"}
 fig_name = Path("Figures/" + subset["contact_matrices_name"] + ".png")
 
 # Number of plots to keep
-N = 108
+N = 25
 
 start_date = datetime(2020, 12, 21)
 

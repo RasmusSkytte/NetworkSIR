@@ -35,7 +35,8 @@ else :
 #params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.01)
 
 # Scale the population
-params["N_tot"]  = int(params["N_tot"] * f)
+params["N_tot"]  = int(params["N_tot"]  * f)
+params["N_init"] = int(params["N_init"] * f)
 params["R_init"] = int(params["R_init"] * f)
 
 
@@ -131,7 +132,7 @@ for subset in [{"contact_matrices_name" : "2021_fase1_sce1"}, {"contact_matrices
     N_init_UK_frac = np.array([cfg.N_init_UK_frac for cfg in cfgs])
 
     best = lambda arr : np.array([np.mean(lls[arr == v]) for v in np.unique(arr)])
-    err = lambda arr :  np.array([np.std( lls[arr == v]) for v in np.unique(arr)])
+    err  = lambda arr : np.array([np.std( lls[arr == v]) for v in np.unique(arr)])
 
     if False:# utils.is_local_computer() :
         rc_params.set_rc_params()

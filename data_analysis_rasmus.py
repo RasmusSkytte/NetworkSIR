@@ -127,13 +127,13 @@ for i in reversed(range(len(lls))) :
         plot_handles.pop(i)
 
 # Rescale lls for plotting
-#lls_best -= np.min(lls_best)
-#lls_best /= np.max(lls_best) / 0.8
+lls_best -= np.min(lls_best)
+lls_best /= np.max(lls_best) / 0.8
 
 # Color according to lls
-#for ll, handles in zip(lls_best, plot_handles) :
-#    for line in handles :
-#        line.set_alpha(1-ll)
+for ll, handles in zip(lls_best, plot_handles) :
+    for line in handles :
+        line.set_alpha(1-ll)
 
 
 # Plot the covid index

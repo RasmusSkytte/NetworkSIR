@@ -22,7 +22,7 @@ from src.analysis.helpers import *
 
 # Define the subset to plot on
 #subset = None
-subset = {"contact_matrices_name" : "2021_fase1_sce2"}
+subset = {"contact_matrices_name" : "basis"}
 fig_name = Path("Figures/" + subset["contact_matrices_name"] + ".png")
 
 # Number of plots to keep
@@ -79,6 +79,8 @@ fraction_offset = 1
 # Load the ABM simulations
 abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=subset, verbose=True)
 
+if len(abm_files.all_filenames) == 0 :
+    raise ValueError(f"No files loaded with subset: {subset}")
 
 plot_handles = []
 lls     = []
@@ -106,6 +108,9 @@ for filename in tqdm(
     plot_handles.append(h)
     lls.append(ll)
 
+print(lls)
+
+
 # Filter out "bad" runs
 lls = np.array(lls)
 ulls = lls[~np.isnan(lls)] # Only non-nans
@@ -122,13 +127,13 @@ for i in reversed(range(len(lls))) :
         plot_handles.pop(i)
 
 # Rescale lls for plotting
-lls_best -= np.min(lls_best)
-lls_best /= np.max(lls_best) / 0.8
+#lls_best -= np.min(lls_best)
+#lls_best /= np.max(lls_best) / 0.8
 
 # Color according to lls
-for ll, handles in zip(lls_best, plot_handles) :
-    for line in handles :
-        line.set_alpha(1-ll)
+#for ll, handles in zip(lls_best, plot_handles) :
+#    for line in handles :
+#        line.set_alpha(1-ll)
 
 
 # Plot the covid index
@@ -150,11 +155,11 @@ axes[1].errorbar(t, fraction, yerr=fraction_sigma, fmt='s', lw=2)
 
 
 
-axes[0].set_ylim(0, 2000)
+#axes[0].set_ylim(0, 2000)
 axes[0].set_ylabel('Daglige positive')
 
 
-axes[1].set_ylim(0, 1)
+#axes[1].set_ylim(0, 1)
 axes[1].set_ylabel('frac. B.1.1.7')
 
 

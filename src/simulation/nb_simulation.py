@@ -41,6 +41,7 @@ spec_cfg = {
     "algo" : nb.uint8,
     "N_init" : nb.uint16,
     "N_init_UK_frac" : nb.float32,
+    "R_init" : nb.uint16,
     "lambda_E" : nb.float32,
     "lambda_I" : nb.float32,
     # other
@@ -81,8 +82,6 @@ spec_cfg = {
     "Intervention_vaccination_schedule_name" : nb.types.unicode_type,
     "Intervention_vaccination_effect_delays" : nb.int16[:],
     "Intervention_vaccination_efficacies" : nb.float32[:],
-    # ID
-    "ID" : nb.uint16,
 }
 
 @jitclass(spec_cfg)
@@ -96,6 +95,7 @@ class Config(object) :
         self.algo = 2
         self.N_init = 100
         self.N_init_UK_frac = 0
+        self.R_init = 0
         self.lambda_E = 1.0
         self.lambda_I = 1.0
 
@@ -117,8 +117,6 @@ class Config(object) :
         # Interventions / Lockdown
         self.do_interventions = True
 
-        self.ID = 0
-
 
 nb_cfg_type = Config.class_type.instance_type
 
@@ -134,6 +132,8 @@ spec_network = {
     "other_matrix" : nb.float64[:, :],
     "work_other_ratio" : nb.float32,  # 0.2 = 20% work, 80% other
     "N_contacts_max" : nb.uint16,
+    # ID
+    "ID" : nb.uint16,
 }
 
 @jitclass(spec_network)
@@ -150,6 +150,7 @@ class Network(object) :
         self.other_matrix = np.ones((8, 8), dtype=np.float64)
         self.work_other_ratio = 0.5
         self.N_contacts_max = 0
+        self.ID = 0
 
 nb_cfg_network_type = Network.class_type.instance_type
 
@@ -1142,7 +1143,7 @@ def make_random_initial_infections(my, possible_agents) :
 
 
 @njit
-def compute_initial_agents_to_infect(my, possible_agents) :
+def choose_initial_agents(my, possible_agents, N) :
 
     ##  Standard outbreak type, infecting randomly
     if my.cfg.make_random_initial_infections :
@@ -1155,16 +1156,16 @@ def compute_initial_agents_to_infect(my, possible_agents) :
 
         outbreak_agent = single_random_choice(possible_agents)  # this is where the outbreak starts
 
-        initial_agents_to_infect = List()
-        initial_agents_to_infect.append(outbreak_agent)
+        initial_agents = List()
+        initial_agents.append(outbreak_agent)
 
-        while len(initial_agents_to_infect) < (my.cfg.N_init) :
+        while len(initial_agents) < N :
             proposed_agent = single_random_choice(possible_agents)
 
             if my.dist_accepted(outbreak_agent, proposed_agent, rho_init_local_outbreak) :
-                if proposed_agent not in initial_agents_to_infect :
-                    initial_agents_to_infect.append(proposed_agent)
-        return np.asarray(initial_agents_to_infect, dtype=np.uint32)
+                if proposed_agent not in initial_agents :
+                    initial_agents.append(proposed_agent)
+        return np.asarray(initial_agents, dtype=np.uint32)
 
 
 @njit
@@ -1243,18 +1244,19 @@ def calc_E_I_dist(my, r_guess) :
 
 
 @njit
-def make_initial_infections(
+def initialize_states(
     my,
     g,
-    state_total_counts,
-    agents_in_state,
     SIR_transition_rates,
+    state_total_counts,
+    variant_counts,
+    infected_per_age_group,
+    agents_in_state,
     agents_in_age_group,
     initial_ages_exposed,
-    # N_infectious_states,
+    #N_infectious_states,
     N_states,
-    verbose=False
-) :
+    verbose=False) :
 
     # version 2 has age groups
     if my.cfg.version >= 2 :
@@ -1267,14 +1269,35 @@ def make_initial_infections(
     else :
         possible_agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
 
-    initial_agents_to_infect = compute_initial_agents_to_infect(my, possible_agents)
+    if my.cfg.R_init > 0 :
 
-    ##  Now make initial infections
+        initial_agents_to_immunize = choose_initial_agents(my, possible_agents, my.cfg.R_init)
+
+        #  Now make initial immunizations
+        for _, agent in enumerate(initial_agents_to_immunize) :
+            my.state[agent] = N_states
+
+            if np.random.rand() < my.cfg.N_init_UK_frac :
+                my.corona_type[agent] = 1 
+
+            state_total_counts[N_states] += 1
+
+        update_infection_list_for_newly_infected_agent(my, g, agent)
+
+    initial_agents_to_infect   = choose_initial_agents(my, possible_agents, my.cfg.N_init)
+
+    #  Now make initial infections
     for _, agent in enumerate(initial_agents_to_infect) :
+
+        # If immune, do not infect # TODO: Discuss if this is the best way to immunize agents
+        if my.state[agent] == N_states :
+            continue
+
         weights = calc_E_I_dist(my, 1)
         states = np.arange(N_states - 1, dtype=np.int8)
         new_state = nb_random_choice(states, weights, verbose=verbose)[0]  # E1-E4 or I1-I4, uniformly distributed
         my.state[agent] = new_state
+
         if np.random.rand() < my.cfg.N_init_UK_frac :
             my.corona_type[agent] = 1  # IMPORTANT LINE!
 
@@ -1284,12 +1307,18 @@ def make_initial_infections(
         g.total_sum_of_state_changes += SIR_transition_rates[new_state]
         g.cumulative_sum_of_state_changes[new_state :] += SIR_transition_rates[new_state]
 
-        # Moves TO infectious State from non-infectious
+        # Moves into a infectious State
         if my.agent_is_infectious(agent) :
             for contact, rate in zip(my.connections[agent], g.rates[agent]) :
                 # update rates if contact is susceptible
                 if my.agent_is_susceptable(contact) :
                     g.update_rates(my, +rate, agent)
+
+
+            # Update the counters
+            variant_counts[my.corona_type[agent]] += 1
+            infected_per_age_group[my.age[agent]] += 1
+
 
         update_infection_list_for_newly_infected_agent(my, g, agent)
 
@@ -1458,7 +1487,7 @@ def do_bug_check(
     x,
 ) :
 
-    if my.cfg.day_max > 0 and day >= my.cfg.day_max :
+    if my.cfg.day_max > 0 and day > my.cfg.day_max :
         if verbose :
             print("--- day exceeded day_max ---")
         continue_run = False
@@ -1565,24 +1594,28 @@ def run_simulation(
     my,
     g,
     intervention,
+    SIR_transition_rates,
     state_total_counts,
+    variant_counts,
+    infected_per_age_group,
     agents_in_state,
     N_states,
-    SIR_transition_rates,
     N_infectious_states,
     nts,
-    verbose=False,
-) :
+    verbose=False) :
+
     if verbose :
         print("Apply intervention", intervention.apply_interventions)
 
-    out_time = List()
-    out_state_counts = List()
+    # Define outputs
+    out_time = List()                       # Sampled times
+    out_state_counts = List()               # Tne counts of the SEIR states
+    out_variant_counts = List()             # The counts of viral strains
+    out_infected_per_age_group = List()     # The counts of infected per age group
     out_my_state = List()
 
     daily_counter = 0
     day = 0
-    #day = 0
     click = 0
     step_number = 0
 
@@ -1628,7 +1661,7 @@ def run_simulation(
 
             my.state[agent] += 1
 
-            state_total_counts[state_now] -= 1
+            state_total_counts[state_now]   -= 1
             state_total_counts[state_after] += 1
 
             g.total_sum_of_state_changes -= SIR_transition_rates[state_now]
@@ -1657,6 +1690,10 @@ def run_simulation(
                         rate = g.rates[agent][i]
                         g.update_rates(my, +rate, agent)
 
+                # Update the counters
+                infected_per_age_group[my.age[agent]] += 1
+                variant_counts[my.corona_type[agent]] += 1
+
             # If this moves to Recovered state
             if my.state[agent] == N_states - 1 :
                 for contact, rate in zip(my.connections[agent], g.rates[agent]) :
@@ -1664,6 +1701,10 @@ def run_simulation(
                     if my.agent_is_susceptable(contact) :
                         g.update_rates(my, -rate, agent)
 
+                # Update counters
+                variant_counts[my.corona_type[agent]] -= 1
+                infected_per_age_group[my.age[agent]] -= 1
+            
         #######/ Here we infect new states
         else :
             s = 2
@@ -1728,12 +1769,15 @@ def run_simulation(
         ################
 
         while nts * click  < real_time :
-            # if nts * click < real_time :
 
             daily_counter += 1
             if ((len(out_time) == 0) or (real_time != out_time[-1])) and day >= 0 :
+
+                # Update the output variables
                 out_time.append(real_time)
                 out_state_counts.append(state_total_counts.copy())
+                out_variant_counts.append(variant_counts.copy())
+                out_infected_per_age_group.append(infected_per_age_group.copy())
 
             if daily_counter >= 10 :
 
@@ -1830,7 +1874,7 @@ def run_simulation(
         # print("N_daily_tests", intervention.N_daily_tests)
         # print("N_positive_tested", N_positive_tested)
 
-    return out_time, out_state_counts, out_my_state, intervention
+    return out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention
 
 
 #%%

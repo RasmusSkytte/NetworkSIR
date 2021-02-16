@@ -446,8 +446,8 @@ def run_single_simulation(
 
 
 def update_database(db_cfg, q, cfg) :
-    cfg.network.pop("ID")
-    if not db_cfg.contains(q.hash == cfg.hash) :
+
+    if not db_cfg.contains(q.hash == cfg.hash and q.network.ID == cfg.network.ID) :
         db_cfg.insert(cfg)
 
 
@@ -461,7 +461,6 @@ def run_simulations(
         dry_run=False,
         **kwargs) :
 
-
     d_simulation_parameters = utils.format_simulation_paramters(d_simulation_parameters)
 
     cfgs_all = utils.generate_cfgs(d_simulation_parameters, N_runs, N_tot_max, verbose=verbose)
@@ -473,7 +472,8 @@ def run_simulations(
     db_cfg = utils.get_db_cfg()
     q = Query()
 
-    db_counts = np.array([db_cfg.count(q.hash == cfg.hash) for cfg in cfgs_all])
+    db_counts  = np.array([db_cfg.count(q.hash == cfg.hash and q.network.ID == cfg.network.ID) for cfg in cfgs_all])
+
     assert np.max(db_counts) <= 1
 
     # keep only cfgs that are not in the database already

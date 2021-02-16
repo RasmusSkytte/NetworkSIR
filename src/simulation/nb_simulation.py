@@ -2394,7 +2394,7 @@ def remove_and_reduce_rates_of_agent(my, g, intervention, agent, rate_reduction)
     return None
 
 @njit
-def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent) :
+def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n) :
     # rate reduction is 2 3-vectors. is used for lockdown interventions
     agent_update_rate = 0.0
     act_rate_reduction = np.array([0.0, 0.0, 0.0], dtype=np.float64)
@@ -2404,10 +2404,10 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent) :
 
         if not my.connections_type[agent][ith_contact] == 0 :
             if my.connections_type[agent][ith_contact] == 1 :
-                mr = intervention.work_matrix_restrict[0]   # TODO: Change so it loops over a list instead
+                mr = intervention.work_matrix_restrict[n]   # TODO: Change so it loops over a list instead
                 mi = my.cfg_network.work_matrix
             elif my.connections_type[agent][ith_contact] == 2 :
-                mr = intervention.other_matrix_restrict[0] # TODO: Change so it loops over a list instead
+                mr = intervention.other_matrix_restrict[n] # TODO: Change so it loops over a list instead
                 mi = my.cfg_network.other_matrix
 
             mr_single = mr[my.age[agent], my.age[contact]]
@@ -2470,7 +2470,7 @@ def masking_on_label(my, g, intervention, label, rate_reduction) :
             reduce_frac_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
 @njit
-def matrix_restriction_on_label(my, g, intervention, label) :
+def matrix_restriction_on_label(my, g, intervention, label, n) :
     # masking on all agent with a certain label (tent or municipality, or whatever else you define). Rate reduction is two vectors of length 3. First is the fraction of [home, job, others] rates to be effected by masks.
     # second is the fraction of reduction of the those [home, job, others] rates.
     # ie : [[0,0.2,0.2],[0,0.8,0.8]] means that your wear mask when around 20% of job and other contacts, and your rates to those is reduced by 80%
@@ -2478,7 +2478,7 @@ def matrix_restriction_on_label(my, g, intervention, label) :
     for agent in range(my.cfg_network.N_tot) :
         if intervention.labels[agent] == label :
             my.restricted_status[agent] = 1
-            remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent)
+            remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n)
 
 
 @njit
@@ -2609,7 +2609,8 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                         my,
                         g,
                         intervention,
-                        label=ith_label,
+                        ith_label,
+                        0, #TODO: if different matrices do some fixing
                     )
 
     elif intervention.start_interventions_by_day :
@@ -2649,13 +2650,15 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3 :
 
                                 if verbose :
-                                    print("Intervention type : matrix restriction")
+                                    print("Intervention type : matrix restriction, name: ", intervention.cfg.Intervention_contact_matrices_name[int(i/2)])
 
                                 matrix_restriction_on_label(
                                     my,
                                     g,
                                     intervention,
-                                    label=ith_label,
+                                    ith_label,
+                                    int(i/2),
+
                                 )
                     else :
                         for i_label, intervention_type in enumerate(intervention.types) :

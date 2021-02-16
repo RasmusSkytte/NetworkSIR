@@ -447,7 +447,7 @@ def run_single_simulation(
 
 def update_database(db_cfg, q, cfg) :
 
-    if not db_cfg.contains(q.hash == cfg.hash and q.network.ID == cfg.network.ID) :
+    if not db_cfg.contains((q.hash == cfg.hash) & (q.network.ID == cfg.network.ID)) :
         db_cfg.insert(cfg)
 
 
@@ -472,7 +472,7 @@ def run_simulations(
     db_cfg = utils.get_db_cfg()
     q = Query()
 
-    db_counts  = np.array([db_cfg.count(q.hash == cfg.hash and q.network.ID == cfg.network.ID) for cfg in cfgs_all])
+    db_counts  = np.array([db_cfg.count((q.hash == cfg.hash) & (q.network.ID == cfg.network.ID)) for cfg in cfgs_all])
 
     assert np.max(db_counts) <= 1
 

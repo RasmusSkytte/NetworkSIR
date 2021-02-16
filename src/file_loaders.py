@@ -107,8 +107,8 @@ def hash_to_cfg(hash_, cfgs_dir="./Output/cfgs") :
             return cfg
         else :
             return None
-    assert len(q_result) == 1
-    cfg = utils.DotDict(q_result[0])
+    assert len(q_result) > 0
+    cfg = [utils.DotDict(cfg) for cfg in q_result if cfg["network"]["ID"] == 0][0]
     return cfg
 
 def query_to_hashes(subset=None, base_dir="Output") :
@@ -180,7 +180,6 @@ class ABM_simulations :
             self.all_filenames = []
 
             for hash_ in [cfg["hash"] for cfg in cfgs] :
-
                 self.all_filenames.extend(utils.hash_to_filenames(hash_))
 
             self.all_folders   = get_all_ABM_folders(self.all_filenames)

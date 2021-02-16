@@ -1817,7 +1817,9 @@ def run_simulation(
         print("Where", where_infections_happened_counter)
         print("positive_test_counter", intervention.positive_test_counter)
         print("n_found", np.sum(np.array([1 for day_found in intervention.day_found_infected if day_found>=0])))
-        #print(list(calc_contact_dist(my,2)))
+        print(list(calc_contact_dist(my,0)))
+        print(list(calc_contact_dist(my,1)))
+        print(list(calc_contact_dist(my,2)))
         # frac_inf = np.zeros((2,200))
         # for agent in range(my.cfg_network.N_tot) :
         #     n_con = my.number_of_contacts[agent]

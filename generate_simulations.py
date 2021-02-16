@@ -23,7 +23,7 @@ if utils.is_local_computer():
     N_runs = 1
 
     # Fraction of population to simulate
-    f = 0.01
+    f = 0.1
 
     #noise = lambda m, d : 0
     noise = lambda m, d : np.round(m + np.linspace(-d, d, 1), 5)
@@ -70,7 +70,7 @@ all_simulation_parameters = [
         "lambda_E": 4 / 2.5,
         #
         "N_init": noise(2300 * f, 200 * f),
-        "N_init_UK_frac": noise(0.13, 0.01),
+        "N_init_UK_frac": noise(0.15, 0.01),
         #
         "Intervention_vaccination_effect_delays" : [[10, 21]],
         "Intervention_vaccination_efficacies" : [[0.95, 0.65]],

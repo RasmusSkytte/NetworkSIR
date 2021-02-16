@@ -22,11 +22,11 @@ from src.analysis.helpers import *
 
 # Define the subset to plot on
 #subset = None
-subset = {"contact_matrices_name" : "basis"}
+subset = {"contact_matrices_name" : "2021_fase1"}
 fig_name = Path("Figures/" + subset["contact_matrices_name"] + ".png")
 
 # Number of plots to keep
-N = 25
+N = 89
 
 start_date = datetime(2020, 12, 21)
 
@@ -107,8 +107,6 @@ for filename in tqdm(
     # Store the plot handles and loglikelihoods
     plot_handles.append(h)
     lls.append(ll)
-
-print(lls)
 
 
 # Filter out "bad" runs

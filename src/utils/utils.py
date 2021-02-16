@@ -2008,7 +2008,7 @@ def load_vaccination_schedule_file(scenario = "reference") :
     age_groups      = []
 
     # Determine the number of files that matches the requested scenario
-    i = 1
+    i = 0
     filename = lambda i : f'Data/vaccination_schedule/{scenario}_{i}.csv'
 
     while file_exists(filename(i)) :

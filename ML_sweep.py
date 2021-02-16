@@ -160,9 +160,9 @@ for subset in [{"contact_matrices_name" : "2021_fase1"}] :
         plt.savefig('Figures/LogLikelihood_parameters.png')
 
 
-    def terminal_printer(name, arr, val) :
+    def terminal_printer(name, arr, val, lls) :
         u_arr = np.unique(arr)
-        s_arr = sorted(u_arr)
+        s_arr = sorted(lls)
         I = np.argmax(u_arr == val)
 
         out_string = "["
@@ -175,7 +175,7 @@ for subset in [{"contact_matrices_name" : "2021_fase1"}] :
         print(name + "\t" + out_string)
 
     print("--- Maximum likelihood value locations ---")
-    terminal_printer("beta* :      ", betas,          cfg_best.beta)
-    terminal_printer("rel_beta* :  ", rel_betas,      cfg_best.beta_UK_multiplier)
-    terminal_printer("N_init* :    ", N_init,         cfg_best.N_init)
-    terminal_printer("N_UK_frac* : ", N_init_UK_frac, cfg_best.N_init_UK_frac)
+    terminal_printer("beta* :      ", betas,          cfg_best.beta                 , lls)
+    terminal_printer("rel_beta* :  ", rel_betas,      cfg_best.beta_UK_multiplier   , lls)
+    terminal_printer("N_init* :    ", N_init,         cfg_best.N_init               , lls)
+    terminal_printer("N_UK_frac* : ", N_init_UK_frac, cfg_best.N_init_UK_frac       , lls)

@@ -25,7 +25,7 @@ if utils.is_local_computer():
     num_cores_max = 3
 else :
     f = 0.1
-    n_sigma = 2
+    n_sigma = 1
     num_cores_max = 30
 
 noise = lambda m, d : np.round(m + np.linspace(-(n_sigma * d), (n_sigma * d), 2*n_sigma + 1), 5)
@@ -38,7 +38,6 @@ params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.005)
 
 # Scale the population
 params["N_tot"]  = int(params["N_tot"]  * f)
-params["N_init"] = int(params["N_init"] * f)
 params["R_init"] = int(params["R_init"] * f)
 
 
@@ -46,7 +45,7 @@ N_files_total = 0
 if __name__ == "__main__":
     with Timer() as t:
 
-        N_files_total +=  simulation.run_simulations(params, N_runs=25, num_cores_max=num_cores_max)
+        N_files_total +=  simulation.run_simulations(params, N_runs=3, num_cores_max=num_cores_max)
 
     print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
     print("Finished simulating!")
@@ -84,7 +83,7 @@ fraction_sigma = 2 * np.sqrt(p)
 fraction_offset = 1
 
 
-for subset in [{"contact_matrices_name" : "2021_fase1_sce1"}, {"contact_matrices_name" : "2021_fase1_sce2"}] :
+for subset in [{"contact_matrices_name" : "2021_fase1"}] :
 
     print(subset)
 
@@ -163,7 +162,7 @@ for subset in [{"contact_matrices_name" : "2021_fase1_sce1"}, {"contact_matrices
 
     def terminal_printer(name, arr, val) :
         u_arr = np.unique(arr)
-        s_arr = sorted(arr)
+        s_arr = sorted(u_arr)
         I = np.argmax(u_arr == val)
 
         out_string = "["
@@ -172,7 +171,7 @@ for subset in [{"contact_matrices_name" : "2021_fase1_sce1"}, {"contact_matrices
                 out_string += " *" + str(u_arr[i]) + "*"
             else :
                 out_string += "  " + str(u_arr[i]) + " "
-        out_string += " ] sens. : " + str(np.round(s_arr[-1] / s_arr[-2]), 1)
+        out_string += " ] sens. : " + str(np.round(s_arr[-1] / s_arr[-2], 1))
         print(name + "\t" + out_string)
 
     print("--- Maximum likelihood value locations ---")

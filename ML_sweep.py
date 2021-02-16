@@ -163,6 +163,7 @@ for subset in [{"contact_matrices_name" : "2021_fase1_sce1"}, {"contact_matrices
 
     def terminal_printer(name, arr, val) :
         u_arr = np.unique(arr)
+        s_arr = sorted(arr)
         I = np.argmax(u_arr == val)
 
         out_string = "["
@@ -171,7 +172,7 @@ for subset in [{"contact_matrices_name" : "2021_fase1_sce1"}, {"contact_matrices
                 out_string += " *" + str(u_arr[i]) + "*"
             else :
                 out_string += "  " + str(u_arr[i]) + " "
-        out_string += " ]"
+        out_string += " ] sens. : " + str(np.round(s_arr[-1] / s_arr[-2]), 1)
         print(name + "\t" + out_string)
 
     print("--- Maximum likelihood value locations ---")

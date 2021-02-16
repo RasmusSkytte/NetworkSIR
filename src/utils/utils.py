@@ -651,31 +651,49 @@ class DotDict(AttrDict) :
     'Michelsen'
     """
 
+    def deepcopy(self) :
+        copy = DotDict()
+
+        for key, val in self.items() :
+
+            if isinstance(val, type(self)) :
+                copy[key] = val.deepcopy()
+
+            else :
+                copy[key] = val
+
+        return copy
+
+    def to_dict(self, exclude='') :
+        out = {}
+
+        if not isinstance(exclude, list) :
+            exclude = [exclude]
+
+        for key, val in self.items() :
+
+            if key in exclude :
+                continue
+
+            if isinstance(val, type(self)) :
+                out[key] = val.to_dict(exclude=exclude)
+
+            elif isinstance(val, set) :
+                out[key] = list(val)
+
+            elif isinstance(val, np.ndarray) :
+                out[key] = val.tolist()
+            else :
+                out[key] = val
+
+        return out
+
     def dump_to_file(self, filename, exclude=None) :
         if any(substring in filename for substring in ["yaml", "yml"]) :
             make_sure_folder_exist(filename)
 
-            out = self.copy
-            if exclude is not None :
-                if not isinstance(exclude, list) :
-                    exclude = [exclude]
-                out = self.copy()
-                for key in exclude :
-                    out.pop(key)
-
-            for key, val in out.items() :
-
-                if isinstance(val, type(self)) :
-                    out[key] = dict(val)
-
-                elif isinstance(val, set) :
-                    out[key] = list(val)
-
-                elif isinstance(val, np.ndarray) :
-                    out[key] = val.tolist()
-
             with open(filename, "w") as yaml_file :
-                yaml.dump(out, yaml_file, default_flow_style=False, sort_keys=False)
+                yaml.dump(self.to_dict(exclude="ID"), yaml_file, default_flow_style=False, sort_keys=False)
         else :
             raise AssertionError("This filetype is not yet implemented. Currently only yamls")
 
@@ -1173,6 +1191,12 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                 elif key in spec_network.keys() :
                     cfg["network"].update(d)
 
+                    if key == "contact_matrices_name" :
+                        # TODO : fix the DotDict indexing
+                        work_matix, other_matrix, work_other_ratio, _ = load_contact_matrices(scenario = d[key])
+                        cfg["network"].update({"work_matrix" : work_matix, "other_matrix" : other_matrix, "work_other_ratio" : work_other_ratio})
+
+
                 #elif key in spec_intervention.keys() :
                 #    cfg["intervention"].update(d)
 
@@ -1417,27 +1441,43 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
 #%%
 
 
-def state_counts_to_df(time, state_counts) :  #
+def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  #
+
+    time = np.array(time)
+    state_counts = np.array(state_counts)
+    variant_counts = np.array(variant_counts)
+    infected_per_age_group = np.array(infected_per_age_group)
+
+    N_states     = np.size(state_counts, 1)
+    N_variants   = np.size(variant_counts, 1)
+    N_age_groups = np.size(infected_per_age_group, 1)
 
     header = [
         "Time",
-        "E1",
-        "E2",
-        "E3",
-        "E4",
-        "I1",
-        "I2",
-        "I3",
-        "I4",
-        "R",
-        # 'H1', 'H2', 'ICU1', 'ICU2', 'R_H', 'D',
-    ]
+        "E1", "E2", "E3", "E4",
+        "I1", "I2", "I3", "I4",
+        "R"]
 
-    df_time = pd.DataFrame(time, columns=header[0 :1])
-    df_states = pd.DataFrame(state_counts, columns=header[1 :])
-    # df_H_states = pd.DataFrame(H_state_total_counts, columns=header[10 :])
-    df = pd.concat([df_time, df_states], axis=1)  # .convert_dtypes()
-    # assert sum(df_H_states.sum(axis=1) == df_states['R'])
+    header.extend(["I^V_" + str(i) for i in range(N_variants)])
+    header.extend(["I^A_" + str(i) for i in range(N_age_groups)])
+
+    k_start = 0
+    k_stop  = 1
+    df_time     = pd.DataFrame(time, columns=header[k_start:k_stop])
+
+    k_start = k_stop
+    k_stop  += N_states
+    df_states   = pd.DataFrame(state_counts, columns=header[k_start:k_stop])
+
+    k_start = k_stop
+    k_stop  += N_variants
+    df_variants = pd.DataFrame(variant_counts, columns=header[k_start:k_stop])
+
+    k_start = k_stop
+    k_stop  += N_age_groups
+    df_age_groups = pd.DataFrame(infected_per_age_group, columns=header[k_start:k_stop])
+
+    df = pd.concat([df_time, df_states, df_variants, df_age_groups], axis=1)  # .convert_dtypes()
     return df
 
 
@@ -2080,6 +2120,12 @@ def query_cfg(cfg) :
     return [DotDict(cfg) for cfg in cfgs]
 
 
+def hash_to_seed(hash_) :
+    seed = int(hash_, 16)
+    while seed > 2**32 - 1 :
+        seed = int(seed / 2)
+    return seed
+
 # ls -R | grep 7274ac6030 | xargs rm -f
 
 #%%
@@ -2237,3 +2283,26 @@ def get_random_samples(simulation_parameter, random_state=0) :
     rounded_list = _round_param_list(param_list, param_grid)
     cfgs = _append_remaining_parameters(simulation_parameter, rounded_list)
     return cfgs
+
+
+from sympy.parsing.sympy_parser import parse_expr
+def load_params(filename) :
+    params = load_yaml(filename)
+    params = params.to_dict()
+
+    # Parse inputs
+    params["R_init"]   = float(parse_expr(params["R_init"]))
+    params["lambda_E"] = float(parse_expr(params["lambda_E"]))
+    params["lambda_I"] = np.round(float(parse_expr(params["lambda_I"])), 5)
+
+    start_date = params["start_date"]
+    params.pop("start_date")
+
+    end_date = params["end_date"]
+    params.pop("end_date")
+
+    params["day_max"] = (end_date - start_date).days
+    params["start_date_offset"] = (start_date - params["start_date_offset"]).days
+    params["restriction_thresholds"] =  [[ 0, (params["restriction_thresholds"] - start_date).days]]
+
+    return (params, start_date)

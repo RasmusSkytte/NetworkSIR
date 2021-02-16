@@ -162,7 +162,7 @@ for subset in [{"contact_matrices_name" : "2021_fase1"}] :
 
     def terminal_printer(name, arr, val, lls) :
         u_arr = np.unique(arr)
-        s_arr = sorted(lls)
+        s_arr = sorted(~lls[np.isnan(lls)])
         I = np.argmax(u_arr == val)
 
         out_string = "["

@@ -2303,6 +2303,25 @@ def load_params(filename) :
 
     params["day_max"] = (end_date - start_date).days
     params["start_date_offset"] = (start_date - params["start_date_offset"]).days
-    params["restriction_thresholds"] =  [[ 0, (params["restriction_thresholds"] - start_date).days]]
+
+    if isinstance(params["restriction_thresholds"], list) :
+
+        restriction_dates = [date for date in params["restriction_thresholds"][0]]
+
+        date_1 = start_date + datetime.timedelta(days=1)
+        date_2 = restriction_dates[0]
+
+        intervals = []
+        for i in range(len(restriction_dates)) :
+            intervals.append([ (date_1 - start_date).days, (date_2 - start_date).days])
+
+            if i < len(restriction_dates) - 1 :
+                date_1 = restriction_dates[i]
+                date_2 = restriction_dates[i+1]
+
+    else :
+        intervals = [1, (params["restriction_thresholds"] - start_date).days]
+
+    params["restriction_thresholds"] =  intervals
 
     return (params, start_date)

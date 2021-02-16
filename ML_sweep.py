@@ -21,18 +21,20 @@ params, start_date = utils.load_params("cfg/simulation_parameters_2021_fase1.yam
 if utils.is_local_computer():
     f = 0.1
     #noise = lambda m, d : m
-    noise = lambda m, d : np.round(m + np.linspace(-d, d, 3), 5)
+    n_sigma = 1
     num_cores_max = 3
 else :
     f = 0.1
-    noise = lambda m, d : np.round(m + np.linspace(-d, d, 3), 5)
+    n_sigma = 2
     num_cores_max = 30
 
+noise = lambda m, d : np.round(m + np.linspace(-(n_sigma * d), (n_sigma * d), 2*n_sigma + 1), 5)
+
 # Sweep around parameter set
-#params["beta"]               = noise(params["beta"], 0.0005)
-#params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.2)
-#params["N_init"]             = noise(params["N_init"] * f, 2000 * f)
-#params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.01)
+#params["beta"]               = noise(params["beta"], 0.00025)
+#params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.1)
+#params["N_init"]             = noise(params["N_init"] * f, 1000 * f)
+#params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.005)
 
 # Scale the population
 params["N_tot"]  = int(params["N_tot"]  * f)

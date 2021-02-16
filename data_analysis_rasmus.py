@@ -23,10 +23,10 @@ from src.analysis.helpers import *
 # Define the subset to plot on
 #subset = None
 subset = {"contact_matrices_name" : "2021_fase1_sce2"}
-fig_name = Path(f"Figures/2021_fase1_sce2.png")
+fig_name = Path("Figures/" + subset["contact_matrices_name"] + ".png")
 
 # Number of plots to keep
-N = 625
+N = 25
 
 start_date = datetime(2020, 12, 21)
 
@@ -66,14 +66,14 @@ logK_sigma = df_index["logI_sd"][ind:]
 covid_index_offset = (datetime(2021, 1, 1) - start_date).days
 
 
-s = np.array([148,   227,  457,  509,  604])
-n = np.array([3946, 3843, 3545, 2560, 1954])
+s = np.array([  76,  148,  275,  460,  510,  617, 101])
+n = np.array([3654, 4020, 3901, 3579, 2570, 2003, 225])
 p = s / n
 p_var = p * (1 - p) / n
 
 fraction = p
 fraction_sigma = np.sqrt(p_var)
-fraction_offset = 2
+fraction_offset = 1
 
 
 # Load the ABM simulations
@@ -99,8 +99,8 @@ for filename in tqdm(
     h = plot_simulation(I_tot_scaled, f, start_date, axes)
 
     # Evaluate
-    ll =  0.5 * compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
-    ll += 0.5 * compute_loglikelihood(f, (fraction, fraction_sigma, fraction_offset))
+    ll =  0.5 * compute_loglikelihood(I_tot_scaled, (logK,         logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
+    ll += 0.5 * compute_loglikelihood(f,            (fraction, fraction_sigma, fraction_offset))
 
     # Store the plot handles and loglikelihoods
     plot_handles.append(h)

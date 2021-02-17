@@ -1250,7 +1250,7 @@ def initialize_states(
     SIR_transition_rates,
     state_total_counts,
     variant_counts,
-    infected_per_age_group,
+    #infected_per_age_group,
     agents_in_state,
     agents_in_age_group,
     initial_ages_exposed,
@@ -1317,7 +1317,7 @@ def initialize_states(
 
             # Update the counters
             variant_counts[my.corona_type[agent]] += 1
-            infected_per_age_group[my.age[agent]] += 1
+            #infected_per_age_group[my.age[agent]] += 1
 
 
         update_infection_list_for_newly_infected_agent(my, g, agent)
@@ -1597,7 +1597,7 @@ def run_simulation(
     SIR_transition_rates,
     state_total_counts,
     variant_counts,
-    infected_per_age_group,
+    #infected_per_age_group,
     agents_in_state,
     N_states,
     N_infectious_states,
@@ -1611,7 +1611,7 @@ def run_simulation(
     out_time = List()                       # Sampled times
     out_state_counts = List()               # Tne counts of the SEIR states
     out_variant_counts = List()             # The counts of viral strains
-    out_infected_per_age_group = List()     # The counts of infected per age group
+    #out_infected_per_age_group = List()     # The counts of infected per age group
     out_my_state = List()
 
     daily_counter = 0
@@ -1691,7 +1691,7 @@ def run_simulation(
                         g.update_rates(my, +rate, agent)
 
                 # Update the counters
-                infected_per_age_group[my.age[agent]] += 1
+                #infected_per_age_group[my.age[agent]] += 1
                 variant_counts[my.corona_type[agent]] += 1
 
             # If this moves to Recovered state
@@ -1703,7 +1703,7 @@ def run_simulation(
 
                 # Update counters
                 variant_counts[my.corona_type[agent]] -= 1
-                infected_per_age_group[my.age[agent]] -= 1
+                #infected_per_age_group[my.age[agent]] -= 1
 
         #######/ Here we infect new states
         else :
@@ -1777,7 +1777,7 @@ def run_simulation(
                 out_time.append(real_time)
                 out_state_counts.append(state_total_counts.copy())
                 out_variant_counts.append(variant_counts.copy())
-                out_infected_per_age_group.append(infected_per_age_group.copy())
+                #out_infected_per_age_group.append(infected_per_age_group.copy())
 
             if daily_counter >= 10 :
 
@@ -1874,7 +1874,8 @@ def run_simulation(
         # print("N_daily_tests", intervention.N_daily_tests)
         # print("N_positive_tested", N_positive_tested)
 
-    return out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention
+    #return out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention
+    return out_time, out_state_counts, out_variant_counts, out_my_state, intervention
 
 
 #%%

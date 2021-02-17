@@ -18,22 +18,23 @@ from contexttimer import Timer
 params, start_date = utils.load_params("cfg/simulation_parameters_2021_fase1.yaml")
 
 if utils.is_local_computer():
-    f = 0.1
+    f = 0.05
     #noise = lambda m, d : m
-    n_sigma = 1
+    n_sigma = 4
     num_cores_max = 3
 else :
     f = 0.1
     n_sigma = 1
     num_cores_max = 5
 
-noise = lambda m, d : np.round(m + np.linspace(-(n_sigma * d), (n_sigma * d), 2*n_sigma + 1), 5)
+noise = lambda m, d : np.round(m + np.linspace(-(d), (d), 2*n_sigma + 1), 5)
 
 # Sweep around parameter set
-params["beta"]               = noise(params["beta"], 0.00025)
-params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.1)
-params["N_init"]             = noise(params["N_init"] * f, 1000 * f)
-params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.005)
+params["beta"]               = [0.0108, 0.0109, 0.011]
+#params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.1)
+#params["N_init"]             = noise(params["N_init"] * f, 1000 * f)
+params["N_init"] = int(params["N_init"] * f)
+#params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.005)
 
 # Scale the population
 params["N_tot"]  = int(params["N_tot"]  * f)
@@ -80,8 +81,8 @@ for subset in [{"contact_matrices_name" : "2021_fase1"}] :
             I_tot_scaled, f = load_from_file(filename)
 
             # Evaluate
-            tmp_ll =  0.5 * compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
-            tmp_ll += 0.5 * compute_loglikelihood(f, (fraction, fraction_sigma, fraction_offset))
+            #tmp_ll =  1 * compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
+            tmp_ll = 1 * compute_loglikelihood(f, (fraction, fraction_sigma, fraction_offset))
 
             ll.append(tmp_ll)
 
@@ -163,6 +164,6 @@ for subset in [{"contact_matrices_name" : "2021_fase1"}] :
 
     print("--- Maximum likelihood value locations ---")
     terminal_printer("beta* :      ", betas,          cfg_best.beta                 , lls)
-    terminal_printer("rel_beta* :  ", rel_betas,      cfg_best.beta_UK_multiplier   , lls)
-    terminal_printer("N_init* :    ", N_init,         cfg_best.N_init               , lls)
-    terminal_printer("N_UK_frac* : ", N_init_UK_frac, cfg_best.N_init_UK_frac       , lls)
+    #terminal_printer("rel_beta* :  ", rel_betas,      cfg_best.beta_UK_multiplier   , lls)
+    #terminal_printer("N_init* :    ", N_init,         cfg_best.N_init               , lls)
+    #terminal_printer("N_UK_frac* : ", N_init_UK_frac, cfg_best.N_init_UK_frac       , lls)

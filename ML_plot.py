@@ -63,17 +63,93 @@ N_runs = np.floor(p * N).astype(int)
 
 # Run the ML plot loop
 N_files_total = 0
+cfgs_all = []
 for s, n in zip(z, N_runs) :
 
-    params["beta"]               = noise(beta,               s, beta_sigma)
-    params["beta_UK_multiplier"] = noise(beta_UK_multiplier, s, beta_UK_multiplier_sigma)
-    params["N_init"]             = noise(N_init,             s, N_init_sigma)
-    params["N_init_UK_frac"]     = noise(N_init_UK_frac,     s, N_init_UK_frac_sigma)
+    if   s == 0 :
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+    
+    elif s == 1 :
+        
+        params["beta"]               = noise(beta,               s, beta_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["beta"]               = beta
+        
+        params["beta_UK_multiplier"] = noise(beta_UK_multiplier, s, beta_UK_multiplier_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["beta_UK_multiplier"] = beta_UK_multiplier
+        
+        params["N_init"]             = noise(N_init,             s, N_init_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["N_init"]             = N_init
+        
+        params["N_init_UK_frac"]     = noise(N_init_UK_frac,     s, N_init_UK_frac_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["N_init_UK_frac"]     = N_init_UK_frac
+    
+    elif s == 2 :
 
-    if __name__ == "__main__":
-        with Timer() as t:
+        params["beta"]               = noise(beta,               s, beta_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["beta"]               = beta
+        
+        params["beta_UK_multiplier"] = noise(beta_UK_multiplier, s, beta_UK_multiplier_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["beta_UK_multiplier"] = beta_UK_multiplier
+        
+        params["N_init"]             = noise(N_init,             s, N_init_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["N_init"]             = N_init
+        
+        params["N_init_UK_frac"]     = noise(N_init_UK_frac,     s, N_init_UK_frac_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["N_init_UK_frac"]     = N_init_UK_frac
 
-            N_files_total +=  simulation.run_simulations(params, N_runs=n, num_cores_max=num_cores_max)
+
+        params["beta"]               = noise(beta,               s-1, beta_sigma)
+        params["beta_UK_multiplier"] = noise(beta_UK_multiplier, s-1, beta_UK_multiplier_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["beta"]               = beta
+        params["beta_UK_multiplier"] = beta_UK_multiplier
+
+        params["beta"]               = noise(beta,               s-1, beta_sigma)
+        params["N_init"]             = noise(N_init,             s-1, N_init_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["beta"]               = beta
+        params["N_init"]             = N_init
+
+        params["beta"]               = noise(beta,               s-1, beta_sigma)
+        params["N_init_UK_frac"]     = noise(N_init_UK_frac,     s-1, N_init_UK_frac_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["beta"]               = beta
+        params["N_init_UK_frac"]     = N_init_UK_frac
+      
+        
+        params["beta_UK_multiplier"] = noise(beta_UK_multiplier, s-1, beta_UK_multiplier_sigma)
+        params["N_init"]             = noise(N_init,             s-1, N_init_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["beta_UK_multiplier"] = beta_UK_multiplier
+        params["N_init"]             = N_init
+
+        params["beta_UK_multiplier"] = noise(beta_UK_multiplier, s-1, beta_UK_multiplier_sigma)
+        params["N_init_UK_frac"]     = noise(N_init_UK_frac,     s-1, N_init_UK_frac_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["beta_UK_multiplier"] = beta_UK_multiplier
+        params["N_init_UK_frac"]     = N_init_UK_frac
+
+        params["N_init"]             = noise(N_init,             s-1, N_init_sigma)
+        params["N_init_UK_frac"]     = noise(N_init_UK_frac,     s-1, N_init_UK_frac_sigma)
+        cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
+        params["beta"]               = beta
+        params["N_init_UK_frac"]     = N_init_UK_frac
+
+    else :
+        raise ValueError("Too many sigma, not yet implemented") # TODO: Implement
+    
+if __name__ == "__main__":
+    with Timer() as t:
+
+        N_files_total +=  simulation.run_simulations(cfgs_all, num_cores_max=num_cores_max)
 
 print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
 print("Finished simulating!")

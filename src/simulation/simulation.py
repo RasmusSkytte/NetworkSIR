@@ -228,7 +228,7 @@ class Simulation :
 
         self.state_total_counts     = np.zeros(self.N_states, dtype=np.uint32)
         self.variant_counts         = np.zeros(2, dtype=np.uint32)  # TODO: Generalize this sta
-        self.infected_per_age_group = np.zeros(self.N_ages, dtype=np.uint32)
+        #self.infected_per_age_group = np.zeros(self.N_ages, dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
@@ -265,7 +265,7 @@ class Simulation :
                 self.SIR_transition_rates,
                 self.state_total_counts,
                 self.variant_counts,
-                self.infected_per_age_group,
+                #self.infected_per_age_group,
                 self.agents_in_state,
                 self.agents_in_age_group,
                 self.initial_ages_exposed,
@@ -320,7 +320,7 @@ class Simulation :
             self.SIR_transition_rates,
             self.state_total_counts,
             self.variant_counts,
-            self.infected_per_age_group,
+            #self.infected_per_age_group,
             self.agents_in_state,
             self.N_states,
             self.N_infectious_states,
@@ -328,11 +328,13 @@ class Simulation :
             self.verbose)
 
 
-        out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention = res
+        #out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention = res
+        out_time, out_state_counts, out_variant_counts, out_my_state, intervention = res
 
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
-        self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts, out_infected_per_age_group)
+        #self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts, out_infected_per_age_group)
+        self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts)
         self.intervention = intervention
 
         return self.df
@@ -452,7 +454,7 @@ def update_database(db_cfg, q, cfg) :
 
 
 def run_simulations(
-        d_simulation_parameters,
+        simulation_parameters,
         N_runs=2,
         num_cores_max=None,
         N_tot_max=False,
@@ -461,9 +463,15 @@ def run_simulations(
         dry_run=False,
         **kwargs) :
 
-    d_simulation_parameters = utils.format_simulation_paramters(d_simulation_parameters)
+    if isinstance(simulation_parameters, dict) :
+        d_simulation_parameters = utils.format_simulation_paramters(simulation_parameters)
+        cfgs_all = utils.generate_cfgs(d_simulation_parameters, N_runs, N_tot_max, verbose=verbose)
 
-    cfgs_all = utils.generate_cfgs(d_simulation_parameters, N_runs, N_tot_max, verbose=verbose)
+    elif isinstance(simulation_parameters[0], utils.DotDict) :
+        cfgs_all = simulation_parameters
+    
+    else :
+        raise ValueError(f"simulation_parameters not of the correct type")
 
     if len(cfgs_all) == 0 :
         N_files = 0

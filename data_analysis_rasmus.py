@@ -48,32 +48,9 @@ reload(file_loaders)
 utils.make_sure_folder_exist(fig_name)
 
 
-# Load the covid index data
-df_index = pd.read_feather("Data/covid_index.feather")
+logK, logK_sigma, covid_index_offset, beta = load_covid_index(start_date)
+fraction, fraction_sigma, fraction_offset = load_b117_fraction()
 
-# Get the beta value (Here, scaling parameter for the index cases)
-beta       = df_index["beta"][0]
-beta_simga = df_index["beta_sd"][0]
-
-# Find the index for the starting date
-ind = np.where(df_index["date"] == datetime(2021, 1, 1).date())[0][0]
-
-# Only fit to data after this date
-logK       = df_index["logI"][ind:]     # Renaming the index I to index K to avoid confusion with I state in SIR model
-logK_sigma = df_index["logI_sd"][ind:]
-
-# Determine the covid_index_offset
-covid_index_offset = (datetime(2021, 1, 1) - start_date).days
-
-
-s = np.array([  76,  148,  275,  460,  510,  617, 101])
-n = np.array([3654, 4020, 3901, 3579, 2570, 2003, 225])
-p = s / n
-p_var = p * (1 - p) / n
-
-fraction = p
-fraction_sigma = np.sqrt(p_var)
-fraction_offset = 1
 
 
 # Load the ABM simulations
@@ -146,7 +123,7 @@ axes[0].errorbar(t, m, yerr=s, fmt='o', lw=2)
 
 
 # Plot the WGS B.1.1.7 fraction
-t = pd.date_range(start = datetime(2021, 1, 4), periods = len(fraction), freq = "W-SUN")
+t = pd.date_range(start = datetime(2020, 12, 28), periods = len(fraction), freq = "W-SUN")
 axes[1].errorbar(t, fraction, yerr=fraction_sigma, fmt='s', lw=2)
 
 

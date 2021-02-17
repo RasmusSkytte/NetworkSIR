@@ -15,17 +15,19 @@ if utils.is_local_computer() :
 from contexttimer import Timer
 
 
-params, start_date = utils.load_params("cfg/simulation_parameters_2021_fase1.yaml")
+params, start_date = utils.load_params("cfg/simulation_parameters_2021_fase2.yaml")
 
 if utils.is_local_computer():
     f = 0.2
     #noise = lambda m, d : m
     n_sigma = 0
     num_cores_max = 3
+    N_runs = 6
 else :
-    f = 0.1
-    n_sigma = 1
-    num_cores_max = 5
+    f = 0.2
+    n_sigma = 0
+    num_cores_max = 15
+    N_runs = 1
 
 noise = lambda m, d : np.round(m + np.linspace(-(d), (d), 2*n_sigma + 1), 5)
 
@@ -45,7 +47,7 @@ N_files_total = 0
 if __name__ == "__main__":
     with Timer() as t:
 
-        N_files_total +=  simulation.run_simulations(params, N_runs=6, num_cores_max=num_cores_max)
+        N_files_total +=  simulation.run_simulations(params, N_runs=N_runs, num_cores_max=num_cores_max)
 
     print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
     print("Finished simulating!")

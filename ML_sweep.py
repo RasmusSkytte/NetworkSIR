@@ -18,9 +18,9 @@ from contexttimer import Timer
 params, start_date = utils.load_params("cfg/simulation_parameters_2021_fase1.yaml")
 
 if utils.is_local_computer():
-    f = 0.05
+    f = 0.2
     #noise = lambda m, d : m
-    n_sigma = 4
+    n_sigma = 0
     num_cores_max = 3
 else :
     f = 0.1
@@ -30,11 +30,11 @@ else :
 noise = lambda m, d : np.round(m + np.linspace(-(d), (d), 2*n_sigma + 1), 5)
 
 # Sweep around parameter set
-params["beta"]               = [0.0108, 0.0109, 0.011]
-#params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.1)
+#params["beta"]               = [0.0102, 0.0103, 0.0104, 0.0105]
+#params["beta_UK_multiplier"] = [1.5]
 #params["N_init"]             = noise(params["N_init"] * f, 1000 * f)
 params["N_init"] = int(params["N_init"] * f)
-#params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.005)
+#params["N_init_UK_frac"]     = [0.02, 0.025, 0.03]
 
 # Scale the population
 params["N_tot"]  = int(params["N_tot"]  * f)
@@ -45,7 +45,7 @@ N_files_total = 0
 if __name__ == "__main__":
     with Timer() as t:
 
-        N_files_total +=  simulation.run_simulations(params, N_runs=1, num_cores_max=num_cores_max)
+        N_files_total +=  simulation.run_simulations(params, N_runs=6, num_cores_max=num_cores_max)
 
     print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
     print("Finished simulating!")
@@ -66,14 +66,16 @@ for subset in [{"contact_matrices_name" : "2021_fase1"}] :
     # Load the ABM simulations
     abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=subset, verbose=True)
 
-    lls     = []
+    lls_f     = []
+    lls_s     = []
 
     for cfg in tqdm(
         abm_files.iter_cfgs(),
         desc="Calculating log-likelihoods",
         total=len(abm_files.cfgs)) :
 
-        ll = []
+        ll_f = []
+        ll_s = []
 
         for filename in abm_files.cfg_to_filenames(cfg) :
 
@@ -81,16 +83,38 @@ for subset in [{"contact_matrices_name" : "2021_fase1"}] :
             I_tot_scaled, f = load_from_file(filename)
 
             # Evaluate
-            #tmp_ll =  1 * compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
-            tmp_ll = 1 * compute_loglikelihood(f, (fraction, fraction_sigma, fraction_offset))
+            tmp_ll_s = compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
+            tmp_ll_f = compute_loglikelihood(f, (fraction, fraction_sigma, fraction_offset))
 
-            ll.append(tmp_ll)
+            ll_s.append(tmp_ll_s)
+            ll_f.append(tmp_ll_f)
 
         # Store loglikelihoods
-        lls.append(np.mean(ll))
+        lls_s.append(np.mean(ll_s))
+        lls_f.append(np.mean(ll_f))
 
-    lls = np.array(lls)
+    
     cfgs = [cfg for cfg in abm_files.iter_cfgs()]
+    cfg_best = cfgs[np.nanargmax(lls_s)]
+    ll_best = lls_s[np.nanargmax(lls_s)]
+    print("--- Best parameters - Smitte ---")
+    print(f"Weighted loglikelihood : {ll_best:.3f}")
+    print(f"beta : {cfg_best.beta:.5f}")
+    print(f"beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}")
+    print(f"N_init : {cfg_best.N_init:.0f}")
+    print(f"N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}")
+
+    cfg_best = cfgs[np.nanargmax(lls_f)]
+    ll_best = lls_f[np.nanargmax(lls_f)]
+    print("--- Best parameters - B.1.1.7 ---")
+    print(f"Weighted loglikelihood : {ll_best:.3f}")
+    print(f"beta : {cfg_best.beta:.5f}")
+    print(f"beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}")
+    print(f"N_init : {cfg_best.N_init:.0f}")
+    print(f"N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}")
+
+
+    lls = np.array(lls_s) + np.array(lls_f)
     cfg_best = cfgs[np.nanargmax(lls)]
     ll_best = lls[np.nanargmax(lls)]
     print("--- Best parameters ---")
@@ -99,8 +123,6 @@ for subset in [{"contact_matrices_name" : "2021_fase1"}] :
     print(f"beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}")
     print(f"N_init : {cfg_best.N_init:.0f}")
     print(f"N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}")
-
-
 
     betas     = np.array([cfg.beta               for cfg in cfgs])
     rel_betas = np.array([cfg.beta_UK_multiplier for cfg in cfgs])

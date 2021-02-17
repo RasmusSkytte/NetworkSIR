@@ -87,17 +87,6 @@ for filename in tqdm(
 
 lls = np.array(lls)
 
-cfgs = [cfg for cfg in abm_files.iter_cfgs()]
-cfg_best = cfgs[np.nanargmax(lls)]
-ll_best = lls[np.nanargmax(lls)]
-print("--- Best parameters ---")
-print(f"Weighted loglikelihood : {ll_best:.3f}")
-print(f"beta : {cfg_best.beta:.5f}")
-print(f"beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}")
-print(f"N_init : {cfg_best.N_init:.0f}")
-print(f"N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}")
-
-
 # Filter out "bad" runs
 ulls = lls[~np.isnan(lls)] # Only non-nans
 ulls = np.unique(ulls)     # Only unique values
@@ -144,7 +133,7 @@ axes[0].set_ylim(0, 3000)
 axes[0].set_ylabel('Daglige positive')
 
 
-#axes[1].set_ylim(0, 1)
+axes[1].set_ylim(0, 1)
 axes[1].set_ylabel('frac. B.1.1.7')
 
 

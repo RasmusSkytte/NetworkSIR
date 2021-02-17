@@ -1913,7 +1913,7 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, ver
         # Check if any vaccines are effective yet :
         if day >= intervention.vaccination_schedule[i][0] :
 
-            # Get the numbe0cgrlævsdø- Xxr of new effective vaccines
+            # Get the number of new effective vaccines
             N = intervention.vaccinations_per_age_group[i][day - intervention.vaccination_schedule[i][0]]
 
             # Determine which agents can be vaccinated

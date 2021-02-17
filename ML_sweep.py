@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from datetime import datetime
 
 from tqdm import tqdm
 
@@ -19,7 +18,7 @@ from contexttimer import Timer
 params, start_date = utils.load_params("cfg/simulation_parameters_2021_fase1.yaml")
 
 if utils.is_local_computer():
-    f = 0.01
+    f = 0.1
     #noise = lambda m, d : m
     n_sigma = 1
     num_cores_max = 3
@@ -54,9 +53,9 @@ if __name__ == "__main__":
 
 from src.analysis.helpers import *
 
-logK, logK_sigma, covid_index_offset, beta = load_covid_index(start_date)
+logK, logK_sigma, beta, covid_index_offset, _ = load_covid_index(start_date)
 
-fraction, fraction_sigma, fraction_offset = load_b117_fraction()
+fraction, fraction_sigma, fraction_offset, _ = load_b117_fraction()
 
 
 for subset in [{"contact_matrices_name" : "2021_fase1"}] :
@@ -143,9 +142,10 @@ for subset in [{"contact_matrices_name" : "2021_fase1"}] :
         # Average loglikelihood value for parameter sets
         lls_param = np.zeros(np.shape(u_arr))
         for i, val in enumerate(u_arr) :
-            lls_param[i] = np.mean(lls[arr == val])
+            lls_param[i] = np.nanmean(lls[arr == val])
 
-        s_lls = sorted(lls_param)
+        s_lls = np.array(sorted(lls_param))
+        s_lls = s_lls[~np.isnan(s_lls)]
         d_lls = s_lls[-1] / s_lls[-2]
 
         # Higtest likelihood location

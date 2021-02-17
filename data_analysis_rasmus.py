@@ -21,9 +21,10 @@ from src.analysis.helpers import *
 
 
 # Define the subset to plot on
-#subset = None
-subset = {"contact_matrices_name" : "2021_fase1"}
-fig_name = Path("Figures/" + subset["contact_matrices_name"] + ".png")
+subset = None
+fig_name  = Path("Figures/all.png")
+#subset = {"contact_matrices_name" : "2021_fase1"}
+#fig_name = Path("Figures/" + subset["contact_matrices_name"] + ".png")
 
 # Number of plots to keep
 N = 1000
@@ -63,7 +64,7 @@ plot_handles = []
 lls     = []
 
 # Prepare figure
-fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(8, 12))
+fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(12, 12))
 axes = axes.flatten()
 
 print("Plotting the individual ABM simulations. Please wait", flush=True)
@@ -142,10 +143,12 @@ fig.canvas.draw()
 ylims = [ax.get_ylim() for ax in axes]
 
 # Get the transition dates
-if isinstance(restriction_thresholds[0], int) : 
-    restiction_days = [restriction_thresholds[-1]]
-else :
-    restiction_days = [interval[-1] for interval in restriction_thresholds]
+restiction_days = restriction_thresholds[1:]
+print(restiction_days)
+#if isinstance(restriction_thresholds[0], int) :
+#    restiction_days = [restriction_thresholds[-1]]
+#else :
+#    restiction_days = [interval[-1] for interval in restriction_thresholds]
 
 for day in restiction_days :
     restiction_date = start_date + datetime.timedelta(days=day)
@@ -159,7 +162,7 @@ months_fmt = mdates.DateFormatter('%b')
 
 axes[1].xaxis.set_major_locator(months)
 axes[1].xaxis.set_major_formatter(months_fmt)
-axes[1].set_xlim([datetime.datetime(2020, 12, 28), datetime.datetime(2021, 3, 1)])
+axes[1].set_xlim([datetime.datetime(2020, 12, 28), datetime.datetime(2021, 5, 15)])
 
 
 for ax, lim in zip(axes, ylims) :

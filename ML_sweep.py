@@ -42,7 +42,6 @@ params["N_init"] = int(params["N_init"] * f)
 params["N_tot"]  = int(params["N_tot"]  * f)
 params["R_init"] = int(params["R_init"] * f)
 
-
 N_files_total = 0
 if __name__ == "__main__":
     with Timer() as t:

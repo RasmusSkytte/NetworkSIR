@@ -1166,15 +1166,16 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
         d_list = []
         for name, lst in d_simulation_parameters.items() :
-
+            
             # Convert all inputs to lists
             if isinstance(lst, (int, float, str)) :
                 lst = [lst]
 
             d_list.append([{name : val} for val in lst])
+
         d_list.append([{"ID" : ID} for ID in range(N_runs)])
         all_combinations = list(product(*d_list))
-        
+
         has_not_printed = True
 
         # Update cfg values
@@ -2315,17 +2316,15 @@ def load_params(filename) :
 
         intervals = []
         for i in range(len(restriction_dates)) :
-            intervals.append([ (date_1 - start_date).days, (date_2 - start_date).days])
+            intervals.extend([ (date_1 - start_date).days, (date_2 - start_date).days])
 
             if i < len(restriction_dates) - 1 :
                 date_1 = restriction_dates[i]
                 date_2 = restriction_dates[i+1]
-        
-        intervals = [intervals]
 
     else :
-        intervals = [[1, (params["restriction_thresholds"] - start_date).days]]
+        intervals = [1, (params["restriction_thresholds"] - start_date).days]
 
-    params["restriction_thresholds"] =  intervals
+    params["restriction_thresholds"] =  [intervals]
 
     return (params, start_date)

@@ -19,7 +19,7 @@ from contexttimer import Timer
 params, start_date = utils.load_params("cfg/simulation_parameters_2021_fase1.yaml")
 
 if utils.is_local_computer():
-    f = 0.1
+    f = 0.01
     #noise = lambda m, d : m
     n_sigma = 1
     num_cores_max = 3
@@ -45,7 +45,7 @@ N_files_total = 0
 if __name__ == "__main__":
     with Timer() as t:
 
-        N_files_total +=  simulation.run_simulations(params, N_runs=3, num_cores_max=num_cores_max)
+        N_files_total +=  simulation.run_simulations(params, N_runs=1, num_cores_max=num_cores_max)
 
     print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
     print("Finished simulating!")
@@ -54,33 +54,9 @@ if __name__ == "__main__":
 
 from src.analysis.helpers import *
 
-# Load the covid index data
-df_index = pd.read_feather("Data/covid_index.feather")
+logK, logK_sigma, covid_index_offset, beta = load_covid_index(start_date)
 
-# Get the beta value (Here, scaling parameter for the index cases)
-beta       = df_index["beta"][0]
-beta_simga = df_index["beta_sd"][0]
-
-# Find the index for the starting date
-ind = np.where(df_index["date"] == datetime(2021, 1, 1).date())[0][0]
-
-# Only fit to data after this date
-logK       = df_index["logI"][ind:]     # Renaming the index I to index K to avoid confusion with I state in SIR model
-logK_sigma = df_index["logI_sd"][ind:]
-
-# Determine the covid_index_offset
-covid_index_offset = (datetime(2021, 1, 1).date() - start_date).days
-
-s = np.array([  76,  148,  275,  460,  510,  617, 101])
-n = np.array([3654, 4020, 3901, 3579, 2570, 2003, 225])
-p = s / n
-p_var = p * (1 - p) / n
-
-#fraction        = np.array([0.04,  0.074,  0.13,  0.2])
-#fraction_sigma  = np.array([0.006, 0.0075, 0.015, 0.016])
-fraction = p
-fraction_sigma = 2 * np.sqrt(p)
-fraction_offset = 1
+fraction, fraction_sigma, fraction_offset = load_b117_fraction()
 
 
 for subset in [{"contact_matrices_name" : "2021_fase1"}] :
@@ -161,17 +137,28 @@ for subset in [{"contact_matrices_name" : "2021_fase1"}] :
 
 
     def terminal_printer(name, arr, val, lls) :
+        # Unique paramter values
         u_arr = np.unique(arr)
-        s_arr = sorted(~lls[np.isnan(lls)])
+
+        # Average loglikelihood value for parameter sets
+        lls_param = np.zeros(np.shape(u_arr))
+        for i, val in enumerate(u_arr) :
+            lls_param[i] = np.mean(lls[arr == val])
+
+        s_lls = sorted(lls_param)
+        d_lls = s_lls[-1] / s_lls[-2]
+
+        # Higtest likelihood location
         I = np.argmax(u_arr == val)
 
+        # Print the houtput
         out_string = "["
         for i in range(len(u_arr)) :
             if i == I :
                 out_string += " *" + str(u_arr[i]) + "*"
             else :
                 out_string += "  " + str(u_arr[i]) + " "
-        out_string += " ] sens. : " + str(np.round(s_arr[-1] / s_arr[-2], 1))
+        out_string += f" ] sens. : {d_lls:.2g}"
         print(name + "\t" + out_string)
 
     print("--- Maximum likelihood value locations ---")

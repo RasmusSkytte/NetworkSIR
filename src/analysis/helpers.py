@@ -1,5 +1,9 @@
 
 import numpy as np
+import pandas as pd
+
+from datetime import datetime
+
 from scipy.stats import norm
 
 from src.utils import utils
@@ -60,3 +64,39 @@ def compute_loglikelihood(arr, data, transformation_function = lambda x : x) :
 
     else :
         return np.nan
+
+
+def load_covid_index(start_date) :
+
+    # Load the covid index data
+    df_index = pd.read_feather("Data/covid_index.feather")
+
+    # Get the beta value (Here, scaling parameter for the index cases)
+    beta       = df_index["beta"][0]
+    beta_simga = df_index["beta_sd"][0]
+
+    # Find the index for the starting date
+    ind = np.where(df_index["date"] == datetime(2021, 1, 1).date())[0][0]
+    
+    # Only fit to data after this date
+    logK       = df_index["logI"][ind:]     # Renaming the index I to index K to avoid confusion with I state in SIR model
+    logK_sigma = df_index["logI_sd"][ind:]
+
+    # Determine the covid_index_offset
+    covid_index_offset = (datetime(2021, 1, 1) - start_date).days
+
+    return (logK, logK_sigma, covid_index_offset, beta)
+
+
+def load_b117_fraction() :
+    #       uge     53     1     2     3     4     5     6
+    s = np.array([  76,  148,  275,  460,  510,  617,  101])
+    n = np.array([3654, 4020, 3901, 3579, 2570, 2003,  225])
+    p = s / n
+    p_var = p * (1 - p) / n
+
+    fraction = p
+    fraction_sigma = 2 * np.sqrt(p_var)
+    fraction_offset = 1    
+
+    return (fraction, fraction_sigma, fraction_offset)

@@ -2320,7 +2320,7 @@ def load_params(filename) :
                 date_2 = restriction_dates[i+1]
 
     else :
-        intervals = [1, (params["restriction_thresholds"] - start_date).days]
+        intervals = [[1, (params["restriction_thresholds"] - start_date).days]]
 
     params["restriction_thresholds"] =  intervals
 

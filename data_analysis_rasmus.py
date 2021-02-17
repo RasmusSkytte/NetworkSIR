@@ -26,7 +26,7 @@ subset = {"contact_matrices_name" : "2021_fase1"}
 fig_name = Path("Figures/" + subset["contact_matrices_name"] + ".png")
 
 # Number of plots to keep
-N = 89
+N = 1000
 
 start_date = datetime.datetime(2020, 12, 21)
 
@@ -85,13 +85,24 @@ for filename in tqdm(
     plot_handles.append(h)
     lls.append(ll)
 
+lls = np.array(lls)
+
+cfgs = [cfg for cfg in abm_files.iter_cfgs()]
+cfg_best = cfgs[np.nanargmax(lls)]
+ll_best = lls[np.nanargmax(lls)]
+print("--- Best parameters ---")
+print(f"Weighted loglikelihood : {ll_best:.3f}")
+print(f"beta : {cfg_best.beta:.5f}")
+print(f"beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}")
+print(f"N_init : {cfg_best.N_init:.0f}")
+print(f"N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}")
+
 
 # Filter out "bad" runs
-lls = np.array(lls)
 ulls = lls[~np.isnan(lls)] # Only non-nans
 ulls = np.unique(ulls)     # Only unique values
 ulls = sorted(ulls)[-N:]   # Keep N best
-lls_best = np.array(ulls)
+lls = lls.tolist()
 
 for i in reversed(range(len(lls))) :
     if lls[i] in ulls :
@@ -100,16 +111,18 @@ for i in reversed(range(len(lls))) :
         for handle in plot_handles[i] :
             handle.remove()
         plot_handles.pop(i)
+        lls.pop(i)
 
+
+lls_best = np.array(lls)
 # Rescale lls for plotting
 lls_best -= np.min(lls_best)
-lls_best /= np.max(lls_best) / 0.8
+lls_best /= np.max(lls_best)
 
 # Color according to lls
 for ll, handles in zip(lls_best, plot_handles) :
     for line in handles :
-        line.set_alpha(1-ll)
-
+        line.set_alpha(0.2 + 0.8*ll)
 
 # Plot the covid index
 m  = np.exp(logK) * (80_000 ** beta)
@@ -127,20 +140,12 @@ axes[1].errorbar(t_fraction, fraction, yerr=fraction_sigma, fmt='s', lw=2)
 # Get restriction_thresholds from a cfg
 restriction_thresholds = abm_files.cfgs[0].restriction_thresholds
 
-#axes[0].set_ylim(0, 2000)
+axes[0].set_ylim(0, 3000)
 axes[0].set_ylabel('Daglige positive')
 
 
 #axes[1].set_ylim(0, 1)
 axes[1].set_ylabel('frac. B.1.1.7')
-
-
-months     = mdates.MonthLocator()
-months_fmt = mdates.DateFormatter('%b')
-
-axes[1].xaxis.set_major_locator(months)
-axes[1].xaxis.set_major_formatter(months_fmt)
-axes[1].set_xlim([datetime.datetime(2021, 1, 1), datetime.datetime(2021, 3, 1)])
 
 
 fig.canvas.draw()
@@ -158,6 +163,18 @@ for day in restiction_days :
     for ax, lim in zip(axes, ylims) :
         ax.plot([restiction_date, restiction_date], lim, '--', color="k", linewidth=2)
 
+
+
+months     = mdates.MonthLocator()
+months_fmt = mdates.DateFormatter('%b')
+
+axes[1].xaxis.set_major_locator(months)
+axes[1].xaxis.set_major_formatter(months_fmt)
+axes[1].set_xlim([datetime.datetime(2020, 12, 28), datetime.datetime(2021, 3, 1)])
+
+
+for ax, lim in zip(axes, ylims) :
+    ax.set_ylim(lim[0], lim[1])
 
 
 plt.savefig(fig_name)

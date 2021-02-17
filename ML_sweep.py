@@ -15,14 +15,13 @@ if utils.is_local_computer() :
 from contexttimer import Timer
 
 
-params, start_date = utils.load_params("cfg/simulation_parameters_2021_fase2.yaml")
+params, start_date = utils.load_params("cfg/simulation_parameters_debugging.yaml")
 
 if utils.is_local_computer():
-    f = 0.2
-    #noise = lambda m, d : m
+    f = 0.1
     n_sigma = 0
     num_cores_max = 3
-    N_runs = 6
+    N_runs = 1
 else :
     f = 0.2
     n_sigma = 0

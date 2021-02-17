@@ -64,7 +64,7 @@ plot_handles = []
 lls     = []
 
 # Prepare figure
-fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(8, 12))
+fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(12, 12))
 axes = axes.flatten()
 
 print("Plotting the individual ABM simulations. Please wait", flush=True)
@@ -143,10 +143,12 @@ fig.canvas.draw()
 ylims = [ax.get_ylim() for ax in axes]
 
 # Get the transition dates
-if isinstance(restriction_thresholds[0], int) : 
-    restiction_days = [restriction_thresholds[-1]]
-else :
-    restiction_days = [interval[-1] for interval in restriction_thresholds]
+restiction_days = restriction_thresholds[1:]
+print(restiction_days)
+#if isinstance(restriction_thresholds[0], int) :
+#    restiction_days = [restriction_thresholds[-1]]
+#else :
+#    restiction_days = [interval[-1] for interval in restriction_thresholds]
 
 for day in restiction_days :
     restiction_date = start_date + datetime.timedelta(days=day)

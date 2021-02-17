@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 
-from datetime import datetime
+import datetime
 
 from scipy.stats import norm
 
@@ -75,20 +75,24 @@ def load_covid_index(start_date) :
     beta       = df_index["beta"][0]
     beta_simga = df_index["beta_sd"][0]
 
+    df_index["date"] += datetime.timedelta(days=7)
+
     # Find the index for the starting date
-    ind = np.where(df_index["date"] == datetime(2021, 1, 1).date())[0][0]
-    
+    ind = np.where(df_index["date"] == datetime.datetime(2021, 1, 1).date())[0][0]
+
     # Only fit to data after this date
     logK       = df_index["logI"][ind:]     # Renaming the index I to index K to avoid confusion with I state in SIR model
     logK_sigma = df_index["logI_sd"][ind:]
+    t          = df_index["date"][ind:]
 
     # Determine the covid_index_offset
-    covid_index_offset = (datetime(2021, 1, 1) - start_date).days
+    covid_index_offset = (datetime.datetime(2021, 1, 1).date() - start_date).days
 
-    return (logK, logK_sigma, covid_index_offset, beta)
+    return (logK, logK_sigma, beta, covid_index_offset, t)
 
 
 def load_b117_fraction() :
+    
     #       uge     53     1     2     3     4     5     6
     s = np.array([  76,  148,  275,  460,  510,  617,  101])
     n = np.array([3654, 4020, 3901, 3579, 2570, 2003,  225])
@@ -98,5 +102,7 @@ def load_b117_fraction() :
     fraction = p
     fraction_sigma = 2 * np.sqrt(p_var)
     fraction_offset = 1    
+    
+    t = pd.date_range(start = datetime.datetime(2020, 12, 28), periods = len(fraction), freq = "W-SUN")
 
-    return (fraction, fraction_sigma, fraction_offset)
+    return (fraction, fraction_sigma, fraction_offset, t)

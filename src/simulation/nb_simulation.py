@@ -2169,11 +2169,13 @@ def reset_rates_of_agent(my, g, agent, intervention, connection_type_weight=None
 
     # actually updates to gillespie sums
     g.update_rates(my, +agent_update_rate, agent)
+    
     if my.agent_is_susceptable(agent) :
-                        i = my.vaccination_type[agent] 
-                        if i != 0:
-                            rate_reduc = np.array([1,1,1]) * my.cfg.Intervention_vaccination_efficacies[i-1]
-                            cut_rates_of_agent(my, g, intervention, agent, rate_reduc)
+        i = my.vaccination_type[agent] 
+        if i != 0:
+            rate_reduc = np.array([1,1,1]) * my.cfg.Intervention_vaccination_efficacies[i-1]
+            cut_rates_of_agent(my, g, intervention, agent, rate_reduc)
+
     return None
 
 

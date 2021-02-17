@@ -22,7 +22,8 @@ from src.analysis.helpers import *
 
 # Define the subset to plot on
 #subset = None
-subset = {"contact_matrices_name" : "2021_fase1"}
+#fig_name = Path("Figures/all.png")
+subset = {"contact_matrices_name" : "2021_fase2_sce9"}
 fig_name = Path("Figures/" + subset["contact_matrices_name"] + ".png")
 
 # Number of plots to keep
@@ -78,40 +79,40 @@ for filename in tqdm(
     h = plot_simulation(I_tot_scaled, f, start_date, axes)
 
     # Evaluate
-    ll =  0.5 * compute_loglikelihood(I_tot_scaled, (logK,         logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
-    ll += 0.5 * compute_loglikelihood(f,            (fraction, fraction_sigma, fraction_offset))
+    #ll =  0.5 * compute_loglikelihood(I_tot_scaled, (logK,         logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
+    #ll += 0.5 * compute_loglikelihood(f,            (fraction, fraction_sigma, fraction_offset))
 
     # Store the plot handles and loglikelihoods
     plot_handles.append(h)
-    lls.append(ll)
+    #lls.append(ll)
 
-lls = np.array(lls)
+#lls = np.array(lls)
 
 # Filter out "bad" runs
-ulls = lls[~np.isnan(lls)] # Only non-nans
-ulls = np.unique(ulls)     # Only unique values
-ulls = sorted(ulls)[-N:]   # Keep N best
-lls = lls.tolist()
+#ulls = lls[~np.isnan(lls)] # Only non-nans
+#ulls = np.unique(ulls)     # Only unique values
+#ulls = sorted(ulls)[-N:]   # Keep N best
+#lls = lls.tolist()
 
-for i in reversed(range(len(lls))) :
-    if lls[i] in ulls :
-        ulls.remove(lls[i])
-    else :
-        for handle in plot_handles[i] :
-            handle.remove()
-        plot_handles.pop(i)
-        lls.pop(i)
+# for i in reversed(range(len(lls))) :
+#     if lls[i] in ulls :
+#         ulls.remove(lls[i])
+#     else :
+#         for handle in plot_handles[i] :
+#             handle.remove()
+#         plot_handles.pop(i)
+#         lls.pop(i)
 
 
-lls_best = np.array(lls)
-# Rescale lls for plotting
-lls_best -= np.min(lls_best)
-lls_best /= np.max(lls_best)
+# lls_best = np.array(lls)
+# # Rescale lls for plotting
+# lls_best -= np.min(lls_best)
+# lls_best /= np.max(lls_best)
 
-# Color according to lls
-for ll, handles in zip(lls_best, plot_handles) :
-    for line in handles :
-        line.set_alpha(0.2 + 0.8*ll)
+# # Color according to lls
+# for ll, handles in zip(lls_best, plot_handles) :
+#     for line in handles :
+#         line.set_alpha(0.2 + 0.8*ll)
 
 # Plot the covid index
 m  = np.exp(logK) * (80_000 ** beta)
@@ -159,7 +160,7 @@ months_fmt = mdates.DateFormatter('%b')
 
 axes[1].xaxis.set_major_locator(months)
 axes[1].xaxis.set_major_formatter(months_fmt)
-axes[1].set_xlim([datetime.datetime(2020, 12, 28), datetime.datetime(2021, 3, 1)])
+axes[1].set_xlim([datetime.datetime(2020, 12, 28), datetime.datetime(2021, 5, 15)])
 
 
 for ax, lim in zip(axes, ylims) :

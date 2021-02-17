@@ -2,7 +2,7 @@ N_tot: 5_800_000
 rho: 0.1
 
 N_init: 30000
-beta: 0.01
+beta: 0.015
 
 # english type corona
 N_init_UK_frac: 0.025

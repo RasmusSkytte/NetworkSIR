@@ -1,12 +1,12 @@
 N_tot: 5_800_000
 rho: 0.1
 
-N_init: 30000
-beta: 0.0095
+N_init: 40000
+beta: 0.0107
 
 # english type corona
-N_init_UK_frac: 0.02
-beta_UK_multiplier: 1.3
+N_init_UK_frac: 0.015
+beta_UK_multiplier: 1.5
 
 R_init : 5_800_000 * 0.065
 
@@ -18,8 +18,6 @@ end_date : 2021-05-15
 
 
 contact_matrices_name: [2021_fase2_sce7_april, 2021_fase2_sce8_april]  # Target activity
-restriction_thresholds: 2021-02-08  # Opening date for fase 1
-
 
 Intervention_contact_matrices_name : [[ned2021jan, 2021_fase1]]
 restriction_thresholds: [[2021-02-08, 2021-04-01]]  # Opening date for fase 1

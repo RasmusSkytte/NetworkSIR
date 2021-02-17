@@ -28,7 +28,7 @@ fig_name = Path("Figures/" + subset["contact_matrices_name"] + ".png")
 # Number of plots to keep
 N = 89
 
-start_date = datetime(2020, 12, 21)
+start_date = datetime.datetime(2020, 12, 21)
 
 
 def plot_simulation(I_tot_scaled, f, start_date, axes) :
@@ -48,8 +48,8 @@ reload(file_loaders)
 utils.make_sure_folder_exist(fig_name)
 
 
-logK, logK_sigma, covid_index_offset, beta = load_covid_index(start_date)
-fraction, fraction_sigma, fraction_offset = load_b117_fraction()
+logK, logK_sigma, beta, covid_index_offset, t_index = load_covid_index(start_date.date())
+fraction, fraction_sigma, fraction_offset, t_fraction = load_b117_fraction()
 
 
 
@@ -112,23 +112,20 @@ for ll, handles in zip(lls_best, plot_handles) :
 
 
 # Plot the covid index
-t = pd.date_range(start = datetime(2021, 1, 1), periods = len(logK), freq = "D")
-
 m  = np.exp(logK) * (80_000 ** beta)
 ub = np.exp(logK + logK_sigma) * (80_000 ** beta) - m
 lb = m - np.exp(logK - logK_sigma) * (80_000 ** beta)
 s  = np.stack((lb.to_numpy(), ub.to_numpy()))
 
-axes[0].errorbar(t, m, yerr=s, fmt='o', lw=2)
+axes[0].errorbar(t_index, m, yerr=s, fmt='o', lw=2)
 
 
 # Plot the WGS B.1.1.7 fraction
-t = pd.date_range(start = datetime(2020, 12, 28), periods = len(fraction), freq = "W-SUN")
-axes[1].errorbar(t, fraction, yerr=fraction_sigma, fmt='s', lw=2)
+axes[1].errorbar(t_fraction, fraction, yerr=fraction_sigma, fmt='s', lw=2)
 
 
-
-
+# Get restriction_thresholds from a cfg
+restriction_thresholds = abm_files.cfgs[0].restriction_thresholds
 
 #axes[0].set_ylim(0, 2000)
 axes[0].set_ylabel('Daglige positive')
@@ -138,12 +135,29 @@ axes[0].set_ylabel('Daglige positive')
 axes[1].set_ylabel('frac. B.1.1.7')
 
 
-
 months     = mdates.MonthLocator()
 months_fmt = mdates.DateFormatter('%b')
 
 axes[1].xaxis.set_major_locator(months)
 axes[1].xaxis.set_major_formatter(months_fmt)
-axes[1].set_xlim([datetime(2021, 1, 1), datetime(2021, 3, 1)])
+axes[1].set_xlim([datetime.datetime(2021, 1, 1), datetime.datetime(2021, 3, 1)])
+
+
+fig.canvas.draw()
+
+ylims = [ax.get_ylim() for ax in axes]
+
+# Get the transition dates
+if isinstance(restriction_thresholds[0], int) : 
+    restiction_days = [restriction_thresholds[-1]]
+else :
+    restiction_days = [interval[-1] for interval in restriction_thresholds]
+
+for day in restiction_days :
+    restiction_date = start_date + datetime.timedelta(days=day)
+    for ax, lim in zip(axes, ylims) :
+        ax.plot([restiction_date, restiction_date], lim, '--', color="k", linewidth=2)
+
+
 
 plt.savefig(fig_name)

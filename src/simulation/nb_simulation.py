@@ -1909,7 +1909,7 @@ def calc_contact_dist_label(my, intervention):
         if my.agent_is_infectious(agent):
             label_infected[label] += 1
         label_people[label] += 1
-        label_contacts[label] += len(my.contacts[agent])
+        label_contacts[label] += len(my.connections[agent])
     return label_contacts, label_infected, label_people
 
 

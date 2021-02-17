@@ -1861,9 +1861,11 @@ def run_simulation(
         print("Where", where_infections_happened_counter)
         print("positive_test_counter", intervention.positive_test_counter)
         print("n_found", np.sum(np.array([1 for day_found in intervention.day_found_infected if day_found>=0])))
-        print(list(calc_contact_dist(my,0)))
-        print(list(calc_contact_dist(my,1)))
-        print(list(calc_contact_dist(my,2)))
+        label_contacts, label_infected, label_people = calc_contact_dist_label(my, intervention)
+        print(list(label_contacts))
+        print(list(label_infected))
+        print(list(label_people))
+
         # frac_inf = np.zeros((2,200))
         # for agent in range(my.cfg_network.N_tot) :
         #     n_con = my.number_of_contacts[agent]
@@ -1897,6 +1899,19 @@ def calc_contact_dist(my, contact_type) :
         contact_dist[agent_sum] += 1
     return contact_dist
 
+@njit
+def calc_contact_dist_label(my, intervention):
+    label_contacts = np.zeros(intervention.N_labels)
+    label_people = np.zeros(intervention.N_labels)
+    label_infected = np.zeros(intervention.N_labels)
+    for agent in range(my.cfg_network.N_tot) :
+        label = intervention.labels[agent]   
+
+        if my.agent_is_infectious(agent):
+            label_infected[label] += 1
+        label_people[label] += 1
+        label_contacts[label] += len(my.connections[agent])
+    return label_contacts, label_infected, label_people
 
 
 @njit
@@ -2154,6 +2169,11 @@ def reset_rates_of_agent(my, g, agent, intervention, connection_type_weight=None
 
     # actually updates to gillespie sums
     g.update_rates(my, +agent_update_rate, agent)
+    if my.agent_is_susceptable(agent) :
+                        i = my.vaccination_type[agent] 
+                        if i != 0:
+                            rate_reduc = np.array([1,1,1]) * my.cfg.Intervention_vaccination_efficacies[i-1]
+                            cut_rates_of_agent(my, g, intervention, agent, rate_reduc)
     return None
 
 
@@ -2415,10 +2435,12 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n) :
             mi_single = mi[my.age[agent], my.age[contact]]
 
             if mr_single > mi_single :
-                print(my.age[agent])
-                print(my.age[contact])
-                print(my.connections_type[agent][ith_contact])
-                assert mr_single <= mi_single
+                mr_single = mi_single
+                # print(my.age[agent])
+                # print(my.age[contact])
+                # print(my.connections_type[agent][ith_contact])
+                # print(mr_single, mi_single)
+                # assert mr_single <= mi_single
 
             p = 1 - np.sqrt(4 - 4 * (1 - min(mr_single / mi_single, 1))) / 2
             if np.random.rand() < p :

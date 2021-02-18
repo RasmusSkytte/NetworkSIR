@@ -7,6 +7,7 @@ Data/*
 !Data/age_dist.csv
 !Data/household_dist.csv
 !Data/covid_index.feather
+!Data/covid_index_2021.feather
 
 Figures/
 

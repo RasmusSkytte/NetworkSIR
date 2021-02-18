@@ -25,12 +25,12 @@ from contexttimer import Timer
 
 if utils.is_local_computer():
     f = 0.1
-    N = 3
-    n_steps = 2 # 2 per sigma
+    N = 10
+    n_steps = 0 # 2 per sigma
     num_cores_max = 3
 else :
     f = 1
-    N = 3
+    N = 5
     n_steps = 2 # 2 per sigma
     num_cores_max = 15
 

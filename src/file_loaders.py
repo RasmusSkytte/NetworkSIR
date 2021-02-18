@@ -175,7 +175,12 @@ class ABM_simulations :
 
             db = utils.get_db_cfg()
             q = Query()
-            cfgs = db.search(q.network.contact_matrices_name == subset["contact_matrices_name"])
+            
+            query = q.version == 2.1
+            for key, val in subset.items() :
+                query = query & (q[key] == val)
+
+            cfgs = db.search(query)
 
             self.all_filenames = []
 

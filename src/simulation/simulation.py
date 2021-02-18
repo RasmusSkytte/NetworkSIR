@@ -464,11 +464,15 @@ def run_simulations(
         **kwargs) :
 
     if isinstance(simulation_parameters, dict) :
-        d_simulation_parameters = utils.format_simulation_paramters(simulation_parameters)
-        cfgs_all = utils.generate_cfgs(d_simulation_parameters, N_runs, N_tot_max, verbose=verbose)
+        simulation_parameters = utils.format_simulation_paramters(simulation_parameters)
+        cfgs_all = utils.generate_cfgs(simulation_parameters, N_runs, N_tot_max, verbose=verbose)
 
+        N_tot_max = utils.d_num_cores_N_tot[utils.extract_N_tot_max(simulation_parameters)]
+    
     elif isinstance(simulation_parameters[0], utils.DotDict) :
         cfgs_all = simulation_parameters
+
+        N_tot_max = np.max([cfg.network.N_tot for cfg in cfgs_all])
     
     else :
         raise ValueError(f"simulation_parameters not of the correct type")
@@ -492,14 +496,14 @@ def run_simulations(
 
     N_files = len(cfgs)
 
-    num_cores = utils.get_num_cores_N_tot(d_simulation_parameters, num_cores_max)
+    num_cores = utils.get_num_cores_N_tot(N_tot_max, num_cores_max)
 
-    if isinstance(d_simulation_parameters, dict) :
-        s_simulation_parameters = str(d_simulation_parameters)
-    elif isinstance(d_simulation_parameters, list) :
-        s_simulation_parameters = f"{len(d_simulation_parameters)} MCMC runs, see cfg/simulation_parameters.yaml for more info"
+    if isinstance(simulation_parameters, dict) :
+        s_simulation_parameters = str(simulation_parameters)
+    elif isinstance(simulation_parameters, list) :
+        s_simulation_parameters = f"{len(simulation_parameters)} runs"
     else :
-        raise AssertionError("d_simulation_parameters neither list nor dict")
+        raise AssertionError("simulation_parameters neither list nor dict")
 
     print( f"\n\n" f"Generating {N_files :3d} network-based simulations",
            f"with {num_cores} cores",

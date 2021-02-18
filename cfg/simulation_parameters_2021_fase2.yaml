@@ -2,7 +2,7 @@ N_tot: 5_800_000
 rho: 0.1
 
 N_init: 40000
-beta: 0.0107
+beta: 0.012
 
 # english type corona
 N_init_UK_frac: 0.01
@@ -17,13 +17,19 @@ start_date : 2020-12-21
 end_date : 2021-05-15
 
 
-contact_matrices_name: [2021_fase2_sce1, 2021_fase2_sce2, 2021_fase2_sce3, 2021_fase2_sce4, 2021_fase2_sce5, 2021_fase2_sce6, 2021_fase2_sce9 ]  # Target activity
+contact_matrices_name: 2021_fase2_sce1  # Target activity
 
-Intervention_contact_matrices_name : [[ned2021jan, 2021_fase1]]
-restriction_thresholds: [[2021-02-08, 2021-03-01]]  # Opening date for fase 1
-threshold_interventions_to_apply: [[3, 3]]
+Intervention_contact_matrices_name : [[ned2021jan, 2021_fase1, 2021_fase2_sce1],
+                                      [ned2021jan, 2021_fase1, 2021_fase2_sce2],
+                                      [ned2021jan, 2021_fase1, 2021_fase2_sce3],
+                                      [ned2021jan, 2021_fase1, 2021_fase2_sce4],
+                                      [ned2021jan, 2021_fase1, 2021_fase2_sce5],
+                                      [ned2021jan, 2021_fase1, 2021_fase2_sce6],
+                                      [ned2021jan, 2021_fase1, 2021_fase2_sce9]]
+restriction_thresholds: [[2021-02-08, 2021-03-01, 2022-01-01]]  # Opening date for fase 1
+threshold_interventions_to_apply: [[3, 3, 3]]
 
-Intervention_vaccination_schedule_name : reference_2021_feb_15
+Intervention_vaccination_schedule_name : reference_2021_feb_17
 start_date_offset: 2020-12-28 # Start date for vaccinations
 Intervention_vaccination_effect_delays : [[10, 22]]
 Intervention_vaccination_efficacies : [[0.95, 0.65]]

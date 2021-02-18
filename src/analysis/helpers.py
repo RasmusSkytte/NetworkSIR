@@ -69,20 +69,18 @@ def compute_loglikelihood(arr, data, transformation_function = lambda x : x) :
 def load_covid_index(start_date) :
 
     # Load the covid index data
-    df_index = pd.read_feather("Data/covid_index.feather")
+    df_index = pd.read_feather("Data/covid_index_2021.feather")
 
     # Get the beta value (Here, scaling parameter for the index cases)
     beta       = df_index["beta"][0]
     beta_simga = df_index["beta_sd"][0]
-
-    df_index["date"] += datetime.timedelta(days=7)
 
     # Find the index for the starting date
     ind = np.where(df_index["date"] == datetime.datetime(2021, 1, 1).date())[0][0]
 
     # Only fit to data after this date
     logK       = df_index["logI"][ind:]     # Renaming the index I to index K to avoid confusion with I state in SIR model
-    logK_sigma = df_index["logI_sd"][ind:]
+    logK_sigma = df_index["logI_sd"][ind:] / 3
     t          = df_index["date"][ind:]
 
     # Determine the covid_index_offset

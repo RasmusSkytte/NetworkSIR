@@ -1277,8 +1277,7 @@ def extract_N_tot_max(d_simulation_parameters) :
         return get_cfg_default()["N_tot"]
 
 
-def get_num_cores_N_tot(d_simulation_parameters, num_cores_max=None) :
-    N_tot_max = d_num_cores_N_tot[extract_N_tot_max(d_simulation_parameters)]
+def get_num_cores_N_tot(N_tot_max, num_cores_max=None) :
     num_cores = get_num_cores(N_tot_max)
     if num_cores_max :
         return min([num_cores, num_cores_max])

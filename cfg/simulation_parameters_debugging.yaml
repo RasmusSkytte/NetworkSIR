@@ -1,12 +1,12 @@
 N_tot: 5_800_000
 rho: 0.1
 
-N_init: 30000
-beta: 0.01
+N_init: 40000
+beta: 0.0107
 
 # english type corona
-N_init_UK_frac: 0.025
-beta_UK_multiplier: 1.5
+N_init_UK_frac: 0.015
+beta_UK_multiplier: 1.45
 
 R_init : 5_800_000 * 0.065
 
@@ -14,14 +14,13 @@ lambda_E: 4 / 2.5
 lambda_I: 4 / 2.52
 
 start_date : 2020-12-21
-end_date : 2021-03-01
+end_date : 2021-02-14
 
 
-contact_matrices_name: [2021_fase1, basis]  # Target activity
-restriction_thresholds: 2021-02-08  # Opening date for fase 1
-
+contact_matrices_name: [2021_fase1, 2021_fase2_sce1, 2021_fase2_sce2, 2021_fase2_sce3, 2021_fase2_sce4, 2021_fase2_sce5, 2021_fase2_sce6, 2021_fase2_sce7_marts, 2021_fase2_sce8_marts, 2021_fase2_sce9 ]  # Target activity
 
 Intervention_contact_matrices_name : [[ned2021jan]]
+restriction_thresholds: 2021-02-08  # Opening date for fase 1
 threshold_interventions_to_apply: [[3]]
 
 Intervention_vaccination_schedule_name : reference_2021_feb_15

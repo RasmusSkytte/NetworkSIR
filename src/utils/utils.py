@@ -1827,105 +1827,54 @@ def draw_random_nb(x) :
 from collections import defaultdict
 
 
-def parse_household_data(filename, age_dist_as_dict=True) :
+def parse_age_distribution_data(filename, kommune_level=False) :
 
-    data = defaultdict(list)
-    ages_groups = [20, 30, 40, 50, 60, 70, 80]
+    age_dist_raw = pd.read_csv(filename, index_col=0)
 
-    with open(filename, "r") as file :
-        N_persons = -1
-        for line in file :
-            line = line.strip()
-            if line[0] == "#" :
-                N_persons = int(line[1 :].split()[0])
-            else :
-                try :
-                    x = int(line)
-                except ValueError :
-                    x = float(line)
-                data[N_persons].append(x)
+    age_dist_raw = age_dist_raw.to_numpy()
 
-    # make sure all entries are normalized numpy arrays
-    data = dict(data)
-    for key, val in data.items() :
-        if len(val) == 1 :
-            data[key] = val[0]
-        else :
-            vals = np.array(val)
-            vals = vals / np.sum(vals)
-            if age_dist_as_dict :
-                data[key] = {age : val for age, val in zip(ages_groups, vals)}
-            else :
-                data[key] = vals
+    age_dist = np.ones( (age_dist_raw.shape[0], age_dist_raw.shape[1], len(eval(age_dist_raw[0, 0]))), dtype=float)
+    for i in range(age_dist_raw.shape[0]) :
+        for j in range(age_dist_raw.shape[1]) :
+            age_dist[i, j, :] = eval(age_dist_raw[i, j])
 
-    return PyDict2NumbaDict(data)
+    if not kommune_level :
+        age_dist = np.sum(age_dist, axis=0)
+
+    return age_dist
 
 
-def parse_household_data_list(filename, convert_to_numpy=False) :
+def parse_household_data(filename, kommune_level=False) :
 
-    data = defaultdict(list)
+    household_dist_raw = pd.read_csv(filename, index_col=0)
+    kommune_id = household_dist_raw.index
 
-    with open(filename, "r") as file :
-        N_persons = -1
-        for line in file :
-            line = line.strip()
-            if line[0] == "#" :
-                N_persons = int(line[1 :].split()[0])
-            else :
-                try :
-                    x = int(line)
-                except ValueError :
-                    x = float(line)
-                data[N_persons].append(x)
+    household_dist = household_dist_raw.to_numpy()
+    
+    for i in range(household_dist.shape[0]) :
+        for j in range(household_dist.shape[1]) :
+            household_dist[i, j] /= j + 1
 
-    # make sure all entries are normalized numpy arrays
-    data = dict(data)
-
-    out = []
-    for key, val in data.items() :
-        if len(val) == 1 :
-            out.append(val[0])
-        else :
-            vals = np.array(val)
-            vals = vals / np.sum(vals)
-            out.append(vals)
-    if convert_to_numpy :
-        out = np.array(out)
-    return out
+    if not kommune_level :
+        return np.sum(household_dist, axis=0)
+    else :
+        return (household_dist, kommune_id)
 
 
 def load_household_data() :
 
-    filename_PeopleInHousehold = load_yaml("cfg/files.yaml")["PeopleInHousehold"]
-    filename_AgeDistribution = load_yaml("cfg/files.yaml")["AgeDistribution"]
+    people_in_household = parse_household_data(load_yaml("cfg/files.yaml")["PeopleInHousehold"])
+    age_distribution_per_people_in_household = parse_age_distribution_data(load_yaml("cfg/files.yaml")["AgeDistribution"])
 
-    people_in_household = parse_household_data_list(
-        filename_PeopleInHousehold, convert_to_numpy=True
-    )
-    age_distribution_per_people_in_household = parse_household_data_list(
-        filename_AgeDistribution, convert_to_numpy=True
-    )
     return people_in_household, age_distribution_per_people_in_household
 
 def load_household_data_kommune_specific() :
-    household_dist_raw = pd.read_csv("Data/household_dist.csv")
-    household_dist_raw = household_dist_raw.set_index('0')
-    kommune_id = household_dist_raw.index
-    age_dist_raw = pd.read_csv("Data/age_dist.csv")
-    age_dist_raw = age_dist_raw.set_index('0')
-    age_dist_raw = np.array(age_dist_raw)
-    age_dist = np.ones((age_dist_raw.shape[0],age_dist_raw.shape[1],len(eval(age_dist_raw[0,0]))),dtype=float)
-    for i in range(age_dist_raw.shape[0]) :
-        for j in range(age_dist_raw.shape[1]) :
-            nrs = eval(age_dist_raw[i,j])
-            age_dist[i,j, :] = np.array(nrs)
+    
+    household_dist, kommune_id = parse_household_data(load_yaml("cfg/files.yaml")["PeopleInHousehold"], kommune_level=True)
+    age_dist = parse_age_distribution_data(load_yaml("cfg/files.yaml")["AgeDistribution"], kommune_level=True)
 
-    household_dist_raw = np.array(household_dist_raw)
-    household_dist = np.ones((household_dist_raw.shape[0],household_dist_raw.shape[1]), dtype=float)
-    for i in range(household_dist_raw.shape[0]) :
-        for j in range(household_dist_raw.shape[1]) :
-            household_dist[i,j] = eval(household_dist_raw[i,j])[0]/(j+1)
-    return household_dist, age_dist, kommune_id
+    return (household_dist, age_dist, kommune_id)
+
 
 def load_age_stratified_file(file) :
     """ Loads and parses the contact matrix from the .csv file specifed

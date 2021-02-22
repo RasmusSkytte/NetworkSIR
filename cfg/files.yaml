@@ -1,2 +1,2 @@
-PeopleInHousehold: "Data/PeopleInHousehold_NorthJutland.txt"
-AgeDistribution: "Data/AgeDistributionPerPeopleInHousehold_NorthJutland.txt"
+PeopleInHousehold: "Data/household_dist.csv"
+AgeDistribution: "Data/age_dist.csv"

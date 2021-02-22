@@ -92,11 +92,12 @@ class Simulation :
 
         #Version 1 do not have [house, work, other], from version 2 this is implemented.
         if self.cfg.version >= 2 :
-            (
-                people_in_household,
-                age_distribution_per_people_in_household,
-            ) = utils.load_household_data()
+
+            # TODO: not currently being used
+            people_in_household, age_distribution_per_people_in_household = utils.load_household_data()
+
             household_size_dist_per_kommune, age_distribution_per_person_in_house_per_kommune, kommune_id = utils.load_household_data_kommune_specific()
+            
             N_ages = len(age_distribution_per_person_in_house_per_kommune[0,0])
             kommune_ids = []
             for val in self.df_coordinates["kommune"].values :
@@ -301,8 +302,7 @@ class Simulation :
 
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
-
-
+            
         self.intervention = nb_simulation.Intervention(
             self.my.cfg,
             self.my.cfg_network,

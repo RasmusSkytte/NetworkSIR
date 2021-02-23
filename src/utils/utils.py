@@ -1166,7 +1166,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
         d_list = []
         for name, lst in d_simulation_parameters.items() :
-            
+
             # Convert all inputs to lists
             if isinstance(lst, (int, float, str)) :
                 lst = [lst]
@@ -1908,12 +1908,11 @@ def load_household_data() :
     return people_in_household, age_distribution_per_people_in_household
 
 def load_household_data_kommune_specific() :
-    household_dist_raw = pd.read_csv("Data/household_dist.csv")
-    household_dist_raw = household_dist_raw.set_index('0')
+    household_dist_raw = pd.read_csv(load_yaml("cfg/files.yaml")["PeopleInHousehold"], index_col=0)
+    age_dist_raw = pd.read_csv(load_yaml("cfg/files.yaml")["AgeDistribution"], index_col=0)
     kommune_id = household_dist_raw.index
-    age_dist_raw = pd.read_csv("Data/age_dist.csv")
-    age_dist_raw = age_dist_raw.set_index('0')
-    age_dist_raw = np.array(age_dist_raw)
+
+    age_dist_raw = age_dist_raw.to_numpy()
     age_dist = np.ones((age_dist_raw.shape[0],age_dist_raw.shape[1],len(eval(age_dist_raw[0,0]))),dtype=float)
     for i in range(age_dist_raw.shape[0]) :
         for j in range(age_dist_raw.shape[1]) :
@@ -1925,6 +1924,7 @@ def load_household_data_kommune_specific() :
     for i in range(household_dist_raw.shape[0]) :
         for j in range(household_dist_raw.shape[1]) :
             household_dist[i,j] = eval(household_dist_raw[i,j])[0]/(j+1)
+
     return household_dist, age_dist, kommune_id
 
 def load_age_stratified_file(file) :

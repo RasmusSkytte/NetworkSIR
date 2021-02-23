@@ -24,16 +24,18 @@ from src.analysis.helpers import *
 #subset = None
 #fig_name = Path("Figures/all.png")
 
-subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]},
-            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]},
-            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce2"]},
-            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce3"]},
-            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce4"]},
-            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce5"]},
-            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce6"]},
-            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce7_marts", "2021_fase2_sce7_april", "2021_fase2_sce7_maj"]},
-            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce8_marts", "2021_fase2_sce8_april", "2021_fase2_sce8_maj"]},
-            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce9"]}]
+subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]}]
+
+#subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce2"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce3"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce4"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce5"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce6"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce7_marts", "2021_fase2_sce7_april", "2021_fase2_sce7_maj"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce8_marts", "2021_fase2_sce8_april", "2021_fase2_sce8_maj"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce9"]}]
 
 for subset in subsets :
     fig_name = Path("Figures/" + subset["Intervention_contact_matrices_name"][-1] + ".png")
@@ -106,24 +108,26 @@ for subset in subsets :
     ulls = sorted(ulls)[-N:]   # Keep N best
     lls = lls.tolist()
 
-    for i in reversed(range(len(lls))) :
-        if lls[i] in ulls :
-            ulls.remove(lls[i])
-        else :
-            for handle in plot_handles[i] :
-                handle.remove()
-            plot_handles.pop(i)
-            lls.pop(i)
+    if len(ulls) > 1 :
 
-    lls_best = np.array(lls)
-    # Rescale lls for plotting
-    lls_best -= np.min(lls_best)
-    lls_best /= np.max(lls_best)
+        for i in reversed(range(len(lls))) :
+            if lls[i] in ulls :
+                ulls.remove(lls[i])
+            else :
+                for handle in plot_handles[i] :
+                    handle.remove()
+                plot_handles.pop(i)
+                lls.pop(i)
 
-    # Color according to lls
-    for ll, handles in zip(lls_best, plot_handles) :
-        for line in handles :
-            line.set_alpha(0.05 + 0.95*ll)
+        lls_best = np.array(lls)
+        # Rescale lls for plotting
+        lls_best -= np.min(lls_best)
+        lls_best /= np.max(lls_best)
+
+        # Color according to lls
+        for ll, handles in zip(lls_best, plot_handles) :
+            for line in handles :
+                line.set_alpha(0.05 + 0.95*ll)
 
     # Plot the covid index
     m  = np.exp(logK) * (80_000 ** beta)

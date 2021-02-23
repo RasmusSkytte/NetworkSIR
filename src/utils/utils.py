@@ -1441,17 +1441,17 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
 #%%
 
 
-#def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  #
-def counts_to_df(time, state_counts, variant_counts) :  #
+def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  #
+#def counts_to_df(time, state_counts, variant_counts) :  #
 
     time = np.array(time)
     state_counts = np.array(state_counts)
     variant_counts = np.array(variant_counts)
-    #infected_per_age_group = np.array(infected_per_age_group)
+    infected_per_age_group = np.array(infected_per_age_group)
 
     N_states     = np.size(state_counts, 1)
     N_variants   = np.size(variant_counts, 1)
-    #N_age_groups = np.size(infected_per_age_group, 1)
+    N_age_groups = np.size(infected_per_age_group, 1)
 
     header = [
         "Time",
@@ -1460,7 +1460,7 @@ def counts_to_df(time, state_counts, variant_counts) :  #
         "R"]
 
     header.extend(["I^V_" + str(i) for i in range(N_variants)])
-    #header.extend(["I^A_" + str(i) for i in range(N_age_groups)])
+    header.extend(["I^A_" + str(i) for i in range(N_age_groups)])
 
     k_start = 0
     k_stop  = 1
@@ -1474,12 +1474,12 @@ def counts_to_df(time, state_counts, variant_counts) :  #
     k_stop  += N_variants
     df_variants = pd.DataFrame(variant_counts, columns=header[k_start:k_stop])
 
-    #k_start = k_stop
-    #k_stop  += N_age_groups
-    #df_age_groups = pd.DataFrame(infected_per_age_group, columns=header[k_start:k_stop])
+    k_start = k_stop
+    k_stop  += N_age_groups
+    df_age_groups = pd.DataFrame(infected_per_age_group, columns=header[k_start:k_stop])
 
-    #df = pd.concat([df_time, df_states, df_variants, df_age_groups], axis=1)  # .convert_dtypes()
-    df = pd.concat([df_time, df_states, df_variants], axis=1)  # .convert_dtypes()
+    df = pd.concat([df_time, df_states, df_variants, df_age_groups], axis=1)  # .convert_dtypes()
+    #df = pd.concat([df_time, df_states, df_variants], axis=1)  # .convert_dtypes()
     return df
 
 
@@ -1908,11 +1908,12 @@ def load_household_data() :
     return people_in_household, age_distribution_per_people_in_household
 
 def load_household_data_kommune_specific() :
-    household_dist_raw = pd.read_csv(load_yaml("cfg/files.yaml")["PeopleInHousehold"], index_col=0)
-    age_dist_raw = pd.read_csv(load_yaml("cfg/files.yaml")["AgeDistribution"], index_col=0)
+    household_dist_raw = pd.read_csv("Data/household_dist.csv")
+    household_dist_raw = household_dist_raw.set_index('0')
     kommune_id = household_dist_raw.index
-
-    age_dist_raw = age_dist_raw.to_numpy()
+    age_dist_raw = pd.read_csv("Data/age_dist.csv")
+    age_dist_raw = age_dist_raw.set_index('0')
+    age_dist_raw = np.array(age_dist_raw)
     age_dist = np.ones((age_dist_raw.shape[0],age_dist_raw.shape[1],len(eval(age_dist_raw[0,0]))),dtype=float)
     for i in range(age_dist_raw.shape[0]) :
         for j in range(age_dist_raw.shape[1]) :
@@ -1924,7 +1925,6 @@ def load_household_data_kommune_specific() :
     for i in range(household_dist_raw.shape[0]) :
         for j in range(household_dist_raw.shape[1]) :
             household_dist[i,j] = eval(household_dist_raw[i,j])[0]/(j+1)
-
     return household_dist, age_dist, kommune_id
 
 def load_age_stratified_file(file) :

@@ -190,7 +190,7 @@ if __name__ == "__main__":
         # kwargs = {}
         if num_cores == 1 :
             for cfg in tqdm(cfgs) :
-                cfg_out = simulation.run_single_simulation(cfg, save_initial_network=True, verbose=False)
+                cfg_out = simulation.run_single_simulation(cfg, save_initial_network=True, verbose=True)
                 simulation.update_database(db_cfg, q, cfg_out)
 
         else :

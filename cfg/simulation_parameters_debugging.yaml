@@ -14,13 +14,13 @@ lambda_E: 4 / 2.5
 lambda_I: 4 / 2.52
 
 start_date : 2020-12-21
-end_date : 2021-02-20
+end_date : 2021-01-05
 
 
 contact_matrices_name: 2021_fase2_sce1  # Target activity
 
 Intervention_contact_matrices_name : [[ned2021jan, 2021_fase1, 2021_fase2_sce1]]
-restriction_thresholds: [[2020-12-22, 2020-12-23, 2022-01-01]]  # Opening date for fase 1
+restriction_thresholds: [[2020-12-25, 2021-01-01, 2022-01-01]]  # Opening date for fase 1
 threshold_interventions_to_apply: [[3, 3, 3]]
 
 Intervention_vaccination_schedule_name : reference_2021_feb_15

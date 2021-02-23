@@ -754,7 +754,7 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
 
     if not cfg.do_interventions :
         exclude.append("interventions_to_apply")
-        exclude.append("f_daily_tests")
+        exclude.append("daily_tests")
         exclude.append("test_delay_in_clicks")
         exclude.append("results_delay_in_clicks")
         exclude.append("chance_of_finding_infected")

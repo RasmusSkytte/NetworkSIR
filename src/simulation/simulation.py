@@ -92,10 +92,10 @@ class Simulation :
 
         #Version 1 do not have [house, work, other], from version 2 this is implemented.
         if self.cfg.version >= 2 :
-            (
-                people_in_household,
-                age_distribution_per_people_in_household,
-            ) = utils.load_household_data()
+            #(
+            #    people_in_household,
+            #    age_distribution_per_people_in_household,
+            #) = utils.load_household_data()
             household_size_dist_per_kommune, age_distribution_per_person_in_house_per_kommune, kommune_id = utils.load_household_data_kommune_specific()
             N_ages = len(age_distribution_per_person_in_house_per_kommune[0,0])
             kommune_ids = []
@@ -118,8 +118,7 @@ class Simulation :
                 coordinates_raw,
                 kommune_ids,
                 self.N_ages,
-                verbose=self.verbose
-            )
+                verbose=self.verbose)
 
             if self.verbose :
                 print("Connecting work and others, currently slow, please wait")
@@ -131,8 +130,7 @@ class Simulation :
                 np.array(self.cfg.network.work_matrix),
                 np.array(self.cfg.network.other_matrix),
                 agents_in_age_group,
-                verbose=self.verbose,
-            )
+                verbose=self.verbose)
 
         else :
 
@@ -229,7 +227,7 @@ class Simulation :
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
         self.state_total_counts     = np.zeros(self.N_states, dtype=np.uint32)
-        self.variant_counts         = np.zeros(2, dtype=np.uint32)  # TODO: Generalize this sta
+        self.variant_counts         = np.zeros(2, dtype=np.uint32)  # TODO: Generalize this to work for more variants
         self.infected_per_age_group = np.zeros(self.N_ages, dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
@@ -331,10 +329,12 @@ class Simulation :
 
 
         out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention = res
+        #out_time, out_state_counts, out_variant_counts, out_my_state, intervention = res
 
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
         self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts, out_infected_per_age_group)
+        #self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts)
         self.intervention = intervention
 
         return self.df
@@ -448,13 +448,13 @@ def run_single_simulation(
 
 
 def update_database(db_cfg, q, cfg) :
-    cfg.network.pop("ID")
-    if not db_cfg.contains(q.hash == cfg.hash) :
+
+    if not db_cfg.contains((q.hash == cfg.hash) & (q.network.ID == cfg.network.ID)) :
         db_cfg.insert(cfg)
 
 
 def run_simulations(
-        d_simulation_parameters,
+        simulation_parameters,
         N_runs=2,
         num_cores_max=None,
         N_tot_max=False,
@@ -463,10 +463,19 @@ def run_simulations(
         dry_run=False,
         **kwargs) :
 
+    if isinstance(simulation_parameters, dict) :
+        simulation_parameters = utils.format_simulation_paramters(simulation_parameters)
+        cfgs_all = utils.generate_cfgs(simulation_parameters, N_runs, N_tot_max, verbose=verbose)
 
-    d_simulation_parameters = utils.format_simulation_paramters(d_simulation_parameters)
+        N_tot_max = utils.d_num_cores_N_tot[utils.extract_N_tot_max(simulation_parameters)]
 
-    cfgs_all = utils.generate_cfgs(d_simulation_parameters, N_runs, N_tot_max, verbose=verbose)
+    elif isinstance(simulation_parameters[0], utils.DotDict) :
+        cfgs_all = simulation_parameters
+
+        N_tot_max = np.max([cfg.network.N_tot for cfg in cfgs_all])
+
+    else :
+        raise ValueError(f"simulation_parameters not of the correct type")
 
     if len(cfgs_all) == 0 :
         N_files = 0
@@ -475,7 +484,8 @@ def run_simulations(
     db_cfg = utils.get_db_cfg()
     q = Query()
 
-    db_counts = np.array([db_cfg.count(q.hash == cfg.hash) for cfg in cfgs_all])
+    db_counts  = np.array([db_cfg.count((q.hash == cfg.hash) & (q.network.ID == cfg.network.ID)) for cfg in cfgs_all])
+
     assert np.max(db_counts) <= 1
 
     # keep only cfgs that are not in the database already
@@ -486,14 +496,14 @@ def run_simulations(
 
     N_files = len(cfgs)
 
-    num_cores = utils.get_num_cores_N_tot(d_simulation_parameters, num_cores_max)
+    num_cores = utils.get_num_cores_N_tot(N_tot_max, num_cores_max)
 
-    if isinstance(d_simulation_parameters, dict) :
-        s_simulation_parameters = str(d_simulation_parameters)
-    elif isinstance(d_simulation_parameters, list) :
-        s_simulation_parameters = f"{len(d_simulation_parameters)} MCMC runs, see cfg/simulation_parameters.yaml for more info"
+    if isinstance(simulation_parameters, dict) :
+        s_simulation_parameters = str(simulation_parameters)
+    elif isinstance(simulation_parameters, list) :
+        s_simulation_parameters = f"{len(simulation_parameters)} runs"
     else :
-        raise AssertionError("d_simulation_parameters neither list nor dict")
+        raise AssertionError("simulation_parameters neither list nor dict")
 
     print( f"\n\n" f"Generating {N_files :3d} network-based simulations",
            f"with {num_cores} cores",

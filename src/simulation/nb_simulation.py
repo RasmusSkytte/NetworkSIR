@@ -179,6 +179,7 @@ def initialize_nb_cfg(obj, cfg, spec) :
 spec_my = {
     "age" : nb.uint8[:],
     "connections" : ListType(ListType(nb.uint32)),
+    "connection_status" : ListType(ListType(nb.boolean)),
     "connections_type" : ListType(ListType(nb.uint8)),
     "beta_connection_type" : nb.float32[:],
     "coordinates" : nb.float32[:, :],
@@ -205,6 +206,7 @@ class My(object) :
         self.age = np.zeros(N_tot, dtype=np.uint8)
         self.coordinates = np.zeros((N_tot, 2), dtype=np.float32)
         self.connections = utils.initialize_nested_lists(N_tot, np.uint32)
+        self.connection_status = utils.initialize_nested_lists(N_tot, nb.boolean)
         self.connections_type = utils.initialize_nested_lists(N_tot, np.uint8)
         self.beta_connection_type = np.array(
             [3.0, 1.0, 1.0, 1.0], dtype=np.float32
@@ -242,8 +244,8 @@ class My(object) :
         else :
             return False
 
-    def agent_is_susceptable(self, agent) :
-        return self.state[agent] == -1
+    def agent_is_susceptible(self, agent) :
+        return (self.state[agent] == -1) and (self.vaccination_type[agent] <= 0)
 
     def agent_is_infectious(self, agent) :
         return self.state[agent] in self.infectious_states
@@ -251,6 +253,8 @@ class My(object) :
     def agent_is_not_infectious(self, agent) :
         return not self.agent_is_infectious(agent)
 
+    def agent_is_connected(self, agent, ith_contact) :
+        return self.connection_status[agent][ith_contact]
 
 def initialize_My(cfg) :
     nb_cfg         = initialize_nb_cfg(Config(),  cfg,         spec_cfg)
@@ -687,6 +691,8 @@ def update_node_connections(
     #Store the connection
     my.connections[agent1].append(np.uint32(agent2))
     my.connections[agent2].append(np.uint32(agent1))
+    my.connection_status[agent1].append(True)
+    my.connection_status[agent2].append(True)
 
     # store connection type
     if code_version >= 2 :
@@ -778,6 +784,8 @@ def place_and_connect_families(
                 if agent1 != agent2 :
                     my.connections[agent1].append(np.uint32(agent2))
                     my.connections[agent2].append(np.uint32(agent1))
+                    my.connection_status[agent1].append(True)
+                    my.connection_status[agent2].append(True)
                     my.connections_type[agent1].append(np.uint8(0))
                     my.connections_type[agent2].append(np.uint8(0))
                     my.number_of_contacts[agent1] += 1
@@ -864,6 +872,8 @@ def place_and_connect_families_kommune_specific(
                 if agent1 != agent2 :
                     my.connections[agent1].append(np.uint32(agent2))
                     my.connections[agent2].append(np.uint32(agent1))
+                    my.connection_status[agent1].append(True)
+                    my.connection_status[agent2].append(True)
                     my.connections_type[agent1].append(np.uint8(0))
                     my.connections_type[agent2].append(np.uint8(0))
                     my.number_of_contacts[agent1] += 1
@@ -1311,7 +1321,7 @@ def initialize_states(
         if my.agent_is_infectious(agent) :
             for contact, rate in zip(my.connections[agent], g.rates[agent]) :
                 # update rates if contact is susceptible
-                if my.agent_is_susceptable(contact) :
+                if my.agent_is_susceptible(contact) :
                     g.update_rates(my, +rate, agent)
 
 
@@ -1372,7 +1382,7 @@ def initialize_states(
 
             if my.dist_accepted(outbreak_agent_UK, proposed_agent_UK, rho_init_local_outbreak) :
                 if proposed_agent_UK not in initial_agents_to_infect_UK :
-                    if my.agent_is_susceptable(proposed_agent_UK) :
+                    if my.agent_is_susceptible(proposed_agent_UK) :
                         initial_agents_to_infect_UK.append(proposed_agent_UK)
 
         initial_agents_to_infect_UK = np.asarray(initial_agents_to_infect_UK, dtype=np.uint32)
@@ -1395,7 +1405,7 @@ def initialize_states(
             if my.agent_is_infectious(agent) :
                 for contact, rate in zip(my.connections[agent], g.rates[agent]) :
                     # update rates if contact is susceptible
-                    if my.agent_is_susceptable(contact) :
+                    if my.agent_is_susceptible(contact) :
                         g.update_rates(my, +rate, agent)
 
             update_infection_list_for_newly_infected_agent(my, g, agent)
@@ -1458,7 +1468,7 @@ def make_initial_infections_from_kommune_data(
         if my.agent_is_infectious(agent) :
             for contact, rate in zip(my.connections[agent], g.rates[agent]) :
                 # update rates if contact is susceptible
-                if my.agent_is_susceptable(contact) :
+                if my.agent_is_susceptible(contact) :
                     g.update_rates(my, +rate, agent)
 
         update_infection_list_for_newly_infected_agent(my, g, agent)
@@ -1554,7 +1564,10 @@ def update_infection_list_for_newly_infected_agent(my, g, agent_getting_infected
     # loop over contacts of the newly infected agent in order to :
     # 1) remove newly infected agent from contact list (find_myself) by setting rate to 0
     # 2) remove rates from contacts gillespie sums (only if they are in infections state (I))
-    for contact_of_agent_getting_infected in my.connections[agent_getting_infected] :
+    for ith_contact, contact_of_agent_getting_infected in enumerate(my.connections[agent_getting_infected]) :
+
+        if not my.agent_is_connected(agent_getting_infected, ith_contact) :
+            continue
 
         # loop over indexes of the contact to find_myself and set rate to 0
         for ith_contact_of_agent_getting_infected in range(
@@ -1682,12 +1695,12 @@ def run_simulation(
             # Moves TO infectious State from non-infectious
             if my.state[agent] == N_infectious_states :
                 # for i, (contact, rate) in enumerate(zip(my.connections[agent], g.rates[agent])) :
-                for i, contact in enumerate(my.connections[agent]) :
+                for ith_contact, contact in enumerate(my.connections[agent]) :
                     # update rates if contact is susceptible
-                    if my.agent_is_susceptable(contact) :
+                    if (my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact)) :
                         if my.corona_type[agent] == 1 :
-                            g.rates[agent][i] *= my.cfg.beta_UK_multiplier
-                        rate = g.rates[agent][i]
+                            g.rates[agent][ith_contact] *= my.cfg.beta_UK_multiplier
+                        rate = g.rates[agent][ith_contact]
                         g.update_rates(my, +rate, agent)
 
                 # Update the counters
@@ -1696,9 +1709,10 @@ def run_simulation(
 
             # If this moves to Recovered state
             if my.state[agent] == N_states - 1 :
-                for contact, rate in zip(my.connections[agent], g.rates[agent]) :
+                for ith_contact, contact in enumerate(my.connections[agent]) :
                     # update rates if contact is susceptible
-                    if my.agent_is_susceptable(contact) :
+                    if (my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact)) :
+                        rate = g.rates[agent][ith_contact]
                         g.update_rates(my, -rate, agent)
 
                 # Update counters
@@ -1726,7 +1740,7 @@ def run_simulation(
                     for rate, contact in zip(g.rates[agent], my.connections[agent]) :
 
                         # if contact is susceptible
-                        if my.state[contact] == -1 :
+                        if my.agent_is_susceptible(contact) :
 
                             g.cumulative_sum += rate / g.total_sum
 
@@ -1877,6 +1891,7 @@ def run_simulation(
         # print("N_positive_tested", N_positive_tested)
 
     return out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention
+    #return out_time, out_state_counts, out_variant_counts, out_my_state, intervention
 
 
 #%%
@@ -1904,7 +1919,7 @@ def calc_contact_dist_label(my, intervention):
     label_people = np.zeros(intervention.N_labels)
     label_infected = np.zeros(intervention.N_labels)
     for agent in range(my.cfg_network.N_tot) :
-        label = intervention.labels[agent]   
+        label = intervention.labels[agent]
 
         if my.agent_is_infectious(agent):
             label_infected[label] += 1
@@ -1927,7 +1942,7 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, ver
         # Check if any vaccines are effective yet :
         if day >= intervention.vaccination_schedule[i][0] :
 
-            # Get the numbe0cgrlævsdø- Xxr of new effective vaccines
+            # Get the number of new effective vaccines
             N = intervention.vaccinations_per_age_group[i][day - intervention.vaccination_schedule[i][0]]
 
             # Determine which agents can be vaccinated
@@ -1945,11 +1960,14 @@ def vaccinate(my, g, intervention, agents_in_state, state_total_counts, day, ver
                 for agent in agents :
 
                     # pick agent if it is susceptible (in S state)
-                    if my.agent_is_susceptable(agent) :
+                    if my.agent_is_susceptible(agent) :
                         # "vaccinate agent"
-                        my.vaccination_type[agent] = i
-                        rate_reduc = np.array([1,1,1]) * my.cfg.Intervention_vaccination_efficacies[i-1]
-                        cut_rates_of_agent(my, g, intervention, agent, rate_reduc)
+                        if np.random.rand() < my.cfg.Intervention_vaccination_efficacies[i-1] :
+                            cut_rates_of_agent(my, g, intervention, agent, np.array([0.0, 0.0, 0.0]))
+                            my.vaccination_type[agent] = i
+
+                        else :
+                            my.vaccination_type[agent] = -i
 
 
 
@@ -2126,6 +2144,98 @@ def test_if_label_needs_intervention_multi(
     return None
 
 @njit
+def find_reverse_connection(my, agent, ith_contact) :
+    contact = my.connections[agent][ith_contact]
+
+    # loop over indexes of the contact to find_myself
+    for ith_contact_of_contact, possible_agent in enumerate(my.connections[contact]) :
+
+        # check if the contact found is myself
+        if agent == possible_agent :
+            return (ith_contact_of_contact, contact)
+
+@njit
+def open_connection(my, g, agent, ith_contact, intervention, two_way=True) :
+
+    my.connection_status[agent][ith_contact] = True
+    rate = reset_rates_of_connection(my, g, agent, ith_contact, intervention, two_way=False)
+
+    if two_way :
+
+        ith_contact_of_contact, contact = find_reverse_connection(my, agent, ith_contact)
+
+        c_rate = open_connection(my, g, contact, ith_contact_of_contact, intervention, two_way=False)
+
+        # updates to gillespie sums, if contact is infectious and agent is susceptible
+        g.update_rates(my, +c_rate, contact)
+
+    if my.agent_is_infectious(agent) and my.agent_is_susceptible(contact) :
+        return rate
+    else :
+        return 0
+
+@njit
+def close_connection(my, g, agent, ith_contact, intervention, two_way=True) :
+
+    contact = my.connections[agent][ith_contact]
+
+    # Reset the g.rates
+    rate = g.rates[agent][ith_contact]
+    g.rates[agent][ith_contact] = 0
+    my.connection_status[agent][ith_contact] = False
+
+    if two_way :
+
+        ith_contact_of_contact, contact = find_reverse_connection(my, agent, ith_contact)
+
+        # update rates from contact to agent.
+        c_rate = close_connection(my, g, contact, ith_contact_of_contact, intervention, two_way=False)
+
+        # updates to gillespie sums, if contact is infectious and agent is susceptible
+        g.update_rates(my, -c_rate, contact)
+
+
+    if my.agent_is_infectious(agent) and my.agent_is_susceptible(contact) :
+        return rate
+    else :
+        return 0
+
+
+@njit
+def reset_rates_of_connection(my, g, agent, ith_contact, intervention, two_way=True) :
+
+    if not my.agent_is_connected(agent, ith_contact) :
+        return 0
+
+    contact = my.connections[agent][ith_contact]
+
+    # Compute the infection rate
+    infection_rate = my.infection_weight[agent] * my.beta_connection_type[my.connections_type[agent][ith_contact]]
+
+    # TODO: Here we should implement transmission risk for vaccinted persons
+
+    # Reset the g.rates
+    rate = infection_rate - g.rates[agent][ith_contact]
+    g.rates[agent][ith_contact] = infection_rate
+
+    if two_way :
+
+        ith_contact_of_contact, contact = find_reverse_connection(my, agent, ith_contact)
+
+        # update rates from contact to agent.
+        c_rate = reset_rates_of_connection(my, g, contact, ith_contact_of_contact, intervention, two_way=False)
+
+        # updates to gillespie sums, if contact is infectious and agent is susceptible
+        g.update_rates(my, +c_rate, contact)
+
+
+    if my.agent_is_infectious(agent) and my.agent_is_susceptible(contact) :
+        return rate
+    else :
+        return 0
+
+
+@njit
 def reset_rates_of_agent(my, g, agent, intervention, connection_type_weight=None) :
 
     if connection_type_weight is None :
@@ -2133,46 +2243,12 @@ def reset_rates_of_agent(my, g, agent, intervention, connection_type_weight=None
         connection_type_weight = np.ones(3, dtype=np.float32)
 
     agent_update_rate = 0.0
-    for ith_contact, contact in enumerate(my.connections[agent]) :
-
-        infection_rate = (
-            my.infection_weight[agent]
-            * connection_type_weight[my.connections_type[agent][ith_contact]]
-        )
-
-        rate = infection_rate - g.rates[agent][ith_contact]
-        intervention.freedom_impact[agent] = 0
-        g.rates[agent][ith_contact] = infection_rate
-
-        if my.agent_is_infectious(agent) and my.agent_is_susceptable(contact) :
-            agent_update_rate += rate
-
-        # loop over indexes of the contact to find_myself and set rate to 0
-        for ith_contact_of_contact, possible_agent in enumerate(my.connections[contact]) :
-
-            # check if the contact found is myself
-            if agent == possible_agent :
-                infection_rate = (
-                    my.infection_weight[contact]
-                    * connection_type_weight[my.connections_type[contact][ith_contact_of_contact]]                )
-
-                # update rates from contact to agent.
-                c_rate = my.infection_weight[contact] - g.rates[contact][ith_contact_of_contact]
-                intervention.freedom_impact[contact] = 0
-                g.rates[contact][ith_contact_of_contact] = my.infection_weight[contact]
-
-                # updates to gillespie sums, if contact is infectious and agent is susceptible
-                if my.agent_is_infectious(contact) and my.agent_is_susceptable(agent) :
-                    g.update_rates(my, c_rate, contact)
-                break
+    for ith_contact in range(my.number_of_contacts[agent]) :
+        agent_update_rate += reset_rates_of_connection(my, g, agent, ith_contact, intervention)
 
     # actually updates to gillespie sums
     g.update_rates(my, +agent_update_rate, agent)
-    if my.agent_is_susceptable(agent) :
-                        i = my.vaccination_type[agent] 
-                        if i != 0:
-                            rate_reduc = np.array([1,1,1]) * my.cfg.Intervention_vaccination_efficacies[i-1]
-                            cut_rates_of_agent(my, g, intervention, agent, rate_reduc)
+
     return None
 
 
@@ -2280,7 +2356,7 @@ def loop_update_rates_of_contacts(
 ) :
 
     # updates to gillespie sums, if agent is infected and contact is susceptible
-    if my.agent_is_infectious(agent) and my.agent_is_susceptable(contact) :
+    if my.agent_is_infectious(agent) and my.agent_is_susceptible(contact) :
         agent_update_rate += rate
 
     # loop over indexes of the contact to find_myself and set rate to 0
@@ -2298,7 +2374,7 @@ def loop_update_rates_of_contacts(
             g.rates[contact][ith_contact_of_contact] -= c_rate
 
             # updates to gillespie sums, if contact is infectious and agent is susceptible
-            if my.agent_is_infectious(contact) and my.agent_is_susceptable(agent) :
+            if my.agent_is_infectious(contact) and my.agent_is_susceptible(agent) :
                 g.update_rates(my, -c_rate, contact)
             break
 
@@ -2415,57 +2491,110 @@ def remove_and_reduce_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
 @njit
 def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n) :
-    # rate reduction is 2 3-vectors. is used for lockdown interventions
-    agent_update_rate = 0.0
-    act_rate_reduction = np.array([0.0, 0.0, 0.0], dtype=np.float64)
-    # step 1 loop over all of an agents contact
-    for ith_contact, contact in enumerate(my.connections[agent]) :
-        act_rate_reduction = np.array([0.0, 0.0, 0.0], dtype=np.float64)
 
+    # Extract the contact matrices
+    if n == 0 :
+        work_matrix_previous  = my.cfg_network.work_matrix
+        other_matrix_previous = my.cfg_network.other_matrix
+    else :
+        work_matrix_previous  = intervention.work_matrix_restrict[n-1]
+        other_matrix_previous = intervention.other_matrix_restrict[n-1]
+
+    work_matrix_max  = my.cfg_network.work_matrix
+    other_matrix_max = my.cfg_network.other_matrix
+
+    work_matrix_current  = intervention.work_matrix_restrict[n]
+    other_matrix_current = intervention.other_matrix_restrict[n]
+
+
+    # Step 1, determine the contacts and their connection probability
+
+    # Get the list of restrictable contacts and the list of restricted contacts
+    possible_contacts     = my.connections[agent].copy()
+    current_contacts      = np.zeros(np.shape(possible_contacts), dtype=nb.boolean)
+
+    # Here we compute the connection probability based on the contact matrix sums
+    connection_probability_current  = np.ones(np.shape(possible_contacts))
+    connection_probability_previous = np.ones(np.shape(possible_contacts))
+
+    for ith_contact, contact in enumerate(possible_contacts) :
+
+        # Check for active connection
+        if my.agent_is_connected(agent, ith_contact) :
+            current_contacts[ith_contact] = 1
+
+        # Compute connection probabilities for non-home contacts
         if not my.connections_type[agent][ith_contact] == 0 :
+
             if my.connections_type[agent][ith_contact] == 1 :
-                mr = intervention.work_matrix_restrict[n]   # TODO: Change so it loops over a list instead
-                mi = my.cfg_network.work_matrix
+                sr = work_matrix_current[my.age[agent], my.age[contact]]
+                sp = work_matrix_previous[my.age[agent], my.age[contact]]
+                su = work_matrix_max[my.age[agent], my.age[contact]]
+
             elif my.connections_type[agent][ith_contact] == 2 :
-                mr = intervention.other_matrix_restrict[n] # TODO: Change so it loops over a list instead
-                mi = my.cfg_network.other_matrix
+                sr = other_matrix_current[my.age[agent], my.age[contact]]
+                sp = other_matrix_previous[my.age[agent], my.age[contact]]
+                su = other_matrix_max[my.age[agent], my.age[contact]]
 
-            mr_single = mr[my.age[agent], my.age[contact]]
-            mi_single = mi[my.age[agent], my.age[contact]]
+            connection_probability_current[ith_contact]  = sr / su
+            connection_probability_previous[ith_contact] = sp / su
 
-            if mr_single > mi_single :
-                mr_single = mi_single
-                # print(my.age[agent])
-                # print(my.age[contact])
-                # print(my.connections_type[agent][ith_contact])
-                # print(mr_single, mi_single)
-                # assert mr_single <= mi_single
+    # Step 2, check if the changes should close any of the active connections
+    agent_update_rate = 0
+    # Store the connection weight
+    sum_connection_probability = np.sum(connection_probability_current)
 
-            p = 1 - np.sqrt(4 - 4 * (1 - min(mr_single / mi_single, 1))) / 2
-            if np.random.rand() < p :
-                act_rate_reduction = np.array([0.0, 1.0, 1.0], dtype=np.float64)
+    # Loop over all active (non-home) conenctions
+    for ith_contact in range(my.number_of_contacts[agent]) :
 
-        rate = (
-            g.rates[agent][ith_contact]
-            * act_rate_reduction[my.connections_type[agent][ith_contact]]
-        )
+        # Only cut non-home contacts
+        if not my.connections_type[agent][ith_contact] == 0 :
+            if current_contacts[ith_contact]:
 
-        g.rates[agent][ith_contact] -= rate
-        intervention.freedom_impact[agent] += act_rate_reduction[my.connections_type[agent][ith_contact]]/my.number_of_contacts[agent]
+                # if a connection is active, and the connection probability is lower now than before, check if this connection should be disabled
+                if connection_probability_current[ith_contact] < connection_probability_previous[ith_contact] :
 
-        agent_update_rate = loop_update_rates_of_contacts(
-            my,
-            g,
-            intervention,
-            agent,
-            contact,
-            rate,
-            agent_update_rate,
-            rate_reduction=act_rate_reduction,
-        )
+                    # Update the connection
+                    p = 1 - np.sqrt(4 - 4 * (1 - min(connection_probability_current[ith_contact], 1))) / 2
+                    if np.random.rand() > p :
+                        agent_update_rate += open_connection(my, g, agent, ith_contact, intervention)
+
+                    else :
+                        connection_probability_current[ith_contact] = 1
+
+
+                # if a connection is active, and the connection probability is larger now than before, redistribute that probability
+                else :
+                    connection_probability_current[ith_contact] = 1
 
     # actually updates to gillespie sums
     g.update_rates(my, -agent_update_rate, agent)
+
+    # Redistribute probability
+    non_active_connection_probability = np.sum(connection_probability_current[~current_contacts])
+    if non_active_connection_probability > 0 :
+        k = (sum_connection_probability - np.sum(connection_probability_current[current_contacts])) / non_active_connection_probability
+    else :
+        k = 0
+
+    connection_probability_current[~current_contacts] *= k
+
+
+    # Step 3, add new connections as needed
+    agent_update_rate = 0
+    # Loop over all posible (non-home) conenctions
+    for ith_contact in range(my.number_of_contacts[agent]) :
+        if not my.connections_type[agent][ith_contact] == 0 :
+            if not current_contacts[ith_contact]:
+
+                # Update the connection
+                p = 1 - np.sqrt(4 - 4 * (1 - min(connection_probability_current[ith_contact], 1))) / 2
+                if np.random.rand() > p :
+                    agent_update_rate += open_connection(my, g, agent, ith_contact, intervention)
+
+    # actually updates to gillespie sums
+    g.update_rates(my, +agent_update_rate, agent)
+
     return None
 
 @njit
@@ -2497,11 +2626,34 @@ def matrix_restriction_on_label(my, g, intervention, label, n) :
     # second is the fraction of reduction of the those [home, job, others] rates.
     # ie : [[0,0.2,0.2],[0,0.8,0.8]] means that your wear mask when around 20% of job and other contacts, and your rates to those is reduced by 80%
     # loop over all agents
+
+    contacts_before = 0
+    contacts_after = 0
+
+    for agent in range(my.cfg_network.N_tot) :
+        for ith_contact in range(my.number_of_contacts[agent]) :
+            if my.agent_is_connected(agent, ith_contact) :
+                contacts_before += 1
+
+
     for agent in range(my.cfg_network.N_tot) :
         if intervention.labels[agent] == label :
             my.restricted_status[agent] = 1
+
             remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n)
 
+
+    for agent in range(my.cfg_network.N_tot) :
+        for ith_contact in range(my.number_of_contacts[agent]) :
+            if my.agent_is_connected(agent, ith_contact) :
+                contacts_after += 1
+
+    print("--------------")
+    print("Contacts before:")
+    print(contacts_before)
+
+    print("Contacts after:")
+    print(contacts_after)
 
 @njit
 def test_a_person(my, g, intervention, agent, click) :
@@ -2685,6 +2837,10 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                     else :
                         for i_label, intervention_type in enumerate(intervention.types) :
 
+                            # Matrix restrictions are not removed # TODO: Remove if no restrictions follow
+                            if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3 :
+                                continue
+
                             if verbose :
                                 print("Intervention removed")
 
@@ -2782,7 +2938,7 @@ def add_daily_events(
         for agent in agents_in_this_event :
             if my.agent_is_infectious(agent) :
                 for guest in agents_in_this_event :
-                    if guest != agent and my.agent_is_susceptable(guest) :
+                    if guest != agent and my.agent_is_susceptible(guest) :
                         time = np.random.uniform(0, event_duration)
                         probability = my.infection_weight[agent] * time * my.cfg.event_beta_scaling
                         if np.random.rand() < probability :

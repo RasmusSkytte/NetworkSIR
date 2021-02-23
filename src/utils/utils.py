@@ -1172,6 +1172,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                 lst = [lst]
 
             d_list.append([{name : val} for val in lst])
+
         d_list.append([{"ID" : ID} for ID in range(N_runs)])
         all_combinations = list(product(*d_list))
 
@@ -1276,8 +1277,7 @@ def extract_N_tot_max(d_simulation_parameters) :
         return get_cfg_default()["N_tot"]
 
 
-def get_num_cores_N_tot(d_simulation_parameters, num_cores_max=None) :
-    N_tot_max = d_num_cores_N_tot[extract_N_tot_max(d_simulation_parameters)]
+def get_num_cores_N_tot(N_tot_max, num_cores_max=None) :
     num_cores = get_num_cores(N_tot_max)
     if num_cores_max :
         return min([num_cores, num_cores_max])
@@ -1442,6 +1442,7 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
 
 
 def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  #
+#def counts_to_df(time, state_counts, variant_counts) :  #
 
     time = np.array(time)
     state_counts = np.array(state_counts)
@@ -1478,6 +1479,7 @@ def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  
     df_age_groups = pd.DataFrame(infected_per_age_group, columns=header[k_start:k_stop])
 
     df = pd.concat([df_time, df_states, df_variants, df_age_groups], axis=1)  # .convert_dtypes()
+    #df = pd.concat([df_time, df_states, df_variants], axis=1)  # .convert_dtypes()
     return df
 
 
@@ -2008,7 +2010,7 @@ def load_vaccination_schedule_file(scenario = "reference") :
     age_groups      = []
 
     # Determine the number of files that matches the requested scenario
-    i = 1
+    i = 0
     filename = lambda i : f'Data/vaccination_schedule/{scenario}_{i}.csv'
 
     while file_exists(filename(i)) :
@@ -2303,6 +2305,25 @@ def load_params(filename) :
 
     params["day_max"] = (end_date - start_date).days
     params["start_date_offset"] = (start_date - params["start_date_offset"]).days
-    params["restriction_thresholds"] =  [[ 0, (params["restriction_thresholds"] - start_date).days]]
+
+    if isinstance(params["restriction_thresholds"], list) :
+
+        restriction_dates = [date for date in params["restriction_thresholds"][0]]
+
+        date_1 = start_date + datetime.timedelta(days=1)
+        date_2 = restriction_dates[0]
+
+        intervals = []
+        for i in range(len(restriction_dates)) :
+            intervals.extend([ (date_1 - start_date).days, (date_2 - start_date).days])
+
+            if i < len(restriction_dates) - 1 :
+                date_1 = restriction_dates[i]
+                date_2 = restriction_dates[i+1]
+
+    else :
+        intervals = [1, (params["restriction_thresholds"] - start_date).days]
+
+    params["restriction_thresholds"] =  [intervals]
 
     return (params, start_date)

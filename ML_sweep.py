@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from datetime import datetime
 
 from tqdm import tqdm
 
@@ -16,35 +15,37 @@ if utils.is_local_computer() :
 from contexttimer import Timer
 
 
-params, start_date = utils.load_params("cfg/simulation_parameters_2021_fase1.yaml")
+params, start_date = utils.load_params("cfg/simulation_parameters_debugging.yaml")
 
 if utils.is_local_computer():
     f = 0.1
-    #noise = lambda m, d : m
-    noise = lambda m, d : np.round(m + np.linspace(-d, d, 3), 5)
+    n_sigma = 0
     num_cores_max = 3
+    N_runs = 1
 else :
-    f = 0.1
-    noise = lambda m, d : np.round(m + np.linspace(-d, d, 3), 5)
-    num_cores_max = 30
+    f = 0.2
+    n_sigma = 0
+    num_cores_max = 15
+    N_runs = 1
+
+noise = lambda m, d : np.round(m + np.linspace(-(d), (d), 2*n_sigma + 1), 5)
 
 # Sweep around parameter set
-#params["beta"]               = noise(params["beta"], 0.0005)
-#params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.2)
-#params["N_init"]             = noise(params["N_init"] * f, 2000 * f)
-#params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.01)
+#params["beta"]               = [0.0102, 0.0103, 0.0104, 0.0105]
+#params["beta_UK_multiplier"] = [1.5]
+#params["N_init"]             = noise(params["N_init"] * f, 1000 * f)
+params["N_init"] = int(params["N_init"] * f)
+#params["N_init_UK_frac"]     = [0.02, 0.025, 0.03]
 
 # Scale the population
 params["N_tot"]  = int(params["N_tot"]  * f)
-params["N_init"] = int(params["N_init"] * f)
 params["R_init"] = int(params["R_init"] * f)
-
 
 N_files_total = 0
 if __name__ == "__main__":
     with Timer() as t:
 
-        N_files_total +=  simulation.run_simulations(params, N_runs=25, num_cores_max=num_cores_max)
+        N_files_total +=  simulation.run_simulations(params, N_runs=N_runs, num_cores_max=num_cores_max)
 
     print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
     print("Finished simulating!")
@@ -53,50 +54,28 @@ if __name__ == "__main__":
 
 from src.analysis.helpers import *
 
-# Load the covid index data
-df_index = pd.read_feather("Data/covid_index.feather")
+logK, logK_sigma, beta, covid_index_offset, _ = load_covid_index(start_date)
 
-# Get the beta value (Here, scaling parameter for the index cases)
-beta       = df_index["beta"][0]
-beta_simga = df_index["beta_sd"][0]
-
-# Find the index for the starting date
-ind = np.where(df_index["date"] == datetime(2021, 1, 1).date())[0][0]
-
-# Only fit to data after this date
-logK       = df_index["logI"][ind:]     # Renaming the index I to index K to avoid confusion with I state in SIR model
-logK_sigma = df_index["logI_sd"][ind:]
-
-# Determine the covid_index_offset
-covid_index_offset = (datetime(2021, 1, 1).date() - start_date).days
-
-s = np.array([  76,  148,  275,  460,  510,  617, 101])
-n = np.array([3654, 4020, 3901, 3579, 2570, 2003, 225])
-p = s / n
-p_var = p * (1 - p) / n
-
-#fraction        = np.array([0.04,  0.074,  0.13,  0.2])
-#fraction_sigma  = np.array([0.006, 0.0075, 0.015, 0.016])
-fraction = p
-fraction_sigma = 2 * np.sqrt(p)
-fraction_offset = 1
+fraction, fraction_sigma, fraction_offset, _ = load_b117_fraction()
 
 
-for subset in [{"contact_matrices_name" : "2021_fase1_sce1"}, {"contact_matrices_name" : "2021_fase1_sce2"}] :
+for subset in [{"contact_matrices_name" : "2021_fase1"}] :
 
     print(subset)
 
     # Load the ABM simulations
     abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=subset, verbose=True)
 
-    lls     = []
+    lls_f     = []
+    lls_s     = []
 
     for cfg in tqdm(
         abm_files.iter_cfgs(),
         desc="Calculating log-likelihoods",
         total=len(abm_files.cfgs)) :
 
-        ll = []
+        ll_f = []
+        ll_s = []
 
         for filename in abm_files.cfg_to_filenames(cfg) :
 
@@ -104,16 +83,38 @@ for subset in [{"contact_matrices_name" : "2021_fase1_sce1"}, {"contact_matrices
             I_tot_scaled, f = load_from_file(filename)
 
             # Evaluate
-            tmp_ll =  0.5 * compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
-            tmp_ll += 0.5 * compute_loglikelihood(f, (fraction, fraction_sigma, fraction_offset))
+            tmp_ll_s = compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
+            tmp_ll_f = compute_loglikelihood(f, (fraction, fraction_sigma, fraction_offset))
 
-            ll.append(tmp_ll)
+            ll_s.append(tmp_ll_s)
+            ll_f.append(tmp_ll_f)
 
         # Store loglikelihoods
-        lls.append(np.mean(ll))
+        lls_s.append(np.mean(ll_s))
+        lls_f.append(np.mean(ll_f))
 
-    lls = np.array(lls)
+    
     cfgs = [cfg for cfg in abm_files.iter_cfgs()]
+    cfg_best = cfgs[np.nanargmax(lls_s)]
+    ll_best = lls_s[np.nanargmax(lls_s)]
+    print("--- Best parameters - Smitte ---")
+    print(f"Weighted loglikelihood : {ll_best:.3f}")
+    print(f"beta : {cfg_best.beta:.5f}")
+    print(f"beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}")
+    print(f"N_init : {cfg_best.N_init:.0f}")
+    print(f"N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}")
+
+    cfg_best = cfgs[np.nanargmax(lls_f)]
+    ll_best = lls_f[np.nanargmax(lls_f)]
+    print("--- Best parameters - B.1.1.7 ---")
+    print(f"Weighted loglikelihood : {ll_best:.3f}")
+    print(f"beta : {cfg_best.beta:.5f}")
+    print(f"beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}")
+    print(f"N_init : {cfg_best.N_init:.0f}")
+    print(f"N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}")
+
+
+    lls = np.array(lls_s) + np.array(lls_f)
     cfg_best = cfgs[np.nanargmax(lls)]
     ll_best = lls[np.nanargmax(lls)]
     print("--- Best parameters ---")
@@ -122,8 +123,6 @@ for subset in [{"contact_matrices_name" : "2021_fase1_sce1"}, {"contact_matrices
     print(f"beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}")
     print(f"N_init : {cfg_best.N_init:.0f}")
     print(f"N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}")
-
-
 
     betas     = np.array([cfg.beta               for cfg in cfgs])
     rel_betas = np.array([cfg.beta_UK_multiplier for cfg in cfgs])
@@ -159,21 +158,34 @@ for subset in [{"contact_matrices_name" : "2021_fase1_sce1"}, {"contact_matrices
         plt.savefig('Figures/LogLikelihood_parameters.png')
 
 
-    def terminal_printer(name, arr, val) :
+    def terminal_printer(name, arr, val, lls) :
+        # Unique paramter values
         u_arr = np.unique(arr)
+
+        # Average loglikelihood value for parameter sets
+        lls_param = np.zeros(np.shape(u_arr))
+        for i, val in enumerate(u_arr) :
+            lls_param[i] = np.nanmean(lls[arr == val])
+
+        s_lls = np.array(sorted(lls_param))
+        s_lls = s_lls[~np.isnan(s_lls)]
+        d_lls = s_lls[-1] / s_lls[-2]
+
+        # Higtest likelihood location
         I = np.argmax(u_arr == val)
 
+        # Print the houtput
         out_string = "["
         for i in range(len(u_arr)) :
             if i == I :
                 out_string += " *" + str(u_arr[i]) + "*"
             else :
                 out_string += "  " + str(u_arr[i]) + " "
-        out_string += " ]"
+        out_string += f" ] sens. : {d_lls:.2g}"
         print(name + "\t" + out_string)
 
     print("--- Maximum likelihood value locations ---")
-    terminal_printer("beta* :      ", betas,          cfg_best.beta)
-    terminal_printer("rel_beta* :  ", rel_betas,      cfg_best.beta_UK_multiplier)
-    terminal_printer("N_init* :    ", N_init,         cfg_best.N_init)
-    terminal_printer("N_UK_frac* : ", N_init_UK_frac, cfg_best.N_init_UK_frac)
+    terminal_printer("beta* :      ", betas,          cfg_best.beta                 , lls)
+    #terminal_printer("rel_beta* :  ", rel_betas,      cfg_best.beta_UK_multiplier   , lls)
+    #terminal_printer("N_init* :    ", N_init,         cfg_best.N_init               , lls)
+    #terminal_printer("N_UK_frac* : ", N_init_UK_frac, cfg_best.N_init_UK_frac       , lls)

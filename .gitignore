@@ -1,13 +1,13 @@
 # exclude data from source control by default
-!Data/
+#!Data/
 
 Data/*
-!Data/contact_matrices/
-!Data/vaccination_schedule/
-!Data/age_dist.csv
-!Data/household_dist.csv
-!Data/covid_index.feather
-!Data/covid_index_2021.feather
+#!Data/contact_matrices/
+#!Data/vaccination_schedule/
+#!Data/age_dist.csv
+#!Data/household_dist.csv
+#!Data/covid_index.feather
+#!Data/covid_index_2021.feather
 
 Figures/
 
@@ -16,6 +16,9 @@ Initialized_networks/
 Output*/
 
 _Plot_tester.ipynb
+_Debugger.ipynb
+
+*.jar
 
 db.json
 

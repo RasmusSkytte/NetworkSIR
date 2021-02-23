@@ -2418,57 +2418,134 @@ def remove_and_reduce_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
 @njit
 def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n) :
-    # rate reduction is 2 3-vectors. is used for lockdown interventions
-    agent_update_rate = 0.0
-    act_rate_reduction = np.array([0.0, 0.0, 0.0], dtype=np.float64)
-    # step 1 loop over all of an agents contact
-    for ith_contact, contact in enumerate(my.connections[agent]) :
-        act_rate_reduction = np.array([0.0, 0.0, 0.0], dtype=np.float64)
+    
+    # Extract the contact matrices
+    if n == 0 :
+        work_matrix_previous  = my.cfg_network.work_matrix
+        other_matrix_previous = my.cfg_network.other_matrix
+    else :
+        work_matrix_previous  = intervention.work_matrix_restrict[n-1]
+        other_matrix_previous = intervention.other_matrix_restrict[n-1]
+    
+    work_matrix_max  = my.cfg_network.work_matrix
+    other_matrix_max = my.cfg_network.other_matrix
 
+    work_matrix_current  = intervention.work_matrix_restrict[n]
+    other_matrix_current = intervention.other_matrix_restrict[n]
+
+
+    # Set the agent update rate
+    agent_update_rate = 0
+    
+
+    # Step 1, determine the contacts and their connection probability
+
+    # Get the list of restrictable contacts and the list of restricted contacts
+    possible_contacts     = my.connections[agent].copy()
+    current_contacts      = np.ones(np.shape(possible_contacts), dtype=nb.boolean)
+
+    # Here we compute the connection probability based on the contact matrix sums
+    connection_probability_current  = np.ones(np.shape(possible_contacts))
+    connection_probability_previous = np.ones(np.shape(possible_contacts))
+
+    for ith_contact, contact in enumerate(possible_contacts) : 
         if not my.connections_type[agent][ith_contact] == 0 :
+
+            if g.rates[agent][ith_contact] == 0 :
+                current_contacts[ith_contact] = False
+
+
             if my.connections_type[agent][ith_contact] == 1 :
-                mr = intervention.work_matrix_restrict[n]   # TODO: Change so it loops over a list instead
-                mi = my.cfg_network.work_matrix
+                sr = work_matrix_current[my.age[agent], my.age[contact]]
+                sp = work_matrix_previous[my.age[agent], my.age[contact]]
+                su = work_matrix_max[my.age[agent], my.age[contact]]
+
             elif my.connections_type[agent][ith_contact] == 2 :
-                mr = intervention.other_matrix_restrict[n] # TODO: Change so it loops over a list instead
-                mi = my.cfg_network.other_matrix
+                sr = other_matrix_current[my.age[agent], my.age[contact]]
+                sp = other_matrix_previous[my.age[agent], my.age[contact]]
+                su = other_matrix_max[my.age[agent], my.age[contact]]
+        
+            connection_probability_current[ith_contact]  = sr / su
+            connection_probability_previous[ith_contact] = sp / su
 
-            mr_single = mr[my.age[agent], my.age[contact]]
-            mi_single = mi[my.age[agent], my.age[contact]]
+    # Step 2, check if the changes should close any of the active connections
+    act_rate_reduction = np.array([0.0, 0.0, 0.0], dtype=np.float64)
 
-            if mr_single > mi_single :
-                mr_single = mi_single
-                # print(my.age[agent])
-                # print(my.age[contact])
-                # print(my.connections_type[agent][ith_contact])
-                # print(mr_single, mi_single)
-                # assert mr_single <= mi_single
+    # Store the connection weight
+    sum_connection_probability = np.sum(connection_probability_current)
+    
+    # Loop over all active (non-home) conenctions
+    for ith_contact in range(my.number_of_contacts[agent]) :
+        if not my.connections_type[agent][ith_contact] == 0 :
+            if current_contacts[ith_contact]:
 
-            p = 1 - np.sqrt(4 - 4 * (1 - min(mr_single / mi_single, 1))) / 2
-            if np.random.rand() < p :
-                act_rate_reduction = np.array([0.0, 1.0, 1.0], dtype=np.float64)
+                # if a connection is active, and the connection probability is lower now than before, check if this connection should be disabled
+                if connection_probability_current[ith_contact] < connection_probability_previous[ith_contact] :
 
-        rate = (
-            g.rates[agent][ith_contact]
-            * act_rate_reduction[my.connections_type[agent][ith_contact]]
-        )
+                    # Update the connection
+                    if np.random.rand() > connection_probability_current[ith_contact] :
+                        current_contacts[ith_contact] = False
+                        connection_probability_current[ith_contact] = 0
 
-        g.rates[agent][ith_contact] -= rate
-        intervention.freedom_impact[agent] += act_rate_reduction[my.connections_type[agent][ith_contact]]/my.number_of_contacts[agent]
+                        rate = g.rates[agent][ith_contact] * act_rate_reduction[my.connections_type[agent][ith_contact]]
+                        g.rates[agent][ith_contact] -= rate
+                        intervention.freedom_impact[agent] += act_rate_reduction[my.connections_type[agent][ith_contact]] / my.number_of_contacts[agent]
 
-        agent_update_rate = loop_update_rates_of_contacts(
-            my,
-            g,
-            intervention,
-            agent,
-            contact,
-            rate,
-            agent_update_rate,
-            rate_reduction=act_rate_reduction,
-        )
+                        agent_update_rate = loop_update_rates_of_contacts(
+                            my,
+                            g,
+                            intervention,
+                            agent,
+                            possible_contacts[ith_contact],
+                            rate,
+                            agent_update_rate,
+                            rate_reduction=act_rate_reduction)
+
+                    else :
+                        connection_probability_current[ith_contact] = 1
+    
+
+                # if a connection is active, and the connection probability is larger now than before, redistribute that probability
+                else :
+                    connection_probability_current[ith_contact] = 1
+
+    # Redistribute probability
+    non_active_connection_probability = np.sum(connection_probability_current[~current_contacts])
+    if non_active_connection_probability > 0 :
+        k = (sum_connection_probability - np.sum(connection_probability_current[current_contacts])) / non_active_connection_probability
+    else :
+        k = 0
+
+    connection_probability_current[~current_contacts] *= k
+
+
+    # Step 3, add new connections as needed
+    act_rate_reduction = np.array([0.0, 1.0, 1.0], dtype=np.float64)
+    # Loop over all posible (non-home) conenctions
+    for ith_contact in range(my.number_of_contacts[agent]) :
+        if not my.connections_type[agent][ith_contact] == 0 :
+            if not current_contacts[ith_contact]:
+
+                # Update the connection
+                if np.random.rand() < connection_probability_current[ith_contact] :
+                    
+                    rate = g.rates[agent][ith_contact] * act_rate_reduction[my.connections_type[agent][ith_contact]]
+                    g.rates[agent][ith_contact] -= rate
+                    intervention.freedom_impact[agent] += act_rate_reduction[my.connections_type[agent][ith_contact]] / my.number_of_contacts[agent]
+
+                    agent_update_rate = loop_update_rates_of_contacts(
+                        my,
+                        g,
+                        intervention,
+                        agent,
+                        possible_contacts[ith_contact],
+                        rate,
+                        agent_update_rate,
+                        rate_reduction=act_rate_reduction)
 
     # actually updates to gillespie sums
     g.update_rates(my, -agent_update_rate, agent)
+
     return None
 
 @njit

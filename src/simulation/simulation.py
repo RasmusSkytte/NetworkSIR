@@ -468,12 +468,12 @@ def run_simulations(
         cfgs_all = utils.generate_cfgs(simulation_parameters, N_runs, N_tot_max, verbose=verbose)
 
         N_tot_max = utils.d_num_cores_N_tot[utils.extract_N_tot_max(simulation_parameters)]
-    
+
     elif isinstance(simulation_parameters[0], utils.DotDict) :
         cfgs_all = simulation_parameters
 
         N_tot_max = np.max([cfg.network.N_tot for cfg in cfgs_all])
-    
+
     else :
         raise ValueError(f"simulation_parameters not of the correct type")
 

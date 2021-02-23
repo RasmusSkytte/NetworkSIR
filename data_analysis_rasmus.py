@@ -35,11 +35,11 @@ subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]
             {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce8_marts", "2021_fase2_sce8_april", "2021_fase2_sce8_maj"]},
             {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce9"]}]
 
-for subset in subsets :      
+for subset in subsets :
     fig_name = Path("Figures/" + subset["Intervention_contact_matrices_name"][-1] + ".png")
 
     # Number of plots to keep
-    N = 5
+    N = 25
 
     start_date = datetime.datetime(2020, 12, 21)
 
@@ -123,7 +123,7 @@ for subset in subsets :
     # Color according to lls
     for ll, handles in zip(lls_best, plot_handles) :
         for line in handles :
-            line.set_alpha(0.2 + 0.8*ll)
+            line.set_alpha(0.05 + 0.95*ll)
 
     # Plot the covid index
     m  = np.exp(logK) * (80_000 ** beta)
@@ -141,7 +141,7 @@ for subset in subsets :
     # Get restriction_thresholds from a cfg
     restriction_thresholds = abm_files.cfgs[0].restriction_thresholds
 
-    axes[0].set_ylim(0, 3000)
+    axes[0].set_ylim(0, 10000)
     axes[0].set_ylabel('Daglige positive')
 
 
@@ -155,7 +155,7 @@ for subset in subsets :
 
     # Get the transition dates
     restiction_days = restriction_thresholds[1::2]
-    
+
     for day in restiction_days :
         restiction_date = start_date + datetime.timedelta(days=day)
         for ax, lim in zip(axes, ylims) :

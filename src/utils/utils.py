@@ -1158,8 +1158,8 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
                 if key in spec_cfg.keys() :
 
-                    if key == "infection_distribution" and d["infection_distribution"] == "newest" :
-                        d["infection_distribution"] = file_loaders.download_newest_SSI_data(return_name=True, verbose=verbose)
+                    if key == "initial_infection_distribution" and not d["initial_infection_distribution"] == "random" :
+                        d["initial_infection_distribution"] = file_loaders.get_SSI_data(date=d["initial_infection_distribution"], return_name=True, verbose=verbose)
 
                     cfg.update(d)
 
@@ -2073,5 +2073,8 @@ def load_params(filename) :
         intervals = [1, (params["restriction_thresholds"] - start_date).days]
 
     params["restriction_thresholds"] =  [intervals]
+
+    if isinstance(params["initial_infection_distribution"], datetime.date) :
+        params["initial_infection_distribution"] = params["initial_infection_distribution"].strftime('%Y_%m_%d')
 
     return params, start_date

@@ -477,7 +477,7 @@ def newest_SSI_filename() :
 
     return date.strftime('%Y_%m_%d')
 
-def SSI_data_is_outdated(filename) :
+def SSI_data_missing(filename) :
     # Check if it is already downloaded
     # If it does not exist return flag
     if not os.path.exists(filename) :
@@ -492,13 +492,15 @@ def download_SSI_data(date=None, download_municipality=True, path_municipality='
     with urllib.request.urlopen(url) as response :
         html = str(response.read())
 
-    s = re.search("Data-Epidemiologisk", html, re.IGNORECASE)
-    data_url = html[s.start()-46:s.end()+23] + ".zip"
+    print(date)
 
-    name = datetime.datetime.strptime(html[s.end()+10:s.end()+18],'%d%m%Y').strftime('%Y_%m_%d')
-    assert(name == date)
+    date_SSI = datetime.datetime.strptime(date, '%Y_%m_%d').strftime('%d%m%Y')
+    print(date_SSI)
+    s = re.search(date_SSI, html, re.IGNORECASE)
+    data_url = html[s.start()-80:s.end()+5]
+    data_url = data_url.split('="')[1] + ".zip"
 
-    filename = name + '.csv'
+    filename = date + '.csv'
 
     with ZipFile(BytesIO(urllib.request.urlopen(data_url).read())) as zfile :
 
@@ -511,16 +513,19 @@ def download_SSI_data(date=None, download_municipality=True, path_municipality='
             save_dataframe(df, path_age, filename)
 
 
-def get_newest_SSI_data(return_data=False, return_name=False, verbose=False) :
+def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False) :
 
-    date = newest_SSI_filename()
+    if date == "newest" :
+        date = newest_SSI_filename()
+
     filename = date + '.csv'
 
     filename_municipality = os.path.join('Data', 'municipality_cases', filename)
     filename_age          = os.path.join('Data', 'age_cases', filename)
 
-    download_municipality = SSI_data_is_outdated(filename_municipality)
-    download_age          = SSI_data_is_outdated(filename_age)
+    download_municipality = SSI_data_missing(filename_municipality)
+    download_age          = SSI_data_missing(filename_age)
+
 
     if download_municipality or download_age:
 
@@ -541,7 +546,7 @@ def get_newest_SSI_data(return_data=False, return_name=False, verbose=False) :
         return df_municipality, df_age
 
     if return_name :
-        return filename
+        return date
 
 
 

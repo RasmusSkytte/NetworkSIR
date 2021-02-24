@@ -6,7 +6,7 @@ beta: 0.012
 
 # english type corona
 N_init_UK_frac: 0.01
-beta_UK_multiplier: 1.5  
+beta_UK_multiplier: 1.5
 
 R_init : 5_800_000 * 0.065
 
@@ -16,6 +16,7 @@ lambda_I: 4 / 2.52
 start_date : 2020-12-21
 end_date : 2021-05-15
 
+initial_infection_distribution : 2020-12-31
 
 contact_matrices_name: 2021_fase2_sce1  # Target activity
 

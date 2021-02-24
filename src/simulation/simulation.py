@@ -47,10 +47,9 @@ while True :
 
 # print(Path("").cwd())
 from src.utils import utils
-from src.simulation import nb_simulation
-from src.simulation import nb_load_jitclass
-from src import file_loaders
+from src.utils import file_loaders
 
+from src.simulation import nb_simulation
 
 hdf5_kwargs = dict(track_order=True)
 np.set_printoptions(linewidth=200)
@@ -94,9 +93,9 @@ class Simulation :
         if self.cfg.version >= 2 :
 
             # TODO: not currently being used
-            people_in_household, age_distribution_per_people_in_household = utils.load_household_data()
+            people_in_household, age_distribution_per_people_in_household = file_loaders.load_household_data()
 
-            household_size_dist_per_kommune, age_distribution_per_person_in_house_per_kommune, kommune_id = utils.load_household_data_kommune_specific()
+            household_size_dist_per_kommune, age_distribution_per_person_in_house_per_kommune, kommune_id = file_loaders.load_household_data_kommune_specific()
 
             N_ages = len(age_distribution_per_person_in_house_per_kommune[0,0])
             kommune_ids = []
@@ -153,12 +152,12 @@ class Simulation :
     def _save_initialized_network(self, filename) :
         if self.verbose :
             print(f"Saving initialized network to {filename}", flush=True)
-        utils.make_sure_folder_exist(filename)
-        my_hdf5ready = nb_load_jitclass.jitclass_to_hdf5_ready_dict(self.my)
+        file_loaders.make_sure_folder_exist(filename)
+        my_hdf5ready = file_loaders.jitclass_to_hdf5_ready_dict(self.my)
 
         with h5py.File(filename, "w", **hdf5_kwargs) as f :
             group_my = f.create_group("my")
-            nb_load_jitclass.save_jitclass_hdf5ready(group_my, my_hdf5ready)
+            file_loaders.save_jitclass_hdf5ready(group_my, my_hdf5ready)
             utils.NestedArray(self.agents_in_age_group).add_to_hdf5_file(f, "agents_in_age_group")
             f.create_dataset("N_ages", data=self.N_ages)
             self._add_cfg_to_hdf5_file(f)
@@ -172,8 +171,8 @@ class Simulation :
             ).to_nested_numba_lists()
             self.N_ages = f["N_ages"][()]
 
-            my_hdf5ready = nb_load_jitclass.load_jitclass_to_dict(f["my"])
-            self.my = nb_load_jitclass.load_My_from_dict(my_hdf5ready, self.cfg)
+            my_hdf5ready = file_loaders.load_jitclass_to_dict(f["my"])
+            self.my = file_loaders.load_My_from_dict(my_hdf5ready, self.cfg)
         self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.network.ID)
 
         # Update connection weights
@@ -194,7 +193,7 @@ class Simulation :
             if self.verbose :
                 print("Initializing network since it was forced to")
 
-        elif not utils.file_exists(filename) :
+        elif not file_loaders.file_exists(filename) :
             initialize_network = True
             if self.verbose :
                 print("Initializing network since the hdf5-file does not exist")
@@ -238,37 +237,41 @@ class Simulation :
         self.SIR_transition_rates = utils.initialize_SIR_transition_rates(self.N_states, self.N_infectious_states, self.cfg)
 
 
-        if self.cfg.initialize_at_kommune_level :
-            infected_per_kommune, immunized_per_kommune, _, _ = file_loaders.load_kommune_data(self.df_coordinates, self.cfg.initial_infection_distribution)
+        # Find the possible agents
+        possible_agents = nb_simulation.find_possible_agents(self.my, self.initial_ages_exposed, self.agents_in_age_group)
 
-            nb_simulation.initialize_states_from_kommune_data(
-                self.my,
-                self.g,
-                self.SIR_transition_rates,
-                self.state_total_counts,
-                self.variant_counts,
-                self.infected_per_age_group,
-                self.agents_in_state,
-                self.agents_in_age_group,
-                self.initial_ages_exposed,
-                np.ones(self.N_ages),   # TODO: Load age distribution
-                infected_per_kommune,
-                immunized_per_kommune,
-                verbose=self.verbose)
+        # Load the age distribution
+        age_distribution = file_loaders.load_infection_age_distribution(self.cfg.initial_infection_distribution, self.N_ages)
+        age_distribution /= self.cfg.testing_penetration  # Adjust for the untested fraction
+        age_distribution /= age_distribution.sum()        # Convert to probability
 
-        else :
-            nb_simulation.initialize_states(
-                self.my,
-                self.g,
-                self.SIR_transition_rates,
-                self.state_total_counts,
-                self.variant_counts,
-                self.infected_per_age_group,
-                self.agents_in_state,
-                self.agents_in_age_group,
-                self.initial_ages_exposed,
-                np.ones(self.N_ages),   # TODO: Load age distribution
-                verbose=self.verbose)
+        # Set the probability to choose agents
+        #if self.cfg.initialize_at_kommune_level :
+        #    infected_per_kommune, immunized_per_kommune, _, _ = file_loaders.load_kommune_infection_distribution(self.df_coordinates, self.cfg.initial_infection_distribution)
+
+        #    infected_per_kommune  /= infected_per_kommune.sum()
+        #    immunized_per_kommune /= immunized_per_kommune.sum()
+
+        #    prior_infected  = [age_distribution[age] * infected_per_kommune[kommune]  for age, kommune in zip(self.my.age[possible_agents], self.my.kommune[possible_agents])]
+        #    prior_immunized = [age_distribution[age] * immunized_per_kommune[kommune] for age, kommune in zip(self.my.age[possible_agents], self.my.kommune[possible_agents])]
+
+        #else :
+        prior_infected = [age_distribution[age] for age in self.my.age[possible_agents]]
+        prior_immunized = prior_infected
+
+
+        nb_simulation.initialize_states(
+            self.my,
+            self.g,
+            self.SIR_transition_rates,
+            self.state_total_counts,
+            self.variant_counts,
+            self.infected_per_age_group,
+            self.agents_in_state,
+            possible_agents,
+            np.array(prior_infected),
+            np.array(prior_immunized),
+            verbose=self.verbose)
 
 
     def run_simulation(self, verbose_interventions=None) :
@@ -287,7 +290,7 @@ class Simulation :
 
         # Load the projected vaccination schedule
         # TODO: This should properably be done at cfg generation for consistent hashes
-        vaccinations_per_age_group, vaccination_schedule = utils.load_vaccination_schedule(self.cfg)
+        vaccinations_per_age_group, vaccination_schedule = file_loaders.load_vaccination_schedule(self.cfg)
 
         # Load the restriction contact matrices
         # TODO: This should properably be done at cfg generation for consistent hashes
@@ -295,7 +298,7 @@ class Simulation :
         other_matrix_restrict = []
 
         for scenario in self.cfg.Intervention_contact_matrices_name :
-            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario=scenario)
+            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario)
 
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
@@ -357,12 +360,12 @@ class Simulation :
         # Save CSV
         if save_csv :
             filename_csv = self._get_filename(name="ABM", filetype="csv")
-            utils.make_sure_folder_exist(filename_csv)
+            file_loaders.make_sure_folder_exist(filename_csv)
             self.df.to_csv(filename_csv, index=False)
 
         if save_hdf5 :
             filename_hdf5 = self._get_filename(name="ABM", filetype="hdf5")
-            utils.make_sure_folder_exist(filename_hdf5)
+            file_loaders.make_sure_folder_exist(filename_hdf5)
             with h5py.File(filename_hdf5, "w", **hdf5_kwargs) as f :  #
                 f.create_dataset("df", data=utils.dataframe_to_hdf5_format(self.df))
                 self._add_cfg_to_hdf5_file(f)
@@ -375,7 +378,7 @@ class Simulation :
             return None
 
         filename_hdf5 = self._get_filename(name="network", filetype="hdf5")
-        utils.make_sure_folder_exist(filename_hdf5)
+        file_loaders.make_sure_folder_exist(filename_hdf5)
 
         with h5py.File(filename_hdf5, "w", **hdf5_kwargs) as f :  #
             f.create_dataset("my_state", data=self.my_state)

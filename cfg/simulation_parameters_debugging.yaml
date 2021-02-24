@@ -16,7 +16,7 @@ lambda_E: 4 / 2.5
 lambda_I: 4 / 2.52
 
 start_date : 2020-12-21
-end_date : 2021-01-05
+end_date : 2021-03-05
 
 
 contact_matrices_name: 2021_fase2_sce1  # Target activity

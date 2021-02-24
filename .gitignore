@@ -1,24 +1,12 @@
 # exclude data from source control by default
-#!Data/
 
-Data/*
-#!Data/contact_matrices/
-#!Data/vaccination_schedule/
-#!Data/age_dist.csv
-#!Data/household_dist.csv
-#!Data/covid_index.feather
-#!Data/covid_index_2021.feather
+Data*/
 
 Figures/
 
 Initialized_networks/
 
 Output*/
-
-_Plot_tester.ipynb
-_Debugger.ipynb
-
-*.jar
 
 db.json
 
@@ -48,7 +36,9 @@ db.json
 # Spyder
 .spyproject/
 
+
 # Jupyter NB Checkpoints
+*.ipynb
 .ipynb_checkpoints/
 
 # Mac OS-specific storage files

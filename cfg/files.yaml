@@ -1,2 +1,2 @@
-PeopleInHousehold: "Data/household_dist.csv"
-AgeDistribution: "Data/age_dist.csv"
+PeopleInHousehold: "Data/population_information/household_dist.csv"
+AgeDistribution: "Data/population_information/age_dist.csv"

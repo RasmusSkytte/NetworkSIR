@@ -8,8 +8,10 @@ from scipy.stats import norm
 from tqdm import tqdm
 
 from src.utils import utils
+from src.utils import file_loaders
+
 from src.simulation import simulation
-from src import file_loaders
+
 
 from tinydb import Query
 

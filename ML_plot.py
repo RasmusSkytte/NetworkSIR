@@ -24,10 +24,10 @@ from contexttimer import Timer
 
 
 if utils.is_local_computer():
-    f = 0.1
-    N = 10
+    f = 0.01
+    N = 1
     n_steps = 0 # 2 per sigma
-    num_cores_max = 3
+    num_cores_max = 1
 else :
     f = 1
     N = 5
@@ -37,10 +37,11 @@ else :
 
 cfgs_all = []
 
-filenames = ["cfg/simulation_parameters_2021_fase1.yaml", 
-             "cfg/simulation_parameters_2021_fase2.yaml",
-             "cfg/simulation_parameters_2021_fase2_sce7.yaml",
-             "cfg/simulation_parameters_2021_fase2_sce8.yaml"]
+#filenames = ["cfg/simulation_parameters_2021_fase1.yaml",
+#             "cfg/simulation_parameters_2021_fase2.yaml",
+#             "cfg/simulation_parameters_2021_fase2_sce7.yaml",
+#             "cfg/simulation_parameters_2021_fase2_sce8.yaml"]
+filenames = ["cfg/simulation_parameters_debugging.yaml"]
 
 for filename in filenames :
     params, start_date = utils.load_params(filename)
@@ -82,39 +83,39 @@ for filename in filenames :
 
         if   s == 0 :
             cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
-        
+
         elif s == 1 :
-            
+
             params["beta"]               = noise(beta,               s, beta_sigma)
             cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
             params["beta"]               = beta
-            
+
             params["beta_UK_multiplier"] = noise(beta_UK_multiplier, s, beta_UK_multiplier_sigma)
             cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
             params["beta_UK_multiplier"] = beta_UK_multiplier
-            
+
             params["N_init"]             = noise(N_init,             s, N_init_sigma)
             cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
             params["N_init"]             = N_init
-            
+
             params["N_init_UK_frac"]     = noise(N_init_UK_frac,     s, N_init_UK_frac_sigma)
             cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
             params["N_init_UK_frac"]     = N_init_UK_frac
-        
+
         elif s == 2 :
 
             params["beta"]               = noise(beta,               s, beta_sigma)
             cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
             params["beta"]               = beta
-            
+
             params["beta_UK_multiplier"] = noise(beta_UK_multiplier, s, beta_UK_multiplier_sigma)
             cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
             params["beta_UK_multiplier"] = beta_UK_multiplier
-            
+
             params["N_init"]             = noise(N_init,             s, N_init_sigma)
             cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
             params["N_init"]             = N_init
-            
+
             params["N_init_UK_frac"]     = noise(N_init_UK_frac,     s, N_init_UK_frac_sigma)
             cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
             params["N_init_UK_frac"]     = N_init_UK_frac
@@ -137,8 +138,8 @@ for filename in filenames :
             cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
             params["beta"]               = beta
             params["N_init_UK_frac"]     = N_init_UK_frac
-        
-            
+
+
             params["beta_UK_multiplier"] = noise(beta_UK_multiplier, s-1, beta_UK_multiplier_sigma)
             params["N_init"]             = noise(N_init,             s-1, N_init_sigma)
             cfgs_all.extend(utils.generate_cfgs(params, N_runs=n))
@@ -189,7 +190,7 @@ if __name__ == "__main__":
         # kwargs = {}
         if num_cores == 1 :
             for cfg in tqdm(cfgs) :
-                cfg_out = simulation.run_single_simulation(cfg, save_initial_network=True, verbose=False)
+                cfg_out = simulation.run_single_simulation(cfg, save_initial_network=True, verbose=True)
                 simulation.update_database(db_cfg, q, cfg_out)
 
         else :

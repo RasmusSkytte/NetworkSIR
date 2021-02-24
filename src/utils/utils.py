@@ -754,7 +754,7 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
 
     if not cfg.do_interventions :
         exclude.append("interventions_to_apply")
-        exclude.append("f_daily_tests")
+        exclude.append("daily_tests")
         exclude.append("test_delay_in_clicks")
         exclude.append("results_delay_in_clicks")
         exclude.append("chance_of_finding_infected")
@@ -1166,7 +1166,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
         d_list = []
         for name, lst in d_simulation_parameters.items() :
-            
+
             # Convert all inputs to lists
             if isinstance(lst, (int, float, str)) :
                 lst = [lst]
@@ -1441,17 +1441,17 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
 #%%
 
 
-#def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  #
-def counts_to_df(time, state_counts, variant_counts) :  #
+def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  #
+#def counts_to_df(time, state_counts, variant_counts) :  #
 
     time = np.array(time)
     state_counts = np.array(state_counts)
     variant_counts = np.array(variant_counts)
-    #infected_per_age_group = np.array(infected_per_age_group)
+    infected_per_age_group = np.array(infected_per_age_group)
 
     N_states     = np.size(state_counts, 1)
     N_variants   = np.size(variant_counts, 1)
-    #N_age_groups = np.size(infected_per_age_group, 1)
+    N_age_groups = np.size(infected_per_age_group, 1)
 
     header = [
         "Time",
@@ -1460,7 +1460,7 @@ def counts_to_df(time, state_counts, variant_counts) :  #
         "R"]
 
     header.extend(["I^V_" + str(i) for i in range(N_variants)])
-    #header.extend(["I^A_" + str(i) for i in range(N_age_groups)])
+    header.extend(["I^A_" + str(i) for i in range(N_age_groups)])
 
     k_start = 0
     k_stop  = 1
@@ -1474,12 +1474,12 @@ def counts_to_df(time, state_counts, variant_counts) :  #
     k_stop  += N_variants
     df_variants = pd.DataFrame(variant_counts, columns=header[k_start:k_stop])
 
-    #k_start = k_stop
-    #k_stop  += N_age_groups
-    #df_age_groups = pd.DataFrame(infected_per_age_group, columns=header[k_start:k_stop])
+    k_start = k_stop
+    k_stop  += N_age_groups
+    df_age_groups = pd.DataFrame(infected_per_age_group, columns=header[k_start:k_stop])
 
-    #df = pd.concat([df_time, df_states, df_variants, df_age_groups], axis=1)  # .convert_dtypes()
-    df = pd.concat([df_time, df_states, df_variants], axis=1)  # .convert_dtypes()
+    df = pd.concat([df_time, df_states, df_variants, df_age_groups], axis=1)  # .convert_dtypes()
+    #df = pd.concat([df_time, df_states, df_variants], axis=1)  # .convert_dtypes()
     return df
 
 

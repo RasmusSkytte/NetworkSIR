@@ -176,7 +176,6 @@ class ABM_simulations :
 
             db = utils.get_db_cfg()
             q = Query()
-
             query = q.version == 2.1
             for key, val in subset.items() :
                 query = query & (q[key] == val)

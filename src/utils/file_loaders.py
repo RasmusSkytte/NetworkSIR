@@ -558,7 +558,7 @@ def load_infection_age_distribution(initial_distribution_file, N_ages) :
     else :
 
         if initial_distribution_file.lower() == "newest" :
-            _, df = get_newest_SSI_data(return_data=True)
+            _, df = get_SSI_data(date="newest", return_data=True)
         else :
             df = pd.read_csv('Data/age_cases/' + initial_distribution_file + ".csv", index_col=0)
 
@@ -583,7 +583,7 @@ def load_kommune_infection_distribution(df_coordinates, initial_distribution_fil
     else :
 
         if initial_distribution_file.lower() == "newest" :
-            df, _ = get_newest_SSI_data(return_data=True)
+            df, _ = get_SSI_data(date="newest", return_data=True)
         else :
             df = pd.read_csv('Data/municipality_cases/' + initial_distribution_file + ".csv")
         dates = df.index

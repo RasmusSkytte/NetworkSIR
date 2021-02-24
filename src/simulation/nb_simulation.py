@@ -1084,9 +1084,9 @@ def exp_func(x, a, b, c) :
 
     return a * np.exp(b * x) + c
 @njit
-def make_random_initial_infections(my, possible_agents, N, prior_prob) :
+def make_random_initial_infections(my, possible_agents, N, prior) :
     if my.cfg.weighted_random_initial_infections :
-        probs = np.array([7.09189651e+00, 7.21828639e+00, 7.35063322e+00, 7.48921778e+00,
+        prior_contacts = np.array([7.09189651e+00, 7.21828639e+00, 7.35063322e+00, 7.48921778e+00,
            7.63433406e+00, 7.78628991e+00, 7.94540769e+00, 8.11202496e+00,
            8.28649517e+00, 8.46918845e+00, 8.66049237e+00, 8.86081276e+00,
            9.07057458e+00, 9.29022282e+00, 9.52022345e+00, 9.76106439e+00,
@@ -1137,11 +1137,14 @@ def make_random_initial_infections(my, possible_agents, N, prior_prob) :
            1.85673577e+04, 1.94422602e+04, 2.03583982e+04, 2.13177153e+04,
            2.23222466e+04, 2.33741232e+04, 2.44755764e+04, 2.56289429e+04])
 
-        prior_prob = prior_prob * probs[my.number_of_contacts[possible_agents]]
+        prob = prior_contacts[my.number_of_contacts[possible_agents]]
+        prob = prior * prob / prob.sum()
+    else :
+        prob = prior.copy()
 
     return nb_random_choice(
         possible_agents,
-        prob=prior_prob,
+        prob=prob,
         size=N,
         replace=False,
     )
@@ -1232,10 +1235,10 @@ def initialize_states(
 
     if my.cfg.R_init > 0 :
 
-        initial_agents_to_immunize = choose_initial_agents(my, possible_agents, my.cfg.R_init, prior_infected)
+        initial_agents_to_immunize = choose_initial_agents(my, possible_agents, my.cfg.R_init, prior_immunized)
 
         #  Now make initial immunizations
-        for _, agent in enumerate(initial_agents_to_immunize) :
+        for agent in initial_agents_to_immunize :
             my.state[agent] = g.N_states
 
             if np.random.rand() < my.cfg.N_init_UK_frac :
@@ -1243,15 +1246,15 @@ def initialize_states(
 
             state_total_counts[g.N_states] += 1
 
-        update_infection_list_for_newly_infected_agent(my, g, agent)
+            update_infection_list_for_newly_infected_agent(my, g, agent)
 
 
 
 
-    initial_agents_to_infect = choose_initial_agents(my, possible_agents, my.cfg.N_init, prior_immunized)
+    initial_agents_to_infect = choose_initial_agents(my, possible_agents, my.cfg.N_init, prior_infected)
 
     #  Now make initial immunizations
-    for _, agent in enumerate(initial_agents_to_infect) :
+    for agent in initial_agents_to_infect :
 
         # If immune, do not infect # TODO: Discuss if this is the best way to immunize agents
         if my.state[agent] == g.N_states :

@@ -2074,7 +2074,7 @@ def load_params(filename) :
 
     params["restriction_thresholds"] =  [intervals]
 
-    if isinstance(params["initial_infection_distribution"], datetime.date) :
+    if "initial_infection_distribution" in params.keys() and isinstance(params["initial_infection_distribution"], datetime.date) :
         params["initial_infection_distribution"] = params["initial_infection_distribution"].strftime('%Y_%m_%d')
 
     return params, start_date

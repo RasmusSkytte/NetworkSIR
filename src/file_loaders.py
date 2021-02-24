@@ -10,6 +10,7 @@ from tinydb import Query
 from src.utils import utils
 from numba.typed import List, Dict  #TODO : delete Dict from line
 
+import urllib.request
 
 def pandas_load_file(filename) :
     # df_raw = pd.read_csv(file)  # .convert_dtypes()
@@ -175,7 +176,7 @@ class ABM_simulations :
 
             db = utils.get_db_cfg()
             q = Query()
-            
+
             query = q.version == 2.1
             for key, val in subset.items() :
                 query = query & (q[key] == val)
@@ -257,45 +258,71 @@ class ABM_simulations :
 from io import BytesIO
 from zipfile import ZipFile
 import urllib.request
-from urllib.error import HTTPError
 import datetime
 
 
 def load_SSI_url(SSI_data_url) :
     with ZipFile(BytesIO(urllib.request.urlopen(SSI_data_url).read())) as zfile :
-        df = pd.read_csv(zfile.open("Municipality_cases_time_series.csv"), sep=";")
+        df = pd.read_csv(zfile.open("Municipality_cases_time_series.csv"), sep=";", index_col=0)
     return df
 
 
-def load_newest_SSI_data(max_days_back=30) :
-    # SSI_data_url = "https ://files.ssi.dk/Data-Epidemiologiske-Rapport-22102020-20mg"
-    today = datetime.date.today()
-    for i in range(max_days_back) :
-        day = today - datetime.timedelta(days=i)
-        s_day = day.strftime("%d%m%Y")
-        SSI_data_url = f"https ://files.ssi.dk/Data-Epidemiologiske-Rapport-{s_day}-20mg"
-        try :
-            df = load_SSI_url(SSI_data_url)
-            return df
-        except HTTPError :
-            continue
-    raise AssertionError("Could not find any data from SSI")
+def download_newest_SSI_data(return_data=False, return_name=False) :
+
+    url = "https://covid19.ssi.dk/overvagningsdata/download-fil-med-overvaagningdata"
+
+    with urllib.request.urlopen(url) as response :
+        html = str(response.read())
+
+    s = re.search("Data-Epidemiologisk", html, re.IGNORECASE)
+    data_url = html[s.start()-46:s.end()+23] + ".zip"
+
+    df = load_SSI_url(data_url)
+
+    name = datetime.datetime.strptime(html[s.end()+10:s.end()+18],'%d%m%Y').strftime('%Y_%m_%d')
+
+    filename = 'Data/municipality_cases/' + name + '.csv'
+
+    df.to_csv(filename)
+
+    if return_data :
+        return df
+
+    if return_name :
+        return name
 
 
-def load_kommune_data(df_coordinates) :
+def load_kommune_data(df_coordinates, initial_distribution_file) :
+
     my_kommune = List(df_coordinates["kommune"].tolist())
-    df = load_newest_SSI_data().set_index("date_sample")
-    dates = df.index[-8 :]
     kommune_names = List(set(my_kommune))
-    infected_per_kommune_ints = np.zeros(len(kommune_names))
-    for date in dates :
+    infected_per_kommune = np.zeros(len(kommune_names))
+    immunized_per_kommune = np.zeros(len(kommune_names))
+
+
+    if initial_distribution_file.lower() == "newest" :
+        df = download_newest_SSI_data(return_data=True)
+    else :
+        df = pd.read_csv('Data/municipality_cases/' + initial_distribution_file + ".csv")
+    dates = df.index
+
+
+    # First fill the immunized per kommune array
+    arr = immunized_per_kommune
+
+    for i, date in enumerate(dates) :
         infected_per_kommune_series = df.loc[date]
+
+        # Last 7 days counts the currently infected
+        if i == len(dates) - 7 :
+            arr = infected_per_kommune
 
         for ith_kommune, kommune in enumerate(kommune_names) :
             if kommune == "Samsø" :
-                infected_per_kommune_ints[ith_kommune] += 1
+                arr[ith_kommune] += 1
             elif kommune == "København" :
-                infected_per_kommune_ints[ith_kommune] += infected_per_kommune_series["Copenhagen"]
+                arr[ith_kommune] += infected_per_kommune_series["Copenhagen"]
             else :
-                infected_per_kommune_ints[ith_kommune] += infected_per_kommune_series[kommune]
-    return infected_per_kommune_ints, kommune_names, my_kommune
+                arr[ith_kommune] += infected_per_kommune_series[kommune]
+
+    return infected_per_kommune, immunized_per_kommune, kommune_names, my_kommune

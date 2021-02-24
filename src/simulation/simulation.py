@@ -234,26 +234,28 @@ class Simulation :
 
         self.g = nb_simulation.Gillespie(self.my, self.N_states)
 
-        self.SIR_transition_rates = utils.initialize_SIR_transition_rates(
-            self.N_states, self.N_infectious_states, self.cfg
-        )
-        if self.cfg.make_initial_infections_at_kommune :
-            infected_per_kommune_ints, kommune_names, my_kommune = file_loaders.load_kommune_data(self.df_coordinates)
+        self.SIR_transition_rates = utils.initialize_SIR_transition_rates(self.N_states, self.N_infectious_states, self.cfg)
+
+
+        if self.cfg.initialize_at_kommune_level :
+            infected_per_kommune, immunized_per_kommune, kommune_names, my_kommune = file_loaders.load_kommune_data(self.df_coordinates, self.cfg.initial_infection_distribution)
 
             if self.cfg.R_init > 0 :
                 raise ValueError("R_init not implemented when using kommune configuration")
 
-            nb_simulation.make_initial_infections_from_kommune_data(
+            nb_simulation.initialize_states_from_kommune_data(
                 self.my,
                 self.g,
-                self.state_total_counts,
-                self.agents_in_state,
                 self.SIR_transition_rates,
+                self.state_total_counts,
+                self.variant_counts,
+                self.infected_per_age_group,
+                self.agents_in_state,
                 self.agents_in_age_group,
-                self.initial_ages_exposed,
-                # self.N_infectious_states,
+                self.initial_ages_exposed,                # self.N_infectious_states,
                 self.N_states,
-                infected_per_kommune_ints,
+                infected_per_kommune,
+                immunized_per_kommune,
                 kommune_names,
                 my_kommune,
                 verbose=self.verbose)
@@ -269,7 +271,6 @@ class Simulation :
                 self.agents_in_state,
                 self.agents_in_age_group,
                 self.initial_ages_exposed,
-                #self.N_infectious_states,
                 self.N_states,
                 verbose=self.verbose)
 
@@ -329,12 +330,11 @@ class Simulation :
 
 
         out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention = res
-        #out_time, out_state_counts, out_variant_counts, out_my_state, intervention = res
 
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
         self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts, out_infected_per_age_group)
-        #self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts)
+
         self.intervention = intervention
 
         return self.df

@@ -282,6 +282,9 @@ def download_newest_SSI_data(return_data=False, return_name=False) :
 
     filename = 'Data/municipality_cases/' + name + '.csv'
 
+    if not (os.path.dirname(filename) == '') and not os.path.exists(os.path.dirname(filename)) :
+        os.makedirs(os.path.dirname(filename))
+
     df.to_csv(filename)
 
     if return_data :
@@ -299,29 +302,34 @@ def load_kommune_data(df_coordinates, initial_distribution_file) :
     immunized_per_kommune = np.zeros(len(kommune_names))
 
 
-    if initial_distribution_file.lower() == "newest" :
-        df = download_newest_SSI_data(return_data=True)
+    if initial_distribution_file.lower() == "random" :
+        infected_per_kommune  = np.ones(np.shape(infected_per_kommune))
+        immunized_per_kommune = np.ones(np.shape(immunized_per_kommune))
+
     else :
-        df = pd.read_csv('Data/municipality_cases/' + initial_distribution_file + ".csv")
-    dates = df.index
 
+        if initial_distribution_file.lower() == "newest" :
+            df = download_newest_SSI_data(return_data=True)
+        else :
+            df = pd.read_csv('Data/municipality_cases/' + initial_distribution_file + ".csv")
+        dates = df.index
 
-    # First fill the immunized per kommune array
-    arr = immunized_per_kommune
+        # First fill the immunized per kommune array
+        arr = immunized_per_kommune
 
-    for i, date in enumerate(dates) :
-        infected_per_kommune_series = df.loc[date]
+        for i, date in enumerate(dates) :
+            infected_per_kommune_series = df.loc[date]
 
-        # Last 7 days counts the currently infected
-        if i == len(dates) - 7 :
-            arr = infected_per_kommune
+            # Last 7 days counts the currently infected
+            if i == len(dates) - 7 :
+                arr = infected_per_kommune
 
-        for ith_kommune, kommune in enumerate(kommune_names) :
-            if kommune == "Samsø" :
-                arr[ith_kommune] += 1
-            elif kommune == "København" :
-                arr[ith_kommune] += infected_per_kommune_series["Copenhagen"]
-            else :
-                arr[ith_kommune] += infected_per_kommune_series[kommune]
+            for ith_kommune, kommune in enumerate(kommune_names) :
+                if kommune == "Samsø" :
+                    arr[ith_kommune] += 1
+                elif kommune == "København" :
+                    arr[ith_kommune] += infected_per_kommune_series["Copenhagen"]
+                else :
+                    arr[ith_kommune] += infected_per_kommune_series[kommune]
 
     return infected_per_kommune, immunized_per_kommune, kommune_names, my_kommune

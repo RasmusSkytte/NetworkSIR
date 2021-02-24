@@ -106,24 +106,26 @@ for subset in subsets :
     ulls = sorted(ulls)[-N:]   # Keep N best
     lls = lls.tolist()
 
-    for i in reversed(range(len(lls))) :
-        if lls[i] in ulls :
-            ulls.remove(lls[i])
-        else :
-            for handle in plot_handles[i] :
-                handle.remove()
-            plot_handles.pop(i)
-            lls.pop(i)
+    if len(ulls) > 1 :
 
-    lls_best = np.array(lls)
-    # Rescale lls for plotting
-    lls_best -= np.min(lls_best)
-    lls_best /= np.max(lls_best)
+        for i in reversed(range(len(lls))) :
+            if lls[i] in ulls :
+                ulls.remove(lls[i])
+            else :
+                for handle in plot_handles[i] :
+                    handle.remove()
+                plot_handles.pop(i)
+                lls.pop(i)
 
-    # Color according to lls
-    for ll, handles in zip(lls_best, plot_handles) :
-        for line in handles :
-            line.set_alpha(0.2 + 0.8*ll)
+        lls_best = np.array(lls)
+        # Rescale lls for plotting
+        lls_best -= np.min(lls_best)
+        lls_best /= np.max(lls_best)
+
+        # Color according to lls
+        for ll, handles in zip(lls_best, plot_handles) :
+            for line in handles :
+                line.set_alpha(0.2 + 0.8*ll)
 
     # Plot the covid index
     m  = np.exp(logK) * (80_000 ** beta)

@@ -73,6 +73,7 @@ spec_cfg = {
     "results_delay_in_clicks" : nb.int64[:],
     "chance_of_finding_infected" : nb.float64[:],
     "days_looking_back" : nb.int64,
+    "testing_penetration" : nb.float32[:],
     #"masking_rate_reduction" : nb.float64[ :, : :1],  # to make the type C instead if A
     #"lockdown_rate_reduction" : nb.float64[ :, : :1],  # to make the type C instead if A
     "isolation_rate_reduction" : nb.float64[:],
@@ -1085,7 +1086,7 @@ def exp_func(x, a, b, c) :
 @njit
 def make_random_initial_infections(my, possible_agents, N, prior_prob) :
     if my.cfg.weighted_random_initial_infections :
-        probs =np.array([7.09189651e+00, 7.21828639e+00, 7.35063322e+00, 7.48921778e+00,
+        probs = np.array([7.09189651e+00, 7.21828639e+00, 7.35063322e+00, 7.48921778e+00,
            7.63433406e+00, 7.78628991e+00, 7.94540769e+00, 8.11202496e+00,
            8.28649517e+00, 8.46918845e+00, 8.66049237e+00, 8.86081276e+00,
            9.07057458e+00, 9.29022282e+00, 9.52022345e+00, 9.76106439e+00,
@@ -1136,7 +1137,7 @@ def make_random_initial_infections(my, possible_agents, N, prior_prob) :
            1.85673577e+04, 1.94422602e+04, 2.03583982e+04, 2.13177153e+04,
            2.23222466e+04, 2.33741232e+04, 2.44755764e+04, 2.56289429e+04])
 
-        prior_prob *= probs[my.number_of_contacts[possible_agents]]
+        prior_prob = prior_prob * probs[my.number_of_contacts[possible_agents]]
 
     return nb_random_choice(
         possible_agents,
@@ -1147,16 +1148,15 @@ def make_random_initial_infections(my, possible_agents, N, prior_prob) :
 
 
 @njit
-def choose_initial_agents(my, possible_agents, N, age_distribution) :
+def choose_initial_agents(my, possible_agents, N, prior) :
 
     ##  Standard outbreak type, infecting randomly
     if my.cfg.make_random_initial_infections :
-        prior = age_distribution[my.age[possible_agents]]
         return make_random_initial_infections(my, possible_agents, N, prior)
 
     # Local outbreak type, infecting around a point :
     else :
-
+        raise ValueError("Prior not implemented here")
         rho_init_local_outbreak = 0.1
 
         outbreak_agent = single_random_choice(possible_agents)  # this is where the outbreak starts
@@ -1172,21 +1172,6 @@ def choose_initial_agents(my, possible_agents, N, age_distribution) :
                     initial_agents.append(proposed_agent)
         return np.asarray(initial_agents, dtype=np.uint32)
 
-
-@njit
-def choose_initial_agents_from_kommune(
-    my,
-    possible_agents,
-    N,
-    age_distribution,
-    kommune_distribution) :
-
-    prior = age_distribution[my.age[possible_agents]] * kommune_distribution[my.kommune[possible_agents]]
-
-    if my.cfg.make_random_initial_infections :
-        return make_random_initial_infections(my, possible_agents, N, prior)
-    else :
-        raise NotImplementedError
 
 @njit
 def find_outbreak_agent(my, possible_agents, coordinate, rho, max_tries=10_000) :
@@ -1230,30 +1215,40 @@ def find_possible_agents(my, initial_ages_exposed, agents_in_age_group) :
 
     return possible_agents
 
-@njit
-def immunize_agents(my, g, initial_agents_to_immunize, state_total_counts) :
-
-    #  Now make initial immunizations
-    for _, agent in enumerate(initial_agents_to_immunize) :
-        my.state[agent] = g.N_states
-
-        if np.random.rand() < my.cfg.N_init_UK_frac :
-            my.corona_type[agent] = 1
-
-        state_total_counts[g.N_states] += 1
-
-    update_infection_list_for_newly_infected_agent(my, g, agent)
 
 @njit
-def infect_agents(my,
-                  g,
-                  initial_agents_to_infect,
-                  SIR_transition_rates,
-                  state_total_counts,
-                  variant_counts,
-                  infected_per_age_group,
-                  agents_in_state,
-                  verbose=False) :
+def initialize_states(
+    my,
+    g,
+    SIR_transition_rates,
+    state_total_counts,
+    variant_counts,
+    infected_per_age_group,
+    agents_in_state,
+    possible_agents,
+    prior_infected,
+    prior_immunized,
+    verbose=False) :
+
+    if my.cfg.R_init > 0 :
+
+        initial_agents_to_immunize = choose_initial_agents(my, possible_agents, my.cfg.R_init, prior_infected)
+
+        #  Now make initial immunizations
+        for _, agent in enumerate(initial_agents_to_immunize) :
+            my.state[agent] = g.N_states
+
+            if np.random.rand() < my.cfg.N_init_UK_frac :
+                my.corona_type[agent] = 1
+
+            state_total_counts[g.N_states] += 1
+
+        update_infection_list_for_newly_infected_agent(my, g, agent)
+
+
+
+
+    initial_agents_to_infect = choose_initial_agents(my, possible_agents, my.cfg.N_init, prior_immunized)
 
     #  Now make initial immunizations
     for _, agent in enumerate(initial_agents_to_infect) :
@@ -1290,33 +1285,6 @@ def infect_agents(my,
 
 
         update_infection_list_for_newly_infected_agent(my, g, agent)
-
-@njit
-def initialize_states(
-    my,
-    g,
-    SIR_transition_rates,
-    state_total_counts,
-    variant_counts,
-    infected_per_age_group,
-    agents_in_state,
-    agents_in_age_group,
-    initial_ages_exposed,
-    age_distribution,
-    verbose=False) :
-
-    possible_agents = find_possible_agents(my, initial_ages_exposed, agents_in_age_group)
-
-    if my.cfg.R_init > 0 :
-
-        initial_agents_to_immunize = choose_initial_agents(my, possible_agents, my.cfg.R_init, age_distribution)
-
-        immunize_agents(my, g, initial_agents_to_immunize, state_total_counts)
-
-
-    initial_agents_to_infect = choose_initial_agents(my, possible_agents, my.cfg.N_init, age_distribution)
-
-    infect_agents(my, g, initial_agents_to_infect, SIR_transition_rates, state_total_counts, variant_counts, infected_per_age_group, agents_in_state, verbose=verbose)
 
     # English Corona Type TODO
 
@@ -1395,43 +1363,6 @@ def initialize_states(
                         g.update_rates(my, +rate, agent)
 
             update_infection_list_for_newly_infected_agent(my, g, agent)
-
-
-@njit
-def initialize_states_from_kommune_data(
-    my,
-    g,
-    SIR_transition_rates,
-    state_total_counts,
-    variant_counts,
-    infected_per_age_group,
-    agents_in_state,
-    agents_in_age_group,
-    initial_ages_exposed,
-    age_distribution,
-    infected_per_kommune,
-    immunized_per_kommune,
-    verbose=False) :
-
-    possible_agents = find_possible_agents(my, initial_ages_exposed, agents_in_age_group)
-
-    if my.cfg.R_init > 0 :
-        initial_agents_to_immunize = choose_initial_agents_from_kommune(my,
-                                            possible_agents,
-                                            my.cfg.R_init,
-                                            age_distribution,
-                                            immunized_per_kommune)
-
-        immunize_agents(my, g, initial_agents_to_immunize, state_total_counts)
-
-
-    initial_agents_to_infect = choose_initial_agents_from_kommune(my,
-                                            possible_agents,
-                                            my.cfg.R_init,
-                                            age_distribution,
-                                            infected_per_kommune)
-
-    infect_agents(my, g, initial_agents_to_infect, SIR_transition_rates, state_total_counts, variant_counts, infected_per_age_group, agents_in_state, verbose=verbose)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -2462,11 +2393,32 @@ def matrix_restriction_on_label(my, g, intervention, label, n) :
     # ie : [[0,0.2,0.2],[0,0.8,0.8]] means that your wear mask when around 20% of job and other contacts, and your rates to those is reduced by 80%
     # loop over all agents
 
+    prev = 0
+    for agent in range(my.cfg_network.N_tot) :
+        for i in range(my.number_of_contacts[agent]) :
+            if my.agent_is_connected(agent, i) :
+                prev += 1
+
     for agent in range(my.cfg_network.N_tot) :
         if intervention.labels[agent] == label :
             my.restricted_status[agent] = 1
 
             remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n)
+
+
+    after = 0
+    for agent in range(my.cfg_network.N_tot) :
+        for i in range(my.number_of_contacts[agent]) :
+            if my.agent_is_connected(agent, i) :
+                after += 1
+
+    print("--------------")
+    print("Contacts before")
+    print(prev)
+    print("Contacts after")
+    print(after)
+    print("Ratio")
+    print(after / prev)
 
 
 @njit

@@ -19,7 +19,7 @@ from attrdict import AttrDict
 
 from tinydb import TinyDB, Query
 
-from src import file_loaders
+from src.utils import file_loaders
 
 
 def sha256(d) :
@@ -57,37 +57,6 @@ def get_num_cores(num_cores_max=None, subtract_cores=1) :
         return num_cores_max
     return num_cores
 
-
-def delete_file(filename) :
-    try :
-        Path(filename).unlink()
-    except FileNotFoundError :
-        pass
-
-
-def file_exists(filename) :
-    if isinstance(filename, str) :
-        filename = Path(filename)
-    return filename.exists()
-
-
-def make_sure_folder_exist(filename, delete_file_if_exists=False) :
-    if isinstance(filename, str) :
-        filename = Path(filename)
-    filename.parent.mkdir(parents=True, exist_ok=True)
-    if delete_file_if_exists and filename.exists() :
-        filename.unlink()
-
-
-def load_yaml(filename) :
-    with open(filename) as file :
-        tmp = yaml.safe_load(file)
-
-        for key, val in tmp.items() :
-            if isinstance(val, dict) :
-                tmp[key] = DotDict(val)
-
-        return DotDict(tmp)
 
 def format_time(t) :
     return str(datetime.timedelta(seconds=t))
@@ -691,7 +660,7 @@ class DotDict(AttrDict) :
 
     def dump_to_file(self, filename, exclude=None) :
         if any(substring in filename for substring in ["yaml", "yml"]) :
-            make_sure_folder_exist(filename)
+            file_loaders.make_sure_folder_exist(filename)
 
             with open(filename, "w") as yaml_file :
                 yaml.dump(self.to_dict(exclude="ID"), yaml_file, default_flow_style=False, sort_keys=False)
@@ -712,7 +681,7 @@ class DotDict(AttrDict) :
 
 
 def get_parameter_to_latex() :
-    return load_yaml("cfg/parameter_to_latex.yaml")
+    return file_loaders.load_yaml("cfg/parameter_to_latex.yaml")
 
 
 def human_format(num, digits=3) :
@@ -794,7 +763,7 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
         cfg.N_init_UK = human_format(cfg.N_init_UK)
 
     # parameter_to_latex = get_parameter_to_latex()
-    parameter_to_latex = load_yaml("cfg/parameter_to_latex.yaml")
+    parameter_to_latex = file_loaders.load_yaml("cfg/parameter_to_latex.yaml")
 
     exclude.append("version")
     exclude.append("hash")
@@ -1054,16 +1023,16 @@ from src.simulation import nb_simulation
 
 def get_cfg_default() :
     """ Default Simulation Parameters """
-    cfg              = load_yaml("cfg/simulation_parameters_default.yaml")
-    cfg.network      = load_yaml("cfg/simulation_parameters_network.yaml")
-    #cfg.intervention = load_yaml("cfg/simulation_parameters_intervention.yaml")
+    cfg              = file_loaders.load_yaml("cfg/simulation_parameters_default.yaml")
+    cfg.network      = file_loaders.load_yaml("cfg/simulation_parameters_network.yaml")
+    #cfg.intervention = file_loaders.load_yaml("cfg/simulation_parameters_intervention.yaml")
     return cfg
 
 
 # def get_cfg_settings() :
 #     """ CFG Settings """
 #     yaml_filename = "cfg/settings.yaml"
-#     return load_yaml(yaml_filename)
+#     return file_loaders.load_yaml(yaml_filename)
 
 # Load numba specifications
 spec_cfg            = nb_simulation.spec_cfg
@@ -1190,7 +1159,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                 if key in spec_cfg.keys() :
 
                     if key == "infection_distribution" and d["infection_distribution"] == "newest" :
-                        d["infection_distribution"] = file_loaders.download_newest_SSI_data(return_name=True)
+                        d["infection_distribution"] = file_loaders.download_newest_SSI_data(return_name=True, verbose=verbose)
 
                     cfg.update(d)
 
@@ -1200,7 +1169,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
                     if key == "contact_matrices_name" :
                         # TODO : fix the DotDict indexing
-                        work_matix, other_matrix, work_other_ratio, _ = load_contact_matrices(scenario = d[key])
+                        work_matix, other_matrix, work_other_ratio, _ = file_loaders.load_contact_matrices(scenario = d[key])
                         cfg["network"].update({"work_matrix" : work_matix, "other_matrix" : other_matrix, "work_other_ratio" : work_other_ratio})
 
 
@@ -1292,31 +1261,13 @@ def get_num_cores_N_tot(N_tot_max, num_cores_max=None) :
 
 
 def load_df_coordinates(N_tot, ID) :
-    # np.random.seed(ID)
-    # coordinates = np.load(coordinates_filename)
-    coordinates_filename = "Data/GPS_coordinates.feather"
+    coordinates_filename = "Data/population_information/GPS_coordinates.feather"
     df_coordinates = (
         pd.read_feather(coordinates_filename)
         .sample(N_tot, replace=False, random_state=ID)
         .reset_index(drop=True)
     )
     return df_coordinates
-
-    # coordinates = df_coordinates_to_coordinates(df_coordinates)
-
-    # if N_tot > len(df_coordinates) :
-    #     raise AssertionError(
-    #         "N_tot cannot be larger than coordinates (number of generated houses in DK)"
-    #     )
-
-    # index = np.arange(len(df_coordinates), dtype=np.uint32)
-    # index_subset = np.random.choice(index, N_tot, replace=False)
-    # return coordinates[index_subset], index_subset
-
-
-# def load_coordinates_indices(coordinates_filename, N_tot, ID) :
-#     return load_coordinates(coordinates_filename, N_tot, ID)[1]
-
 
 def df_coordinates_to_coordinates(df_coordinates) :
     return df_coordinates[["Longitude", "Lattitude"]].values
@@ -1827,163 +1778,6 @@ def draw_random_nb(x) :
         return lambda x : draw_random_index_based_on_array(x)
 
 
-#%%
-
-from collections import defaultdict
-
-
-def parse_age_distribution_data(filename, kommune_level=False) :
-
-    age_dist_raw = pd.read_csv(filename, index_col=0)
-
-    age_dist_raw = age_dist_raw.to_numpy()
-
-    age_dist = np.ones( (age_dist_raw.shape[0], age_dist_raw.shape[1], len(eval(age_dist_raw[0, 0]))), dtype=float)
-    for i in range(age_dist_raw.shape[0]) :
-        for j in range(age_dist_raw.shape[1]) :
-            age_dist[i, j, :] = eval(age_dist_raw[i, j])
-
-    if not kommune_level :
-        age_dist = np.sum(age_dist, axis=0)
-
-    return age_dist
-
-
-def parse_household_data(filename, kommune_level=False) :
-
-    household_dist_raw = pd.read_csv(filename, index_col=0)
-    kommune_id = household_dist_raw.index
-
-    household_dist = household_dist_raw.to_numpy()
-
-    for i in range(household_dist.shape[0]) :
-        for j in range(household_dist.shape[1]) :
-            household_dist[i, j] /= j + 1
-
-    if not kommune_level :
-        return np.sum(household_dist, axis=0)
-    else :
-        return (household_dist, kommune_id)
-
-
-def load_household_data() :
-
-    people_in_household = parse_household_data(load_yaml("cfg/files.yaml")["PeopleInHousehold"])
-    age_distribution_per_people_in_household = parse_age_distribution_data(load_yaml("cfg/files.yaml")["AgeDistribution"])
-
-    return people_in_household, age_distribution_per_people_in_household
-
-def load_household_data_kommune_specific() :
-
-    household_dist, kommune_id = parse_household_data(load_yaml("cfg/files.yaml")["PeopleInHousehold"], kommune_level=True)
-    age_dist = parse_age_distribution_data(load_yaml("cfg/files.yaml")["AgeDistribution"], kommune_level=True)
-
-    return (household_dist, age_dist, kommune_id)
-
-
-def load_age_stratified_file(file) :
-    """ Loads and parses the contact matrix from the .csv file specifed
-        Parameters :
-            file (string) : path the the .csv file
-    """
-
-    # Load using pandas
-    data = pd.read_csv(file, index_col=0)
-
-    # Get the age groups from the dataframe
-    age_groups = list(data)
-
-    # Extract the lowest age from the age group intervals
-    lower_breaks = [int(age_group.split('-')[0]) for age_group in age_groups]
-
-    # Get the row_names
-    row_names = data.index.values
-
-    return data.to_numpy(), row_names, lower_breaks
-
-def load_contact_matrices(scenario = 'reference') :
-    """ Loads and parses the contact matrices corresponding to the chosen scenario.
-        The function first determines what the relationship between work activites and other activites are
-        After the work_other_ratio has been calculated, the function returns the normalized contact matrices
-        Parameters :
-            scenario (string) : Name for the scenario to load
-    """
-    # Load the contact matrices
-    matrix_work,   _, age_groups_work   = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
-    matrix_school, _, age_groups_school = load_age_stratified_file('Data/contact_matrices/' + scenario + '_school.csv')
-    matrix_other,  _, age_groups_other  = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
-    # TODO : Load the school contact matrix
-
-    # Assert the age_groups are the same
-    if not age_groups_work == age_groups_other :
-        raise ValueError('Age groups for work contact matrix and other contact matrix not equal')
-    matrix_work = matrix_work + matrix_school
-
-    # Determine the work-to-other ratio
-    work_other_ratio = matrix_work.sum() / (matrix_other.sum() + matrix_work.sum())
-
-    # Normalize the contact matrices after this ratio has been determined
-    # TODO : Find out if lists or numpy arrays are better --- I am leaning towards using only numpy arrays
-    return matrix_work.tolist(), matrix_other.tolist(), work_other_ratio, age_groups_work
-
-
-
-
-
-def load_vaccination_schedule(cfg) :
-    """ Loads and parses the vaccination schedule corresponding to the chosen scenario.
-        This includes scaling the number of infections and adjusting the effective start dates
-        Parameters :
-            cfg (dict) : the configuration file
-    """
-    vaccinations_per_age_group, vaccination_schedule, _ = load_vaccination_schedule_file(scenario = cfg.Intervention_vaccination_schedule_name)
-
-    # Check that lengths match
-    test_length(vaccinations_per_age_group, cfg.Intervention_vaccination_effect_delays, "Loaded vaccination schedules does not match with the length of vaccination_effect_delays")
-
-    # Scale and adjust the vaccination schedules
-    for i in range(len(vaccinations_per_age_group)) :
-
-        # Scale the number of vaccines
-        np.multiply(vaccinations_per_age_group[i], cfg.network.N_tot / 5_800_000, out=vaccinations_per_age_group[i], casting='unsafe')
-
-        # Determine the timing of effective vaccines
-        vaccination_schedule[i] = cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + cfg.Intervention_vaccination_effect_delays[i]
-
-    return vaccinations_per_age_group, vaccination_schedule
-
-
-def load_vaccination_schedule_file(scenario = "reference") :
-    """ Loads and parses the vaccination schedule file corresponding to the chosen scenario.
-        Parameters :
-            scenario (string) : Name for the scenario to load
-    """
-    # Prepare output files
-    vaccine_counts  = []
-    schedule        = []
-    age_groups      = []
-
-    # Determine the number of files that matches the requested scenario
-    i = 0
-    filename = lambda i : f'Data/vaccination_schedule/{scenario}_{i}.csv'
-
-    while file_exists(filename(i)) :
-
-        # Load the contact matrices
-        tmp_vaccine_counts, tmp_schedule, _ = load_age_stratified_file(filename(i))
-
-        # Convert schedule to datetimes
-        tmp_schedule = [datetime.datetime.strptime(date, '%Y-%m-%d').date() for date in tmp_schedule]
-
-        # Store the loaded schedule
-        vaccine_counts.append(tmp_vaccine_counts)
-        schedule.append(tmp_schedule)
-
-        # Increment
-        i += 1
-
-    # Normalize the contact matrices after this ratio has been determined
-    return vaccine_counts, schedule, age_groups
 
 @njit
 def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=False) :
@@ -2162,7 +1956,7 @@ def read_cfg_from_hdf5_file_recursively(f, path='cfg') :
 #%%
 
 def get_cfg_network_initialized(cfg) :
-    include = load_yaml("cfg/settings.yaml")["network_initialization_include_parameters"]
+    include = file_loaders.load_yaml("cfg/settings.yaml")["network_initialization_include_parameters"]
     cfg_network_initialized = {key : cfg[key] for key in include}
     return cfg_network_initialized
 
@@ -2172,7 +1966,7 @@ def get_cfg_network_initialized(cfg) :
 
 def get_simulation_parameters() :
     yaml_filename = "cfg/simulation_parameters.yaml"
-    all_simulation_parameters_input = load_yaml(yaml_filename)["all_simulation_parameters"]
+    all_simulation_parameters_input = file_loaders.load_yaml(yaml_filename)["all_simulation_parameters"]
     all_simulation_parameters = []
     for simulation_parameter in all_simulation_parameters_input :
         if "N_RS" in simulation_parameter.keys() and "MCMC" in simulation_parameter.keys() :
@@ -2243,7 +2037,7 @@ def get_random_samples(simulation_parameter, random_state=0) :
 
 from sympy.parsing.sympy_parser import parse_expr
 def load_params(filename) :
-    params = load_yaml(filename)
+    params = file_loaders.load_yaml(filename)
     params = params.to_dict()
 
     # Parse inputs

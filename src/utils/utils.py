@@ -19,6 +19,7 @@ from attrdict import AttrDict
 
 from tinydb import TinyDB, Query
 
+from src import file_loaders
 
 
 def sha256(d) :
@@ -1187,7 +1188,12 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                 key = list(d.keys())[0]
 
                 if key in spec_cfg.keys() :
+
+                    if key == "infection_distribution" and d["infection_distribution"] == "newest" :
+                        d["infection_distribution"] = file_loaders.download_newest_SSI_data(return_name=True)
+
                     cfg.update(d)
+
 
                 elif key in spec_network.keys() :
                     cfg["network"].update(d)
@@ -1442,7 +1448,6 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
 
 
 def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  #
-#def counts_to_df(time, state_counts, variant_counts) :  #
 
     time = np.array(time)
     state_counts = np.array(state_counts)
@@ -1479,7 +1484,7 @@ def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  
     df_age_groups = pd.DataFrame(infected_per_age_group, columns=header[k_start:k_stop])
 
     df = pd.concat([df_time, df_states, df_variants, df_age_groups], axis=1)  # .convert_dtypes()
-    #df = pd.concat([df_time, df_states, df_variants], axis=1)  # .convert_dtypes()
+
     return df
 
 
@@ -1945,7 +1950,7 @@ def load_age_stratified_file(file) :
     # Get the row_names
     row_names = data.index.values
 
-    return (data.to_numpy(), row_names, lower_breaks)
+    return data.to_numpy(), row_names, lower_breaks
 
 def load_contact_matrices(scenario = 'reference') :
     """ Loads and parses the contact matrices corresponding to the chosen scenario.
@@ -1970,7 +1975,7 @@ def load_contact_matrices(scenario = 'reference') :
 
     # Normalize the contact matrices after this ratio has been determined
     # TODO : Find out if lists or numpy arrays are better --- I am leaning towards using only numpy arrays
-    return (matrix_work.tolist(), matrix_other.tolist(), work_other_ratio, age_groups_work)
+    return matrix_work.tolist(), matrix_other.tolist(), work_other_ratio, age_groups_work
 
 
 
@@ -1996,7 +2001,7 @@ def load_vaccination_schedule(cfg) :
         # Determine the timing of effective vaccines
         vaccination_schedule[i] = cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + cfg.Intervention_vaccination_effect_delays[i]
 
-    return (vaccinations_per_age_group, vaccination_schedule)
+    return vaccinations_per_age_group, vaccination_schedule
 
 
 def load_vaccination_schedule_file(scenario = "reference") :
@@ -2029,7 +2034,7 @@ def load_vaccination_schedule_file(scenario = "reference") :
         i += 1
 
     # Normalize the contact matrices after this ratio has been determined
-    return (vaccine_counts, schedule, age_groups)
+    return vaccine_counts, schedule, age_groups
 
 @njit
 def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=False) :
@@ -2326,4 +2331,4 @@ def load_params(filename) :
 
     params["restriction_thresholds"] =  [intervals]
 
-    return (params, start_date)
+    return params, start_date

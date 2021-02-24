@@ -14,13 +14,15 @@ outbreak_position_UK: random
 
 R_init : 0
 
+initial_infection_distribution : newest
+
 lambda_E: 1.0  # E->I, Lambda(from E states)
 lambda_I: 1.0  # I->R, Lambda(from I states)
 
 # Other:
 make_random_initial_infections: True # Infections around a single agent
 weighted_random_initial_infections: True # Infections weighted by the number of contacts
-make_initial_infections_at_kommune: False # Initiate infections at kommune basis
+initialize_at_kommune_level: False # Initiate infections at kommune basis
 make_restrictions_at_kommune_level: True # True makes interventions at labels=kommune, false
 day_max: 0 # 5 weeks. Sets the maximum number of days the algorithm runs
 

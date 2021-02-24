@@ -42,13 +42,14 @@ spec_cfg = {
     "N_init" : nb.uint16,
     "N_init_UK_frac" : nb.float32,
     "R_init" : nb.uint16,
+    "initial_infection_distribution" : nb.types.unicode_type,
     "lambda_E" : nb.float32,
     "lambda_I" : nb.float32,
     # other
     "day_max" : nb.int32,
     "make_random_initial_infections" : nb.boolean,
     "weighted_random_initial_infections" : nb.boolean,
-    "make_initial_infections_at_kommune" : nb.boolean,
+    "initialize_at_kommune_level" : nb.boolean,
     "make_restrictions_at_kommune_level" : nb.boolean,
     "clustering_connection_retries" : nb.uint32,
     "beta_UK_multiplier" : nb.float32,
@@ -96,13 +97,14 @@ class Config(object) :
         self.N_init = 100
         self.N_init_UK_frac = 0
         self.R_init = 0
+        self.initial_infection_distribution = "newest"
         self.lambda_E = 1.0
         self.lambda_I = 1.0
 
         # other
         self.make_random_initial_infections = True
         self.weighted_random_initial_infections = False
-        self.make_initial_infections_at_kommune = False
+        self.initialize_at_kommune_level = False
         self.make_restrictions_at_kommune_level = True
         self.day_max = 0
         self.clustering_connection_retries = 0
@@ -187,11 +189,10 @@ spec_my = {
     "infection_weight" : nb.float64[:],
     "number_of_contacts" : nb.uint16[:],
     "state" : nb.int8[:],
-    "tent" : nb.uint16[:],
     "kommune" : nb.uint8[:],
     "infectious_states" : ListType(nb.int64),
     "corona_type" : nb.uint8[:],
-    "vaccination_type" : nb.uint8[:],
+    "vaccination_type" : nb.int8[:],
     "restricted_status" : nb.uint8[:],
     "cfg" : nb_cfg_type,
     "cfg_network" : nb_cfg_network_type,
@@ -215,7 +216,6 @@ class My(object) :
         self.infection_weight = np.ones(N_tot, dtype=np.float64)
         self.number_of_contacts = np.zeros(N_tot, dtype=nb.uint16)
         self.state = np.full(N_tot, fill_value=-1, dtype=np.int8)
-        self.tent = np.zeros(N_tot, dtype=np.uint16)
         self.kommune = np.zeros(N_tot, dtype=np.uint8)
         self.infectious_states = List([4, 5, 6, 7])
         self.corona_type = np.zeros(N_tot, dtype=np.uint8)
@@ -1264,7 +1264,6 @@ def initialize_states(
     agents_in_state,
     agents_in_age_group,
     initial_ages_exposed,
-    #N_infectious_states,
     N_states,
     verbose=False) :
 
@@ -1414,17 +1413,19 @@ def initialize_states(
 
 
 @njit
-def make_initial_infections_from_kommune_data(
+def initialize_states_from_kommune_data(
     my,
     g,
-    state_total_counts,
-    agents_in_state,
     SIR_transition_rates,
+    state_total_counts,
+    variant_counts,
+    infected_per_age_group,
+    agents_in_state,
     agents_in_age_group,
     initial_ages_exposed,
-    # N_infectious_states,
     N_states,
-    infected_per_kommune_ints,
+    infected_per_kommune,
+    immunized_per_kommune,
     kommune_names,
     my_kommune,
     verbose=False,
@@ -1443,7 +1444,7 @@ def make_initial_infections_from_kommune_data(
 
     initial_agents_to_infect, E_I_ratio = compute_initial_agents_to_infect_from_kommune(
         my,
-        infected_per_kommune_ints,
+        infected_per_kommune,
         kommune_names,
         my_kommune,
         verbose,
@@ -1464,7 +1465,6 @@ def make_initial_infections_from_kommune_data(
         g.total_sum_of_state_changes += SIR_transition_rates[new_state]
         g.cumulative_sum_of_state_changes[new_state :] += SIR_transition_rates[new_state]
 
-        # if my.state[agent] >= N_infectious_states :
         if my.agent_is_infectious(agent) :
             for contact, rate in zip(my.connections[agent], g.rates[agent]) :
                 # update rates if contact is susceptible

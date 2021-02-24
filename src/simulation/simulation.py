@@ -228,8 +228,8 @@ class Simulation :
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
         self.state_total_counts     = np.zeros(self.N_states, dtype=np.uint32)
-        self.variant_counts         = np.zeros(2, dtype=np.uint32)  # TODO: Generalize this sta
-        #self.infected_per_age_group = np.zeros(self.N_ages, dtype=np.uint32)
+        self.variant_counts         = np.zeros(2, dtype=np.uint32)  # TODO: Generalize this to work for more variants
+        self.infected_per_age_group = np.zeros(self.N_ages, dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
@@ -266,7 +266,7 @@ class Simulation :
                 self.SIR_transition_rates,
                 self.state_total_counts,
                 self.variant_counts,
-                #self.infected_per_age_group,
+                self.infected_per_age_group,
                 self.agents_in_state,
                 self.agents_in_age_group,
                 self.initial_ages_exposed,
@@ -320,7 +320,7 @@ class Simulation :
             self.SIR_transition_rates,
             self.state_total_counts,
             self.variant_counts,
-            #self.infected_per_age_group,
+            self.infected_per_age_group,
             self.agents_in_state,
             self.N_states,
             self.N_infectious_states,
@@ -328,13 +328,13 @@ class Simulation :
             self.verbose)
 
 
-        #out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention = res
-        out_time, out_state_counts, out_variant_counts, out_my_state, intervention = res
+        out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention = res
+        #out_time, out_state_counts, out_variant_counts, out_my_state, intervention = res
 
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
-        #self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts, out_infected_per_age_group)
-        self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts)
+        self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts, out_infected_per_age_group)
+        #self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts)
         self.intervention = intervention
 
         return self.df
@@ -468,12 +468,12 @@ def run_simulations(
         cfgs_all = utils.generate_cfgs(simulation_parameters, N_runs, N_tot_max, verbose=verbose)
 
         N_tot_max = utils.d_num_cores_N_tot[utils.extract_N_tot_max(simulation_parameters)]
-    
+
     elif isinstance(simulation_parameters[0], utils.DotDict) :
         cfgs_all = simulation_parameters
 
         N_tot_max = np.max([cfg.network.N_tot for cfg in cfgs_all])
-    
+
     else :
         raise ValueError(f"simulation_parameters not of the correct type")
 

@@ -239,10 +239,7 @@ class Simulation :
 
 
         if self.cfg.initialize_at_kommune_level :
-            infected_per_kommune, immunized_per_kommune, kommune_names, my_kommune = file_loaders.load_kommune_data(self.df_coordinates, self.cfg.initial_infection_distribution)
-
-            if self.cfg.R_init > 0 :
-                raise ValueError("R_init not implemented when using kommune configuration")
+            infected_per_kommune, immunized_per_kommune, _, _ = file_loaders.load_kommune_data(self.df_coordinates, self.cfg.initial_infection_distribution)
 
             nb_simulation.initialize_states_from_kommune_data(
                 self.my,
@@ -253,12 +250,10 @@ class Simulation :
                 self.infected_per_age_group,
                 self.agents_in_state,
                 self.agents_in_age_group,
-                self.initial_ages_exposed,                # self.N_infectious_states,
-                self.N_states,
+                self.initial_ages_exposed,
+                np.ones(self.N_ages),   # TODO: Load age distribution
                 infected_per_kommune,
                 immunized_per_kommune,
-                kommune_names,
-                my_kommune,
                 verbose=self.verbose)
 
         else :
@@ -272,8 +267,9 @@ class Simulation :
                 self.agents_in_state,
                 self.agents_in_age_group,
                 self.initial_ages_exposed,
-                self.N_states,
+                np.ones(self.N_ages),   # TODO: Load age distribution
                 verbose=self.verbose)
+
 
     def run_simulation(self, verbose_interventions=None) :
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))

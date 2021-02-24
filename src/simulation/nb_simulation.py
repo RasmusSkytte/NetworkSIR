@@ -798,7 +798,7 @@ def place_and_connect_families(
 
 @njit
 def place_and_connect_families_kommune_specific(
-    my, people_in_household, age_distribution_per_people_in_household, coordinates_raw, Kommune_ids, N_ages, verbose=False
+    my, people_in_household, age_distribution_per_people_in_household, coordinates_raw, kommune_ids, N_ages, verbose=False
 ) :
     """ Place agents into household, including assigning coordinates and making connections. First step in making the network.
         Parameters :
@@ -831,11 +831,11 @@ def place_and_connect_families_kommune_specific(
         agent0 = agent
         house_index = all_indices[agent]
         coordinates = coordinates_raw[house_index]
-        kommune = Kommune_ids[house_index]
+        kommune = kommune_ids[house_index]
 
         #Draw size of household form distribution
-        people_in_household_kom = people_in_household[kommune, :]
-        N_people_in_house_index = utils.rand_choice_nb(people_in_household_kom)
+        people_in_household_kommune = people_in_household[kommune, :]
+        N_people_in_house_index = utils.rand_choice_nb(people_in_household_kommune)
         N_people_in_house = people_index_to_value[N_people_in_house_index]
         house_sizes[N_people_in_house_index] += 1
         # if N_in_house would increase agent to over N_tot,
@@ -854,6 +854,7 @@ def place_and_connect_families_kommune_specific(
             #set age for agent
             age = age_index  # just use age index as substitute for age
             my.age[agent] = age
+            my.kommune[agent] = kommune
             counter_ages[age_index] += 1
             agents_in_age_group[age_index].append(np.uint32(agent))
 
@@ -1082,7 +1083,7 @@ def exp_func(x, a, b, c) :
 
     return a * np.exp(b * x) + c
 @njit
-def make_random_initial_infections(my, possible_agents) :
+def make_random_initial_infections(my, possible_agents, N, prior_prob) :
     if my.cfg.weighted_random_initial_infections :
         probs =np.array([7.09189651e+00, 7.21828639e+00, 7.35063322e+00, 7.48921778e+00,
            7.63433406e+00, 7.78628991e+00, 7.94540769e+00, 8.11202496e+00,
@@ -1135,29 +1136,23 @@ def make_random_initial_infections(my, possible_agents) :
            1.85673577e+04, 1.94422602e+04, 2.03583982e+04, 2.13177153e+04,
            2.23222466e+04, 2.33741232e+04, 2.44755764e+04, 2.56289429e+04])
 
-        proba = np.zeros(my.cfg_network.N_tot,dtype=np.float64)
-        for agent in range(my.cfg_network.N_tot) :
-            proba[agent] = probs[my.number_of_contacts[agent]]
-        return nb_random_choice(
-            possible_agents,
-            prob=proba,
-            size=my.cfg.N_init,
-            replace=False,
-        )
-    else :
-        return np.random.choice(
-            possible_agents,
-            size=my.cfg.N_init,
-            replace=False,
-        )
+        prior_prob *= probs[my.number_of_contacts[possible_agents]]
+
+    return nb_random_choice(
+        possible_agents,
+        prob=prior_prob,
+        size=N,
+        replace=False,
+    )
 
 
 @njit
-def choose_initial_agents(my, possible_agents, N) :
+def choose_initial_agents(my, possible_agents, N, age_distribution) :
 
     ##  Standard outbreak type, infecting randomly
     if my.cfg.make_random_initial_infections :
-        return make_random_initial_infections(my, possible_agents)
+        prior = age_distribution[my.age[possible_agents]]
+        return make_random_initial_infections(my, possible_agents, N, prior)
 
     # Local outbreak type, infecting around a point :
     else :
@@ -1179,51 +1174,19 @@ def choose_initial_agents(my, possible_agents, N) :
 
 
 @njit
-def compute_initial_agents_to_infect_from_kommune(
+def choose_initial_agents_from_kommune(
     my,
-    infected_per_kommune_start,
-    kommune_names,
-    my_kommune,
-    verbose=False,
-) :
-    fraction_found = 0.5  # estimate of size of fraction of positive we find. roughly speaking "mørketallet" is the inverse of this times n_found_positive- TODO : make this a function based on N_daily_test, tracking_rates and symptomatics
-    contact_number_init = (
-        1.05  # used to estimate how many people are in the E state, from how many found positive.
-    )
-    N_tot_frac = my.cfg_network.N_tot / 5_800_000
-    time_inf = 1 / my.cfg.lambda_I
-    time_e = 1 / my.cfg.lambda_E
-    norm_factor = contact_number_init / fraction_found * N_tot_frac * (1 + time_e / time_inf)
+    possible_agents,
+    N,
+    age_distribution,
+    kommune_distribution) :
 
-    initial_agents_to_infect = List()
-    # num_infected = 0
+    prior = age_distribution[my.age[possible_agents]] * kommune_distribution[my.kommune[possible_agents]]
 
-    for num_of_infected_in_kommune, kommune in zip(infected_per_kommune_start, kommune_names) :
-        num_of_infected_normed = np.int32(np.ceil(num_of_infected_in_kommune * norm_factor))
-        if verbose :
-            print(
-                "kommune",
-                kommune,
-                "num_infected",
-                num_of_infected_normed,
-                "non normed",
-                num_of_infected_in_kommune,
-            )
-        list_of_agent_in_kommune = List()
-        for agent, agent_kommune in zip(range(my.cfg_network.N_tot), my_kommune) :
-            if kommune == agent_kommune :
-                list_of_agent_in_kommune.append(agent)
-        if num_of_infected_normed != 0 :
-            if verbose :
-                print("kommune", kommune, "num_infected", num_of_infected_normed)
-            liste = np.random.choice(
-                np.asarray(list_of_agent_in_kommune), size=num_of_infected_normed, replace=False
-            )
-            for entry in liste :
-                initial_agents_to_infect.append(entry)
-    E_I_ratio = contact_number_init * time_e / (contact_number_init * time_e + time_inf)
-    return initial_agents_to_infect, E_I_ratio
-
+    if my.cfg.make_random_initial_infections :
+        return make_random_initial_infections(my, possible_agents, N, prior)
+    else :
+        raise NotImplementedError
 
 @njit
 def find_outbreak_agent(my, possible_agents, coordinate, rho, max_tries=10_000) :
@@ -1252,21 +1215,8 @@ def calc_E_I_dist(my, r_guess) :
 
 
 
-
 @njit
-def initialize_states(
-    my,
-    g,
-    SIR_transition_rates,
-    state_total_counts,
-    variant_counts,
-    infected_per_age_group,
-    agents_in_state,
-    agents_in_age_group,
-    initial_ages_exposed,
-    N_states,
-    verbose=False) :
-
+def find_possible_agents(my, initial_ages_exposed, agents_in_age_group) :
     # version 2 has age groups
     if my.cfg.version >= 2 :
         possible_agents = List()
@@ -1278,32 +1228,42 @@ def initialize_states(
     else :
         possible_agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
 
-    if my.cfg.R_init > 0 :
+    return possible_agents
 
-        initial_agents_to_immunize = choose_initial_agents(my, possible_agents, my.cfg.R_init)
+@njit
+def immunize_agents(my, g, initial_agents_to_immunize, state_total_counts) :
 
-        #  Now make initial immunizations
-        for _, agent in enumerate(initial_agents_to_immunize) :
-            my.state[agent] = N_states
+    #  Now make initial immunizations
+    for _, agent in enumerate(initial_agents_to_immunize) :
+        my.state[agent] = g.N_states
 
-            if np.random.rand() < my.cfg.N_init_UK_frac :
-                my.corona_type[agent] = 1
+        if np.random.rand() < my.cfg.N_init_UK_frac :
+            my.corona_type[agent] = 1
 
-            state_total_counts[N_states] += 1
+        state_total_counts[g.N_states] += 1
 
-        update_infection_list_for_newly_infected_agent(my, g, agent)
+    update_infection_list_for_newly_infected_agent(my, g, agent)
 
-    initial_agents_to_infect   = choose_initial_agents(my, possible_agents, my.cfg.N_init)
+@njit
+def infect_agents(my,
+                  g,
+                  initial_agents_to_infect,
+                  SIR_transition_rates,
+                  state_total_counts,
+                  variant_counts,
+                  infected_per_age_group,
+                  agents_in_state,
+                  verbose=False) :
 
-    #  Now make initial infections
+    #  Now make initial immunizations
     for _, agent in enumerate(initial_agents_to_infect) :
 
         # If immune, do not infect # TODO: Discuss if this is the best way to immunize agents
-        if my.state[agent] == N_states :
+        if my.state[agent] == g.N_states :
             continue
 
         weights = calc_E_I_dist(my, 1)
-        states = np.arange(N_states - 1, dtype=np.int8)
+        states = np.arange(g.N_states - 1, dtype=np.int8)
         new_state = nb_random_choice(states, weights, verbose=verbose)[0]  # E1-E4 or I1-I4, uniformly distributed
         my.state[agent] = new_state
 
@@ -1330,6 +1290,33 @@ def initialize_states(
 
 
         update_infection_list_for_newly_infected_agent(my, g, agent)
+
+@njit
+def initialize_states(
+    my,
+    g,
+    SIR_transition_rates,
+    state_total_counts,
+    variant_counts,
+    infected_per_age_group,
+    agents_in_state,
+    agents_in_age_group,
+    initial_ages_exposed,
+    age_distribution,
+    verbose=False) :
+
+    possible_agents = find_possible_agents(my, initial_ages_exposed, agents_in_age_group)
+
+    if my.cfg.R_init > 0 :
+
+        initial_agents_to_immunize = choose_initial_agents(my, possible_agents, my.cfg.R_init, age_distribution)
+
+        immunize_agents(my, g, initial_agents_to_immunize, state_total_counts)
+
+
+    initial_agents_to_infect = choose_initial_agents(my, possible_agents, my.cfg.N_init, age_distribution)
+
+    infect_agents(my, g, initial_agents_to_infect, SIR_transition_rates, state_total_counts, variant_counts, infected_per_age_group, agents_in_state, verbose=verbose)
 
     # English Corona Type TODO
 
@@ -1409,8 +1396,6 @@ def initialize_states(
 
             update_infection_list_for_newly_infected_agent(my, g, agent)
 
-    return None
-
 
 @njit
 def initialize_states_from_kommune_data(
@@ -1423,57 +1408,30 @@ def initialize_states_from_kommune_data(
     agents_in_state,
     agents_in_age_group,
     initial_ages_exposed,
-    N_states,
+    age_distribution,
     infected_per_kommune,
     immunized_per_kommune,
-    kommune_names,
-    my_kommune,
-    verbose=False,
-) :
+    verbose=False) :
 
-    # version 2 has age groups
-    if my.cfg.version >= 2 :
-        possible_agents = List()
-        for age_exposed in initial_ages_exposed :
-            for agent in agents_in_age_group[age_exposed] :
-                possible_agents.append(agent)
-        possible_agents = np.asarray(possible_agents, dtype=np.uint32)
-    # version 1 has no age groups
-    else :
-        possible_agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
+    possible_agents = find_possible_agents(my, initial_ages_exposed, agents_in_age_group)
 
-    initial_agents_to_infect, E_I_ratio = compute_initial_agents_to_infect_from_kommune(
-        my,
-        infected_per_kommune,
-        kommune_names,
-        my_kommune,
-        verbose,
-    )
-    # initial_agents_to_infect.flatten()
-    g.total_sum_of_state_changes = 0.0
+    if my.cfg.R_init > 0 :
+        initial_agents_to_immunize = choose_initial_agents_from_kommune(my,
+                                            possible_agents,
+                                            my.cfg.R_init,
+                                            age_distribution,
+                                            immunized_per_kommune)
 
-    ##  Now make initial infections
-    for _, agent in enumerate(initial_agents_to_infect) :
-        new_state = np.random.randint(N_states - 1)  # E1-E4 or I1-I4, uniformly distributed
-        if np.random.rand() < E_I_ratio :
-            new_state += 4
-        my.state[agent] = new_state
+        immunize_agents(my, g, initial_agents_to_immunize, state_total_counts)
 
-        agents_in_state[new_state].append(np.uint32(agent))
-        state_total_counts[new_state] += 1
 
-        g.total_sum_of_state_changes += SIR_transition_rates[new_state]
-        g.cumulative_sum_of_state_changes[new_state :] += SIR_transition_rates[new_state]
+    initial_agents_to_infect = choose_initial_agents_from_kommune(my,
+                                            possible_agents,
+                                            my.cfg.R_init,
+                                            age_distribution,
+                                            infected_per_kommune)
 
-        if my.agent_is_infectious(agent) :
-            for contact, rate in zip(my.connections[agent], g.rates[agent]) :
-                # update rates if contact is susceptible
-                if my.agent_is_susceptible(contact) :
-                    g.update_rates(my, +rate, agent)
-
-        update_infection_list_for_newly_infected_agent(my, g, agent)
-
-    return None
+    infect_agents(my, g, initial_agents_to_infect, SIR_transition_rates, state_total_counts, variant_counts, infected_per_age_group, agents_in_state, verbose=verbose)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #

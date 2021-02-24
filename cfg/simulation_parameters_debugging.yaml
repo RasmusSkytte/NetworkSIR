@@ -10,6 +10,8 @@ beta_UK_multiplier: 1.45
 
 R_init : 5_800_000 * 0.065
 
+initialize_at_kommune_level: True
+
 lambda_E: 4 / 2.5
 lambda_I: 4 / 2.52
 

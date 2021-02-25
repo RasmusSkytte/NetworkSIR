@@ -8,15 +8,15 @@ If first time using:
     >> conda env update --file environment.yaml
 
 
->> conda activate NetworkSIR
+    >> conda activate NetworkSIR
 
 
 
 Generate Simulations:
->> python generate_simulations.py
+    >> python generate_simulations.py
 
 Plot the results:
->> python generate_plots.py
+    >> python generate_plots.py
 
 Make animations
->> python generate_animations.py
+    >> python generate_animations.py

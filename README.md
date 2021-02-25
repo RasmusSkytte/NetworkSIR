@@ -1,6 +1,6 @@
 If first time using:
 
-    >> git clone https://github.com/ChristianMichelsen/NetworkSIR
+    >> git clone https://github.com/RasmusSkytte/NetworkSIR
     >> cd NetworkSIR
     >> conda env create -f environment.yaml
 

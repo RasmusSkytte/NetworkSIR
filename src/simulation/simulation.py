@@ -36,6 +36,8 @@ from p_tqdm import p_umap, p_uimap
 # import awkward as awkward0  # conda install awkward0, conda install -c conda-forge pyarrow    TODO : Delete line
 # import awkward1 as ak  # pip install awkward1 TODO : Delete line
 
+check_distributions = True
+
 debugging = False
 while True :
     path = Path("").cwd()
@@ -240,66 +242,123 @@ class Simulation :
         # Find the possible agents
         possible_agents = nb_simulation.find_possible_agents(self.my, self.initial_ages_exposed, self.agents_in_age_group)
 
-        # Load the age distribution
+        # Load the age distribution for infected
         age_distribution = file_loaders.load_infection_age_distribution(self.cfg.initial_infection_distribution, self.N_ages)
         age_distribution /= self.cfg.testing_penetration  # Adjust for the untested fraction
-        age_distribution /= age_distribution.sum()        # Convert to probability
+        age_distribution /= age_distribution.sum()       # Convert to probability
 
         # Set the probability to choose agents
         if self.cfg.initialize_at_kommune_level :
-            infected_per_kommune, immunized_per_kommune, _, _ = file_loaders.load_kommune_infection_distribution(self.df_coordinates, self.cfg.initial_infection_distribution)
+
+            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.df_coordinates, self.cfg.initial_infection_distribution)
 
             infected_per_kommune  /= infected_per_kommune.sum()
             immunized_per_kommune /= immunized_per_kommune.sum()
 
-            print(np.sum(infected_per_kommune))
-            print(np.sum(immunized_per_kommune))
+            # Choose the a number of initially infected and immunized per kommune
+            kommune_ids = np.arange(len(infected_per_kommune)) # TODO: See if this should be updated after new coordinats are updated
+            N_kommune   = np.zeros(np.shape(kommune_ids), dtype=int)
+            R_kommune   = np.zeros(np.shape(kommune_ids), dtype=int)
 
-            print(np.max(infected_per_kommune))
-            print(np.max(immunized_per_kommune))
+            N_inds, N_counts = np.unique(np.random.choice(kommune_ids, size=self.my.cfg.N_init, p=infected_per_kommune),  return_counts=True)
+            R_inds, R_counts = np.unique(np.random.choice(kommune_ids, size=self.my.cfg.R_init, p=immunized_per_kommune), return_counts=True)
 
-            print(np.min(infected_per_kommune))
-            print(np.min(immunized_per_kommune))
+            N_kommune[N_inds] += N_counts
+            R_kommune[R_inds] += R_counts
 
-            print(np.mean(infected_per_kommune))
-            print(np.mean(immunized_per_kommune))
+            initialization_subgroups = []
 
-            prior_infected  = [age_distribution[age] * infected_per_kommune[kommune]  for age, kommune in zip(self.my.age[possible_agents], self.my.kommune[possible_agents])]
-            prior_immunized = [age_distribution[age] * immunized_per_kommune[kommune] for age, kommune in zip(self.my.age[possible_agents], self.my.kommune[possible_agents])]
+            # Loop over kommuner
+            for kommune_id, N, R in zip(kommune_ids, N_kommune, R_kommune) :
 
-            prior_infected = [age_distribution[age] for age in self.my.age[possible_agents]]
-            prior_immunized = prior_infected
+                agents_in_kommune = np.array([agent for agent in possible_agents if self.my.kommune[agent] == kommune_id])
+
+                # Check if kommune is valid
+                if len(agents_in_kommune) == 0:
+                    continue
+
+                # Check if any are to be infectd
+                if N == 0 and R == 0 :
+                    continue
+
+                # Check if too many have been selected
+                if len(agents_in_kommune) < (N + R) :
+                    raise ValueError("More are being selected for infection in a kommune than exists")
+
+                # Determine the age distribution in the simulation
+                ages_in_kommune = self.my.age[agents_in_kommune]
+                _, agent_age_distribution = np.unique(ages_in_kommune, return_counts=True)
+
+                # Load the age distribution
+                prior_kommune = age_distribution[ages_in_kommune] / agent_age_distribution[ages_in_kommune]  # Adjust for age distribution of the populaiton
+                prior_kommune /= prior_kommune.sum()   # Convert to probability
+
+                initialization_subgroups.append((agents_in_kommune, N, R, prior_kommune))
 
         else :
-            prior_infected = [age_distribution[age] for age in self.my.age[possible_agents]]
-            prior_immunized = prior_infected
+
+            # Determine the age distribution in the simulation
+            ages = self.my.age[possible_agents]
+            _, agent_age_distribution = np.unique(ages, return_counts=True)
+
+            # Compute prior  and adjust for age distribution of the populaiton
+            prior  = age_distribution[ages] / agent_age_distribution[ages]
+            prior /= prior.sum()   # Convert to probability
+
+            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior)]
+
+        # Loop over subgroups and initialize
+        for agents_in_subgroup, N, R, prior in initialization_subgroups :
+
+            nb_simulation.initialize_states(
+                self.my,
+                self.g,
+                self.SIR_transition_rates,
+                self.state_total_counts,
+                self.variant_counts,
+                self.infected_per_age_group,
+                self.agents_in_state,
+                agents_in_subgroup,
+                N,
+                R,
+                prior,
+                prior,
+                verbose=self.verbose)
 
 
-        nb_simulation.initialize_states(
-            self.my,
-            self.g,
-            self.SIR_transition_rates,
-            self.state_total_counts,
-            self.variant_counts,
-            self.infected_per_age_group,
-            self.agents_in_state,
-            possible_agents,
-            np.array(prior_infected),
-            np.array(prior_immunized),
-            verbose=self.verbose)
+        if check_distributions:
+            ages = [self.my.age[agent] for agent in possible_agents if self.my.agent_is_infectious(agent)]
+            _, dist = np.unique(ages, return_counts=True)
+            dist = dist / dist.sum()
+
+            print("Deviation of distribution for infected per age group (percentage points)")
+            print(np.round(100 * (dist - age_distribution), 1))
 
 
-        ages = [self.my.age[agent] for agent in possible_agents if self.my.agent_is_infectious(agent)]
-        _, dist = np.unique(ages, return_counts=True)
+            if self.my.cfg.initialize_at_kommune_level :
 
-        print("Expected age group distribution")
-        print(age_distribution)
-        print("Realized age group distribution")
-        print(dist / dist.sum())
-        print("Deviation of distribution (percentage points)")
-        print(100 * (dist / dist.sum() - age_distribution))
+                kommune = [self.my.kommune[agent] for agent in possible_agents if self.my.agent_is_infectious(agent)]
+                dist = np.zeros(np.shape(infected_per_kommune))
+                for k in kommune :
+                    dist[k] += 1
+                dist /= dist.sum()
+
+                print("Deviation of distribution for infected per kommune (percentage points)")
+                print(np.round(100 * (dist - infected_per_kommune), 1))
+
+                if self.my.cfg.R_init > 0 :
+
+                    kommune = [self.my.kommune[agent] for agent in possible_agents if self.my.state[agent] == self.g.N_states]
+                    dist = np.zeros(np.shape(infected_per_kommune))
+                    for k in kommune :
+                        dist[k] += 1
+                    dist /= dist.sum()
+
+                    print("Deviation of distribution for immunized per kommune (percentage points)")
+                    print(np.round(100 * (dist - immunized_per_kommune), 1))
 
         x = x
+
 
     def run_simulation(self, verbose_interventions=None) :
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))

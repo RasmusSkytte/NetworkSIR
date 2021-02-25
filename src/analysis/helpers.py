@@ -73,7 +73,7 @@ def load_covid_index(start_date) :
 
     # Get the beta value (Here, scaling parameter for the index cases)
     beta       = df_index["beta"][0]
-    beta_simga = df_index["beta_sd"][0]
+    beta_sigma = df_index["beta_sd"][0]
 
     # Find the index for the starting date
     ind = np.where(df_index["date"] == datetime.datetime(2021, 1, 1).date())[0][0]
@@ -90,7 +90,7 @@ def load_covid_index(start_date) :
 
 
 def load_b117_fraction() :
-    
+
     #       uge     53     1     2     3     4     5     6
     s = np.array([  76,  148,  275,  460,  510,  617,  101])
     n = np.array([3654, 4020, 3901, 3579, 2570, 2003,  225])
@@ -99,8 +99,8 @@ def load_b117_fraction() :
 
     fraction = p
     fraction_sigma = 2 * np.sqrt(p_var)
-    fraction_offset = 1    
-    
+    fraction_offset = 1
+
     t = pd.date_range(start = datetime.datetime(2020, 12, 28), periods = len(fraction), freq = "W-SUN")
 
     return (fraction, fraction_sigma, fraction_offset, t)

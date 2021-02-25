@@ -9,14 +9,3 @@ If first time using:
 
 
     >> conda activate NetworkSIR
-
-
-
-Generate Simulations:
-    >> python generate_simulations.py
-
-Plot the results:
-    >> python generate_plots.py
-
-Make animations
-    >> python generate_animations.py

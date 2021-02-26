@@ -21,9 +21,9 @@ lambda_I: 1.0  # I->R, Lambda(from I states)
 
 # Other:
 make_random_initial_infections: True # Infections around a single agent
-weighted_random_initial_infections: False # Infections weighted by the number of contacts
+weighted_random_initial_infections: True # Infections weighted by the number of contacts
 initialize_at_kommune_level: False # Initiate infections at kommune basis
-make_restrictions_at_kommune_level: True # True makes interventions at labels=kommune, false
+make_restrictions_at_kommune_level: False # True makes interventions at labels=kommune, false
 day_max: 0 # 5 weeks. Sets the maximum number of days the algorithm runs
 
 

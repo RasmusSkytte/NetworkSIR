@@ -1,29 +1,35 @@
 N_tot: 5_800_000
 rho: 0.1
 
-N_init: 40000
+N_init: 58_000
 beta: 0.0107
 
 # english type corona
 N_init_UK_frac: 0.015
 beta_UK_multiplier: 1.45
 
-R_init : 5_800_000 * 0.065
+R_init : 5_800_000 * 0
 
 initialize_at_kommune_level: True
+initial_infection_distribution : newest
 
 lambda_E: 4 / 2.5
 lambda_I: 4 / 2.52
 
+
+
+
 start_date : 2020-12-21
 end_date : 2021-03-05
-
 
 contact_matrices_name: 2021_fase2_sce1  # Target activity
 
 Intervention_contact_matrices_name : [[ned2021jan, 2021_fase1, 2021_fase2_sce1]]
 restriction_thresholds: [[2020-12-25, 2021-01-01, 2022-01-01]]  # Opening date for fase 1
 threshold_interventions_to_apply: [[3, 3, 3]]
+
+
+
 
 Intervention_vaccination_schedule_name : reference_2021_feb_15
 start_date_offset: 2020-12-28 # Start date for vaccinations

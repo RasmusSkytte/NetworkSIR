@@ -142,7 +142,7 @@ class Config(object) :
         self.N_init = 100
         self.N_init_UK_frac = 0
         self.R_init = 0
-        self.initial_infection_distribution = "newest"
+        self.initial_infection_distribution = "random"
         self.lambda_E = 1.0
         self.lambda_I = 1.0
 
@@ -1273,13 +1273,15 @@ def initialize_states(
     infected_per_age_group,
     agents_in_state,
     possible_agents,
+    N_init,
+    R_init,
     prior_infected,
     prior_immunized,
     verbose=False) :
 
-    if my.cfg.R_init > 0 :
+    if R_init > 0 :
 
-        initial_agents_to_immunize = choose_initial_agents(my, possible_agents, my.cfg.R_init, prior_immunized)
+        initial_agents_to_immunize = choose_initial_agents(my, possible_agents, R_init, prior_immunized)
 
         #  Now make initial immunizations
         for agent in initial_agents_to_immunize :
@@ -1295,7 +1297,7 @@ def initialize_states(
 
 
 
-    initial_agents_to_infect = choose_initial_agents(my, possible_agents, my.cfg.N_init, prior_infected)
+    initial_agents_to_infect = choose_initial_agents(my, possible_agents, N_init, prior_infected)
 
     #  Now make initial immunizations
     for agent in initial_agents_to_infect :

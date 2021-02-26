@@ -66,7 +66,7 @@ def test_length(arr1, arr2, error_message) :
     if not len(arr1) == len(arr2) :
         raise ValueError(error_message)
 
-#%%
+
 
 
 @njit
@@ -251,7 +251,7 @@ def list_of_arrays_to_list_of_lists(list_of_arrays) :
 #         res.append(dtype(len(nested_list[i])))
 #     return np.asarray(res)
 
-#%%
+
 # Counters in Numba
 from numba import types
 from numba.experimental import jitclass
@@ -355,7 +355,7 @@ def array_to_counter2(arr) :
     return counter.d
 
 
-#%%
+
 # Cumulative Sums in numba
 
 
@@ -416,7 +416,7 @@ def numba_cumsum(x, axis=None) :
     return numba_cumsum_shape(x, axis)
 
 
-#%%
+
 
 
 # Counters in Numba
@@ -527,8 +527,6 @@ class MutableArray :
         self._initialize_numba_array()
 
 
-#%%
-
 
 def is_nested_numba_list(nested_lists) :
     if isinstance(nested_lists, List) and isinstance(nested_lists[0], (List, np.ndarray)) :
@@ -605,10 +603,10 @@ def to_nested_numba_lists(content, offsets) :
     return out
 
 
-#%%
 
 
-#%%
+
+
 # from collections import UserDict
 
 
@@ -677,7 +675,7 @@ class DotDict(AttrDict) :
 # dotdict = DotDict({"first_name" : "Christian", "last_name" : "Michelsen"})
 # dotdict.middle = 'XXX'
 
-#%%
+
 
 
 def get_parameter_to_latex() :
@@ -935,7 +933,7 @@ def format_relative_uncertainties(x, name) :
     return s
 
 
-#%%
+
 
 
 def df_encode_asci_to_utf8(series) :
@@ -961,7 +959,7 @@ def dataframe_to_hdf5_format(df_in, include_index=False, cols_to_str=None) :
     return np.array(df.to_records(index=include_index, **kwargs))
 
 
-#%%
+
 
 
 @njit
@@ -969,7 +967,7 @@ def numba_random_choice_list(l) :
     return l[np.random.randint(len(l))]
 
 
-#%%
+
 
 
 from scipy.special import erf
@@ -991,7 +989,7 @@ def SDOM(x) :
     return np.std(x) / np.sqrt(len(x))
 
 
-#%%
+
 
 
 # def load_df_coordinates() :
@@ -1004,7 +1002,7 @@ def SDOM(x) :
 #     return load_df_coordinates().iloc[coordinate_indices].reset_index(drop=True)
 
 
-#%%
+
 
 
 import numpy as np
@@ -1273,7 +1271,7 @@ def df_coordinates_to_coordinates(df_coordinates) :
     return df_coordinates[["Longitude", "Lattitude"]].values
 
 
-#%%
+
 
 
 @njit
@@ -1395,7 +1393,7 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
     )
 
 
-#%%
+
 
 
 def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  #
@@ -1439,7 +1437,7 @@ def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  
     return df
 
 
-#%%
+
 
 
 def parse_memory_file(filename) :
@@ -1587,7 +1585,7 @@ def plot_memory_comsumption(
     return fig, ax
 
 
-#%%
+
 
 
 def does_file_contains_string(filename, string) :
@@ -1615,7 +1613,7 @@ def get_search_string_time(filename, search_string) :
     return 0
 
 
-#%%
+
 
 
 def path(file) :
@@ -1650,7 +1648,7 @@ def get_1D_scan_cfgs_all_filenames(scan_parameter, non_default_parameters) :
     return cfgs, all_filenames
 
 
-#%%
+
 
 
 @njit
@@ -1798,7 +1796,7 @@ def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=Fals
 #     return np.array(coordinates)
 
 
-#%%
+
 
 #import geopandas as gpd  # conda install -c conda-forge geopandas
 
@@ -1824,7 +1822,7 @@ def load_kommune_shapefiles(shapefile_size, verbose=False) :
     return kommuner, name_to_idx, idx_to_name
 
 
-#%%
+
 
 from tinydb import Query
 from functools import reduce
@@ -1876,10 +1874,6 @@ def hash_to_seed(hash_) :
         seed = int(seed / 2)
     return seed
 
-# ls -R | grep 7274ac6030 | xargs rm -f
-
-#%%
-
 
 def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True) :
 
@@ -1909,7 +1903,7 @@ def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True) :
             folder_to_delete.rmdir()
 
 
-#%%
+
 
 import h5py
 
@@ -1953,7 +1947,7 @@ def read_cfg_from_hdf5_file_recursively(f, path='cfg') :
 
     return tmp
 
-#%%
+
 
 def get_cfg_network_initialized(cfg) :
     include = file_loaders.load_yaml("cfg/settings.yaml")["network_initialization_include_parameters"]
@@ -1961,7 +1955,7 @@ def get_cfg_network_initialized(cfg) :
     return cfg_network_initialized
 
 
-#%%
+
 
 
 def get_simulation_parameters() :
@@ -1979,7 +1973,7 @@ def get_simulation_parameters() :
     return all_simulation_parameters
 
 
-#%%
+
 
 from scipy.stats import uniform as sp_uniform
 from scipy.stats import randint

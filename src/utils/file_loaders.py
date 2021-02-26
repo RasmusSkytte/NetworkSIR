@@ -14,39 +14,23 @@ from src.simulation import nb_simulation
 
 from numba.typed import List, Dict  #TODO : delete Dict from line
 
+
+from io import BytesIO
+from zipfile import ZipFile
 import urllib.request
-
-def pandas_load_file(filename) :
-    # df_raw = pd.read_csv(file)  # .convert_dtypes()
-
-    with h5py.File(filename, "r") as f :
-        df_raw = pd.DataFrame(f["df"][()])
-
-    df = df_raw.copy()
-
-    for state in ["E", "I"] :
-        cols = [col for col in df_raw.columns if state in col and len(col) == 2]
-        df[state] = sum((df_raw[col] for col in cols))
-        df = df.drop(columns=cols)
-
-    # only keep relevant columns
-    df.rename(columns={"Time" : "time"}, inplace=True)
-
-    # remove duplicate timings
-    df = df.loc[df["time"].drop_duplicates().index]
-
-    return df
+import datetime
 
 
-def path(file) :
-    if isinstance(file, str) :
-        file = Path(file)
-    return file
 
 
-def file_is_empty(file) :
-    return path(file).stat().st_size == 0
 
+ ######  #### ##     ## ##     ## ##          ###    ######## ####  #######  ##    ##  ######
+##    ##  ##  ###   ### ##     ## ##         ## ##      ##     ##  ##     ## ###   ## ##    ##
+##        ##  #### #### ##     ## ##        ##   ##     ##     ##  ##     ## ####  ## ##
+ ######   ##  ## ### ## ##     ## ##       ##     ##    ##     ##  ##     ## ## ## ##  ######
+      ##  ##  ##     ## ##     ## ##       #########    ##     ##  ##     ## ##  ####       ##
+##    ##  ##  ##     ## ##     ## ##       ##     ##    ##     ##  ##     ## ##   ### ##    ##
+ ######  #### ##     ##  #######  ######## ##     ##    ##    ####  #######  ##    ##  ######
 
 def get_all_ABM_filenames(base_dir="Output/ABM", filetype="hdf5") :
     "get all ABM result files with filetype {filetype}"
@@ -126,17 +110,6 @@ def query_to_hashes(subset=None, base_dir="Output") :
         q_result = db_cfg.search(utils.dict_to_query(subset))
 
     return q_result
-    # if len(q_result) == 0 :
-    #     cfgs = [str(file) for file in Path(cfgs_dir).rglob(f"*{hash_}.yaml")]
-    #     if len(cfgs) == 1 :
-    #         cfg = utils.load_yaml(cfgs[0])
-    #         cfg.hash = utils.cfg_to_hash(cfg)
-    #         return cfg
-    #     else :
-    #         return None
-    # assert len(q_result) == 1
-    # cfg = utils.DotDict(q_result[0])
-    # return cfg
 
 
 def get_cfgs(all_folders) :
@@ -255,13 +228,6 @@ class ABM_simulations :
         )
 
 
-#%%
-
-
-from io import BytesIO
-from zipfile import ZipFile
-import urllib.request
-import datetime
 
 
 
@@ -269,6 +235,13 @@ import datetime
 
 
 
+########   #######  ########  ##     ## ##          ###    ######## ####  #######  ##    ##
+##     ## ##     ## ##     ## ##     ## ##         ## ##      ##     ##  ##     ## ###   ##
+##     ## ##     ## ##     ## ##     ## ##        ##   ##     ##     ##  ##     ## ####  ##
+########  ##     ## ########  ##     ## ##       ##     ##    ##     ##  ##     ## ## ## ##
+##        ##     ## ##        ##     ## ##       #########    ##     ##  ##     ## ##  ####
+##        ##     ## ##        ##     ## ##       ##     ##    ##     ##  ##     ## ##   ###
+##         #######  ##         #######  ######## ##     ##    ##    ####  #######  ##    ##
 
 
 def parse_age_distribution_data(filename, kommune_level=False) :
@@ -437,21 +410,13 @@ def load_vaccination_schedule_file(scenario = "reference") :
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ ######   ######  ####    ########     ###    ########    ###
+##    ## ##    ##  ##     ##     ##   ## ##      ##      ## ##
+##       ##        ##     ##     ##  ##   ##     ##     ##   ##
+ ######   ######   ##     ##     ## ##     ##    ##    ##     ##
+      ##       ##  ##     ##     ## #########    ##    #########
+##    ## ##    ##  ##     ##     ## ##     ##    ##    ##     ##
+ ######   ######  ####    ########  ##     ##    ##    ##     ##
 
 
 def load_municipality_data(zfile) :
@@ -492,10 +457,8 @@ def download_SSI_data(date=None, download_municipality=True, path_municipality='
     with urllib.request.urlopen(url) as response :
         html = str(response.read())
 
-    print(date)
-
     date_SSI = datetime.datetime.strptime(date, '%Y_%m_%d').strftime('%d%m%Y')
-    print(date_SSI)
+
     s = re.search(date_SSI, html, re.IGNORECASE)
     data_url = html[s.start()-80:s.end()+5]
     data_url = data_url.split('="')[1] + ".zip"
@@ -570,11 +533,14 @@ def load_infection_age_distribution(initial_distribution_file, N_ages) :
 
 def load_kommune_infection_distribution(df_coordinates, initial_distribution_file) :
 
-    my_kommune = List(df_coordinates["kommune"].tolist())
-    kommune_names = List(set(my_kommune))
-    infected_per_kommune = np.zeros(len(kommune_names))
-    immunized_per_kommune = np.zeros(len(kommune_names))
+    my_kommune = df_coordinates["kommune"].to_numpy()
+    my_ids     = df_coordinates["idx"].to_numpy()
 
+    kommune_names, I = np.unique(my_kommune, return_index=True)
+    kommune_ids = my_ids[I]
+
+    infected_per_kommune  = np.zeros(np.max(kommune_ids) + 1)
+    immunized_per_kommune = np.zeros(np.max(kommune_ids) + 1)
 
     if initial_distribution_file.lower() == "random" :
         infected_per_kommune  = np.ones(np.shape(infected_per_kommune))
@@ -585,29 +551,25 @@ def load_kommune_infection_distribution(df_coordinates, initial_distribution_fil
         if initial_distribution_file.lower() == "newest" :
             df, _ = get_SSI_data(date="newest", return_data=True)
         else :
-            df = pd.read_csv('Data/municipality_cases/' + initial_distribution_file + ".csv")
-        dates = df.index
+            df = pd.read_csv('Data/municipality_cases/' + initial_distribution_file + '.csv')
 
         # First fill the immunized per kommune array
         arr = immunized_per_kommune
 
-        for i, date in enumerate(dates) :
-            infected_per_kommune_series = df.loc[date]
+        for i in range(len(df.index)) :
 
             # Last 7 days counts the currently infected
-            if i == len(dates) - 7 :
+            if i == len(df.index) - 7 :
                 arr = infected_per_kommune
 
-            for ith_kommune, kommune in enumerate(kommune_names) :
+            for kommune, kommune_id in zip(kommune_names, kommune_ids) :
 
                 if kommune == "København" :
-                    arr[ith_kommune] += infected_per_kommune_series["Copenhagen"]
+                    arr[kommune_id] += df["Copenhagen"][i]
                 else :
-                    arr[ith_kommune] += infected_per_kommune_series[kommune]
+                    arr[kommune_id] += df[kommune][i]
 
-    return infected_per_kommune, immunized_per_kommune, kommune_names, my_kommune
-
-
+    return infected_per_kommune, immunized_per_kommune
 
 
 
@@ -617,11 +579,13 @@ def load_kommune_infection_distribution(df_coordinates, initial_distribution_fil
 
 
 
-
-
-
-
-
+ ######   ######## ##    ## ######## ########  ####  ######
+##    ##  ##       ###   ## ##       ##     ##  ##  ##    ##
+##        ##       ####  ## ##       ##     ##  ##  ##
+##   #### ######   ## ## ## ######   ########   ##  ##
+##    ##  ##       ##  #### ##       ##   ##    ##  ##
+##    ##  ##       ##   ### ##       ##    ##   ##  ##    ##
+ ######   ######## ##    ## ######## ##     ## ####  ######
 
 
 def jitclass_to_hdf5_ready_dict(jitclass, skip=["cfg", "cfg_network"]):
@@ -699,12 +663,36 @@ def load_My_from_dict(d_in, cfg):
 
 
 
+def pandas_load_file(filename) :
+    # df_raw = pd.read_csv(file)  # .convert_dtypes()
+
+    with h5py.File(filename, "r") as f :
+        df_raw = pd.DataFrame(f["df"][()])
+
+    df = df_raw.copy()
+
+    for state in ["E", "I"] :
+        cols = [col for col in df_raw.columns if state in col and len(col) == 2]
+        df[state] = sum((df_raw[col] for col in cols))
+        df = df.drop(columns=cols)
+
+    # only keep relevant columns
+    df.rename(columns={"Time" : "time"}, inplace=True)
+
+    # remove duplicate timings
+    df = df.loc[df["time"].drop_duplicates().index]
+
+    return df
 
 
+def path(file) :
+    if isinstance(file, str) :
+        file = Path(file)
+    return file
 
 
-
-
+def file_is_empty(file) :
+    return path(file).stat().st_size == 0
 
 
 

@@ -1,35 +1,22 @@
 import numpy as np
-import pandas as pd
-
-from datetime import datetime
-
 from scipy.stats import norm
 
-from tqdm import tqdm
-
 from src.utils import utils
-from src.utils import file_loaders
-
 from src.simulation import simulation
-
 
 from tinydb import Query
 
+from tqdm import tqdm
 from functools import partial
 from p_tqdm import p_umap, p_uimap
-
-if utils.is_local_computer() :
-    from src import rc_params
-    import matplotlib.pyplot as plt
-
 from contexttimer import Timer
 
 
 if utils.is_local_computer():
-    f = 0.1
+    f = 0.05
     N = 1
     n_steps = 0 # 2 per sigma
-    num_cores_max = 1
+    num_cores_max = 3
 else :
     f = 1
     N = 5
@@ -39,11 +26,10 @@ else :
 
 cfgs_all = []
 
-#filenames = ["cfg/simulation_parameters_2021_fase1.yaml",
-#             "cfg/simulation_parameters_2021_fase2.yaml",
-#             "cfg/simulation_parameters_2021_fase2_sce7.yaml",
-#             "cfg/simulation_parameters_2021_fase2_sce8.yaml"]
-filenames = ["cfg/simulation_parameters_debugging.yaml"]
+filenames = ["cfg/simulation_parameters_2021_fase1.yaml",
+             "cfg/simulation_parameters_2021_fase2.yaml",
+             "cfg/simulation_parameters_2021_fase2_sce7.yaml",
+             "cfg/simulation_parameters_2021_fase2_sce8.yaml"]
 
 for filename in filenames :
     params, start_date = utils.load_params(filename)

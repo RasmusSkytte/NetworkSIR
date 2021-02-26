@@ -7,7 +7,7 @@ import datetime
 from scipy.stats import norm
 
 from src.utils import utils
-from src import file_loaders
+from src.utils import file_loaders
 
 
 def aggregate_array(arr, chunk_size=10) :

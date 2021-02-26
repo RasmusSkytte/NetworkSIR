@@ -1,20 +1,15 @@
-from os import stat
 import numpy as np
 import pandas as pd
 from datetime import datetime
 
-
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from matplotlib.backends.backend_pdf import PdfPages
 
 from tqdm import tqdm
 from pathlib import Path
 
-from importlib import reload
 from src.utils import utils
-from src import plot
-from src import file_loaders
+from src.utils import file_loaders
 from src import rc_params
 
 from src.analysis.helpers import *
@@ -24,7 +19,7 @@ from src.analysis.helpers import *
 #subset = None
 #fig_name = Path("Figures/all.png")
 
-subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]}]
+#subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]}]
 
 #subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]},
 #            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]},
@@ -36,6 +31,15 @@ subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1",
 #            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce7_marts", "2021_fase2_sce7_april", "2021_fase2_sce7_maj"]},
 #            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce8_marts", "2021_fase2_sce8_april", "2021_fase2_sce8_maj"]},
 #            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce9"]}]
+
+subsets = [{"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]},
+           {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce2"]},
+           {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce3"]},
+           {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce4"]},
+           {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce5"]},
+           {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce6"]},
+           {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce9"]}]
+
 
 for subset in subsets :
     fig_name = Path("Figures/" + subset["Intervention_contact_matrices_name"][-1] + ".png")
@@ -56,16 +60,13 @@ for subset in subsets :
 
     rc_params.set_rc_params()
 
-    reload(plot)
-    reload(file_loaders)
 
     # Prepare output file
-    utils.make_sure_folder_exist(fig_name)
+    file_loaders.make_sure_folder_exist(fig_name)
 
 
     logK, logK_sigma, beta, covid_index_offset, t_index = load_covid_index(start_date.date())
     fraction, fraction_sigma, fraction_offset, t_fraction = load_b117_fraction()
-
 
 
     # Load the ABM simulations

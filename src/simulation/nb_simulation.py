@@ -1,12 +1,10 @@
-from numba.core.types.scalars import Boolean
 import numpy as np
-from pathlib import Path
-import os
+
 import numba as nb
 from numba.experimental import jitclass
-from numba import njit, typeof
-from numba.typed import List, Dict
-from numba.types import ListType, DictType, unicode_type
+from numba import njit
+from numba.typed import List
+from numba.types import ListType
 
 from src.utils import utils
 
@@ -121,8 +119,8 @@ spec_cfg = {
     #"masking_rate_reduction" : nb.float64[ :, : :1],  # to make the type C instead if A
     #"lockdown_rate_reduction" : nb.float64[ :, : :1],  # to make the type C instead if A
     "isolation_rate_reduction" : nb.float64[:],
-    "tracking_rates" : nb.float64[:],
-    "tracking_delay" : nb.int64,
+    "tracing_rates" : nb.float64[:],
+    "tracing_delay" : nb.int64,
     "intervention_removal_delay_in_clicks" : nb.int32,
     "Intervention_contact_matrices_name" : ListType(nb.types.unicode_type),
     "Intervention_vaccination_schedule_name" : nb.types.unicode_type,
@@ -425,7 +423,7 @@ class Intervention(object) :
 
     - continuous_interventions : array to keep count of which intervention are at place at which label
         # 0 : Do nothing
-        # 1 : Tracking (infected and their connections)
+        # 1 : tracing (infected and their connections)
         # 2 : Test people with symptoms
         # 3 : Isolate
         # 4 : Random Testing
@@ -499,7 +497,7 @@ class Intervention(object) :
         )
 
     @property
-    def apply_tracking(self) :
+    def apply_tracing(self) :
         return 1 in self.cfg.continuous_interventions_to_apply
 
     @property
@@ -2436,17 +2434,18 @@ def masking_on_label(my, g, intervention, label, rate_reduction) :
             reduce_frac_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
 @njit
-def matrix_restriction_on_label(my, g, intervention, label, n) :
+def matrix_restriction_on_label(my, g, intervention, label, n, verbose=False) :
     # masking on all agent with a certain label (tent or municipality, or whatever else you define). Rate reduction is two vectors of length 3. First is the fraction of [home, job, others] rates to be effected by masks.
     # second is the fraction of reduction of the those [home, job, others] rates.
     # ie : [[0,0.2,0.2],[0,0.8,0.8]] means that your wear mask when around 20% of job and other contacts, and your rates to those is reduced by 80%
     # loop over all agents
 
-    prev = 0
-    for agent in range(my.cfg_network.N_tot) :
-        for i in range(my.number_of_contacts[agent]) :
-            if my.agent_is_connected(agent, i) :
-                prev += 1
+    if verbose :
+        prev = 0
+        for agent in range(my.cfg_network.N_tot) :
+            for i in range(my.number_of_contacts[agent]) :
+                if my.agent_is_connected(agent, i) :
+                    prev += 1
 
     for agent in range(my.cfg_network.N_tot) :
         if intervention.labels[agent] == label :
@@ -2455,19 +2454,20 @@ def matrix_restriction_on_label(my, g, intervention, label, n) :
             remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n)
 
 
-    after = 0
-    for agent in range(my.cfg_network.N_tot) :
-        for i in range(my.number_of_contacts[agent]) :
-            if my.agent_is_connected(agent, i) :
-                after += 1
+    if verbose :
+        after = 0
+        for agent in range(my.cfg_network.N_tot) :
+            for i in range(my.number_of_contacts[agent]) :
+                if my.agent_is_connected(agent, i) :
+                    after += 1
 
-    print("--------------")
-    print("Contacts before")
-    print(prev)
-    print("Contacts after")
-    print(after)
-    print("Ratio")
-    print(after / prev)
+        print("--------------")
+        print("Contacts before")
+        print(prev)
+        print("Contacts after")
+        print(after)
+        print("Ratio")
+        print(after / prev)
 
 
 @njit
@@ -2476,20 +2476,20 @@ def test_agent(my, g, intervention, agent, click) :
     if my.agent_is_infectious(agent) and intervention.agent_not_found_positive(agent):
         intervention.clicks_when_tested_result[agent] = click + intervention.cfg.results_delay_in_clicks[intervention.reason_for_test[agent]]
         intervention.positive_test_counter[intervention.reason_for_test[agent]]+= 1  # count reason found infected
-        # check if tracking is on
-        if intervention.apply_tracking :
+        # check if tracing is on
+        if intervention.apply_tracing :
             # loop over contacts
             for ith_contact, contact in enumerate(my.connections[agent]) :
                 if (
                     np.random.rand()
-                    < intervention.cfg.tracking_rates[my.connections_type[agent][ith_contact]]
+                    < intervention.cfg.tracing_rates[my.connections_type[agent][ith_contact]]
                     and intervention.clicks_when_tested[contact] == -1
                 ) :
                     intervention.reason_for_test[contact] = 2
                     intervention.clicks_when_tested[contact] = (
                         click + intervention.cfg.test_delay_in_clicks[2]
                     )
-                    intervention.clicks_when_isolated[contact] = click + my.cfg.tracking_delay
+                    intervention.clicks_when_isolated[contact] = click + my.cfg.tracing_delay
 
     # this should only trigger if they have gone into isolation after contact tracing goes out of isolation
     elif (
@@ -2529,9 +2529,6 @@ def apply_symptom_testing(my, intervention, agent, click) :
 def apply_random_testing(my, intervention, click) :
     # choose N_daily_test people at random to test
     N_daily_test = int(my.cfg.daily_tests * my.cfg_network.N_tot / 5_800_000)
-    print("N_daily_test")
-    print(N_daily_test)
-    print("------------")
     agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
     random_agents_to_be_tested = np.random.choice(agents, N_daily_test)
     intervention.clicks_when_tested[random_agents_to_be_tested] = (
@@ -2602,6 +2599,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                         intervention,
                         ith_label,
                         0, #TODO: if different matrices do some fixing
+                        verbose=verbose
                     )
 
     elif intervention.start_interventions_by_day :
@@ -2649,7 +2647,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                                     intervention,
                                     ith_label,
                                     int(i/2),
-
+                                    verbose=verbose
                                 )
                     else :
                         for i_label, intervention_type in enumerate(intervention.types) :

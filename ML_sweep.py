@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 
 from tqdm import tqdm
 
@@ -93,7 +92,7 @@ for subset in [{"contact_matrices_name" : "2021_fase1"}] :
         lls_s.append(np.mean(ll_s))
         lls_f.append(np.mean(ll_f))
 
-    
+
     cfgs = [cfg for cfg in abm_files.iter_cfgs()]
     cfg_best = cfgs[np.nanargmax(lls_s)]
     ll_best = lls_s[np.nanargmax(lls_s)]

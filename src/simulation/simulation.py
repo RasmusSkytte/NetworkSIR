@@ -1,42 +1,29 @@
-# from re import X TODO : Delete line
-from sys import version
 import numpy as np
-# import pandas as pd TODO : Delete line
-# import matplotlib.pyplot as plt TODO : Delete line
-from pathlib import Path
-# import multiprocessing as mp TODO : Delete line
-import h5py
-# from resource import getrusage, RUSAGE_SELF TODO : Delete line
-import warnings
-# from importlib import reload TODO : Delete line
-import os
-from IPython.display import display
-from contexttimer import Timer
 
-# import yaml TODO : Delete line
-
-# conda install -c numba/label/dev numba
-# import numba as nb TODO : Delete line
-# from numba import njit, prange, objmode, typeof TODO : Delete line
-from numba.typed import List, Dict # TODO : Delete "Dict"
-# import uuid TODO : Delete line
-import datetime
+from numba.typed import List
 from numba.core.errors import (
     NumbaTypeSafetyWarning,
     NumbaExperimentalFeatureWarning,
     NumbaPendingDeprecationWarning, # TODO : Delete line
 )
 
+from pathlib import Path
+import os
 
-from tinydb import TinyDB, Query
-from tqdm import tqdm
+import h5py
+import warnings
+import datetime
+from contexttimer import Timer
+
+from tinydb import Query
+
 from functools import partial
+
+from tqdm import tqdm
 from p_tqdm import p_umap, p_uimap
 
-# import awkward as awkward0  # conda install awkward0, conda install -c conda-forge pyarrow    TODO : Delete line
-# import awkward1 as ak  # pip install awkward1 TODO : Delete line
 
-check_distributions = True
+check_distributions = False
 
 debugging = False
 while True :
@@ -148,8 +135,6 @@ class Simulation :
             agents_in_age_group.append(np.arange(self.cfg.network.N_tot, dtype=np.uint32))
 
         self.agents_in_age_group = agents_in_age_group
-
-        return None
 
     def _save_initialized_network(self, filename) :
         if self.verbose :
@@ -283,7 +268,9 @@ class Simulation :
 
                 # Check if too many have been selected
                 if len(agents_in_kommune) < (N + R) :
-                    raise ValueError("More are being selected for infection in a kommune than exists")
+                    N = int(len(agents_in_kommune) * N / (N + R))
+                    R = int(len(agents_in_kommune) * R / (N + R))
+                    warnings.warn(f"{N+R} agents selected for initialization in a kommune {kommune_id} but only {len(agents_in_kommune)} agents exists")
 
                 # Determine the age distribution in the simulation
                 ages_in_kommune = self.my.age[agents_in_kommune]
@@ -356,8 +343,6 @@ class Simulation :
 
                     print("Deviation of distribution for immunized per kommune (percentage points)")
                     print(np.round(100 * (dist - immunized_per_kommune), 1))
-
-        x = x
 
 
     def run_simulation(self, verbose_interventions=None) :
@@ -433,7 +418,6 @@ class Simulation :
         date = datetime.datetime.now().strftime("%Y-%m-%d")
         filename_cfg = f"Output/cfgs/cfg_{date}_{self.hash}.yaml"
         self.cfg.dump_to_file(filename_cfg, exclude="network.ID")
-        return None
 
     def _add_cfg_to_hdf5_file(self, f, cfg=None) :
         if cfg is None :
@@ -456,12 +440,11 @@ class Simulation :
                 f.create_dataset("df", data=utils.dataframe_to_hdf5_format(self.df))
                 self._add_cfg_to_hdf5_file(f)
 
-        return None
 
     def _save_simulation_results(self, save_only_ID_0=False, time_elapsed=None) :
 
         if save_only_ID_0 and self.cfg.network.ID != 0 :
-            return None
+            return
 
         filename_hdf5 = self._get_filename(name="network", filetype="hdf5")
         file_loaders.make_sure_folder_exist(filename_hdf5)
@@ -487,8 +470,6 @@ class Simulation :
                 f.create_dataset("time_elapsed", data=time_elapsed)
 
             self._add_cfg_to_hdf5_file(f)
-
-        return None
 
     def save(self, save_csv=False, save_hdf5=True, save_only_ID_0=False, time_elapsed=None) :
         self._save_cfg()

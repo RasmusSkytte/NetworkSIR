@@ -1,8 +1,10 @@
-# exclude data from source control by default
+cfg/*
+!cfg/simulation_parameters_default.yaml
+!cfg/simulation_parameters_network.yaml
 
 Data*/
 
-Figures/
+Figures*/
 
 Initialized_networks/
 

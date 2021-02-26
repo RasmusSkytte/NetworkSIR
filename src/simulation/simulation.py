@@ -230,7 +230,7 @@ class Simulation :
         # Load the age distribution for infected
         age_distribution = file_loaders.load_infection_age_distribution(self.cfg.initial_infection_distribution, self.N_ages)
         age_distribution /= self.cfg.testing_penetration  # Adjust for the untested fraction
-        age_distribution /= age_distribution.sum()       # Convert to probability
+        age_distribution /= age_distribution.sum()        # Convert to probability
 
         # Set the probability to choose agents
         if self.cfg.initialize_at_kommune_level :
@@ -241,7 +241,7 @@ class Simulation :
             immunized_per_kommune /= immunized_per_kommune.sum()
 
             # Choose the a number of initially infected and immunized per kommune
-            kommune_ids = np.arange(len(infected_per_kommune)) # TODO: See if this should be updated after new coordinats are updated
+            kommune_ids = np.arange(len(infected_per_kommune)) # TODO: See if this should be updated after new coordinates are updated
             N_kommune   = np.zeros(np.shape(kommune_ids), dtype=int)
             R_kommune   = np.zeros(np.shape(kommune_ids), dtype=int)
 

@@ -13,7 +13,7 @@ from contexttimer import Timer
 
 
 if utils.is_local_computer():
-    f = 0.05
+    f = 0.1
     N = 1
     n_steps = 0 # 2 per sigma
     num_cores_max = 3

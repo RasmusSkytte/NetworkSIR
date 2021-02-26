@@ -21,23 +21,15 @@ from src.analysis.helpers import *
 
 #subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]}]
 
-#subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]},
-#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]},
-#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce2"]},
-#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce3"]},
-#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce4"]},
-#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce5"]},
-#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce6"]},
-#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce7_marts", "2021_fase2_sce7_april", "2021_fase2_sce7_maj"]},
-#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce8_marts", "2021_fase2_sce8_april", "2021_fase2_sce8_maj"]},
-#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce9"]}]
-
-subsets = [{"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]},
+subsets = [{"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]},
+           {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]},
            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce2"]},
            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce3"]},
            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce4"]},
            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce5"]},
            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce6"]},
+           {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce7_marts", "2021_fase2_sce7_april", "2021_fase2_sce7_maj"]},
+           {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce8_marts", "2021_fase2_sce8_april", "2021_fase2_sce8_maj"]},
            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce9"]}]
 
 

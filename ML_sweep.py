@@ -1,16 +1,14 @@
 import numpy as np
-
-from tqdm import tqdm
+from scipy.stats import norm
 
 from src.utils import utils
 from src.simulation import simulation
-from src import file_loaders
 
+from tinydb import Query
 
-if utils.is_local_computer() :
-    from src import rc_params
-    import matplotlib.pyplot as plt
-
+from tqdm import tqdm
+from functools import partial
+from p_tqdm import p_umap, p_uimap
 from contexttimer import Timer
 
 

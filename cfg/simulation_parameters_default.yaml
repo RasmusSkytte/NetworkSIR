@@ -57,7 +57,7 @@ threshold_interventions_to_apply: [3]
 
 continuous_interventions_to_apply: [1, 2, 3, 4, 5]
     # 0: Do nothing
-    # 1: Tracking (infected and their connections)
+    # 1: tracing (infected and their connections)
     # 2: Test people with symptoms
     # 3: Isolate
     # 4: Random Testing
@@ -82,8 +82,8 @@ testing_penetration: [0.4,   0.4,   0.4,   0.4,   0.4,   0.4,   0.7,   0.7]
 # masking_rate_reduction: [[0.0, 0.0, 0.3], [0.0, 0.0, 0.8]] # [family, job, other]
 # lockdown_rate_reduction: [[0.0, 1.0, 0.6], [0.0, 0.6, 0.6]] # [family, job, other]
 isolation_rate_reduction: [0.2, 1.0, 1.0] # [family, job, other]
-tracking_rates: [1.0, 0.8, 0.0] # [family, job, other]
-tracking_delay: 10 #
+tracing_rates: [1.0, 0.8, 0.0] # [family, job, other]
+tracing_delay: 10 #
 
 Intervention_contact_matrices_name : [reference]
 

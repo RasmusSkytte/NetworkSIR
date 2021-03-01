@@ -2288,64 +2288,59 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n) :
 
 
     # Step 1, determine the contacts and their connection probability
-
     # Get the list of restrictable contacts and the list of restricted contacts
     possible_contacts     = my.connections[agent].copy()
     current_contacts      = np.zeros(np.shape(possible_contacts), dtype=nb.boolean)
 
     # Here we compute the connection probability based on the contact matrix sums
-    connection_probability_current  = np.ones(np.shape(possible_contacts))
-    connection_probability_previous = np.ones(np.shape(possible_contacts))
+    connection_probability_current  = np.ones(np.shape(possible_contacts), dtype=np.float64)
+    connection_probability_previous = np.ones(np.shape(possible_contacts), dtype=np.float64)
 
     for ith_contact, contact in enumerate(possible_contacts) :
 
         # Check for active connection
         if my.agent_is_connected(agent, ith_contact) :
-            current_contacts[ith_contact] = 1
+            current_contacts[ith_contact] = True
 
         # Compute connection probabilities for non-home contacts
         if not my.connections_type[agent][ith_contact] == 0 :
 
             if my.connections_type[agent][ith_contact] == 1 :
-                sr = work_matrix_current[my.age[agent], my.age[contact]]
+                sc = work_matrix_current[my.age[agent], my.age[contact]]
                 sp = work_matrix_previous[my.age[agent], my.age[contact]]
-                su = work_matrix_max[my.age[agent], my.age[contact]]
+                sm = work_matrix_max[my.age[agent], my.age[contact]]
 
             elif my.connections_type[agent][ith_contact] == 2 :
-                sr = other_matrix_current[my.age[agent], my.age[contact]]
+                sc = other_matrix_current[my.age[agent], my.age[contact]]
                 sp = other_matrix_previous[my.age[agent], my.age[contact]]
-                su = other_matrix_max[my.age[agent], my.age[contact]]
+                sm = other_matrix_max[my.age[agent], my.age[contact]]
 
-            connection_probability_current[ith_contact]  = sr / su
-            connection_probability_previous[ith_contact] = sp / su
+            connection_probability_current[ith_contact]  = sc / sm
+            connection_probability_previous[ith_contact] = sp / sm
 
     # Step 2, check if the changes should close any of the active connections
-
     # Store the connection weight
     sum_connection_probability = np.sum(connection_probability_current)
 
     # Loop over all active (non-home) conenctions
     for ith_contact in range(my.number_of_contacts[agent]) :
 
-        # Only cut non-home contacts
-        if not my.connections_type[agent][ith_contact] == 0 :
-            if current_contacts[ith_contact]:
+        if current_contacts[ith_contact]:
 
-                # if a connection is active, and the connection probability is lower now than before, check if this connection should be disabled
-                if connection_probability_current[ith_contact] < connection_probability_previous[ith_contact] :
+            # if a connection is active, and the connection probability is lower now than before, check if this connection should be disabled
+            if connection_probability_current[ith_contact] < connection_probability_previous[ith_contact] :
 
-                    # Update the connection
-                    p = 1 - np.sqrt(1 - connection_probability_current[ith_contact])
-                    if np.random.rand() < p :
-                        close_connection(my, g, agent, ith_contact, intervention)
+                # Update the connection
+                p = 1 - np.sqrt(connection_probability_current[ith_contact])
+                if np.random.rand() < p :
+                    close_connection(my, g, agent, ith_contact, intervention)
 
-                    else :
-                        connection_probability_current[ith_contact] = 1
-
-
-                # if a connection is active, and the connection probability is larger now than before, redistribute that probability
                 else :
                     connection_probability_current[ith_contact] = 1
+
+            # if a connection is active, and the connection probability is larger now than before, redistribute that probability
+            else :
+                connection_probability_current[ith_contact] = 1
 
 
     # Redistribute probability
@@ -2359,16 +2354,14 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n) :
 
 
     # Step 3, add new connections as needed
-
     # Loop over all posible (non-home) conenctions
     for ith_contact in range(my.number_of_contacts[agent]) :
-        if not my.connections_type[agent][ith_contact] == 0 :
-            if not current_contacts[ith_contact]:
+        if not current_contacts[ith_contact]:
 
-                # Update the connection
-                p = 1 - np.sqrt(1 - connection_probability_current[ith_contact])
-                if np.random.rand() < p :
-                    open_connection(my, g, agent, ith_contact, intervention)
+            # Update the connection
+            p = 1 - np.sqrt(1 - connection_probability_current[ith_contact])
+            if np.random.rand() < p :
+                open_connection(my, g, agent, ith_contact, intervention)
 
 @njit
 def lockdown_on_label(my, g, intervention, label, rate_reduction) :
@@ -2400,12 +2393,12 @@ def matrix_restriction_on_label(my, g, intervention, label, n, verbose=False) :
     # ie : [[0,0.2,0.2],[0,0.8,0.8]] means that your wear mask when around 20% of job and other contacts, and your rates to those is reduced by 80%
     # loop over all agents
 
-    if verbose :
-        prev = 0
-        for agent in range(my.cfg_network.N_tot) :
-            for i in range(my.number_of_contacts[agent]) :
-                if my.agent_is_connected(agent, i) :
-                    prev += 1
+    #if verbose :
+    prev = 0
+    for agent in range(my.cfg_network.N_tot) :
+        for i in range(my.number_of_contacts[agent]) :
+            if my.agent_is_connected(agent, i) :
+                prev += 1
 
     for agent in range(my.cfg_network.N_tot) :
         if intervention.labels[agent] == label :
@@ -2414,20 +2407,20 @@ def matrix_restriction_on_label(my, g, intervention, label, n, verbose=False) :
             remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n)
 
 
-    if verbose :
-        after = 0
-        for agent in range(my.cfg_network.N_tot) :
-            for i in range(my.number_of_contacts[agent]) :
-                if my.agent_is_connected(agent, i) :
-                    after += 1
+    #if verbose :
+    after = 0
+    for agent in range(my.cfg_network.N_tot) :
+        for i in range(my.number_of_contacts[agent]) :
+            if my.agent_is_connected(agent, i) :
+                after += 1
 
-        print("--------------")
-        print("Contacts before")
-        print(prev)
-        print("Contacts after")
-        print(after)
-        print("Ratio")
-        print(after / prev)
+    print("--------------")
+    print("Contacts before")
+    print(prev)
+    print("Contacts after")
+    print(after)
+    print("Ratio")
+    print(after / prev)
 
 
 @njit

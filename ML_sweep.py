@@ -169,13 +169,13 @@ for subset in [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fas
         u_arr = np.unique(arr)
 
         # Average loglikelihood value for parameter sets
-        lls_param = np.zeros(np.shape(u_arr))
-        for i, val in enumerate(u_arr) :
-            lls_param[i] = np.nanmean(lls[arr == val])
+        #lls_param = np.zeros(np.shape(u_arr))
+        #for i, val in enumerate(u_arr) :
+        #    lls_param[i] = np.nanmean(lls[arr == val])
 
-        s_lls = np.array(sorted(lls_param))
-        s_lls = s_lls[~np.isnan(s_lls)]
-        d_lls = s_lls[-1] / s_lls[-2]
+        #s_lls = np.array(sorted(lls_param))
+        #s_lls = s_lls[~np.isnan(s_lls)]
+        #d_lls = s_lls[-1] / s_lls[-2]
 
         # Higtest likelihood location
         I = np.argmax(u_arr == val)
@@ -187,7 +187,7 @@ for subset in [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fas
                 out_string += " *" + str(u_arr[i]) + "*"
             else :
                 out_string += "  " + str(u_arr[i]) + " "
-        out_string += f" ] sens. : {d_lls:.2g}"
+        out_string += f" ]"# sens. : {d_lls:.2g}"
         print(name + "\t" + out_string)
 
     print("--- Maximum likelihood value locations ---")

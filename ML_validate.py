@@ -268,7 +268,7 @@ for subset in subsets :
     for i in range(len(axes3)) :
 
         axes3[i].set_xlim([start_date, end_date])
-        axes3[i].set_ylim(0, 1)
+        axes3[i].set_ylim(0.5, 1.5)
 
         axes3[i].xaxis.set_major_locator(months)
         axes3[i].xaxis.set_major_formatter(months_fmt)

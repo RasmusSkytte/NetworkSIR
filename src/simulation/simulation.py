@@ -335,6 +335,14 @@ class Simulation :
             print(np.round(100 * (dist - age_distribution_infected), 1))
 
 
+            ages = [self.my.age[agent] for agent in possible_agents if self.my.state[agent] == self.N_states - 1]
+            _, dist = np.unique(ages, return_counts=True)
+            dist = dist / dist.sum()
+
+            print("Deviation of distribution for immunized per age group (percentage points)")
+            print(np.round(100 * (dist - age_distribution_immunized), 1))
+
+
             if self.my.cfg.initialize_at_kommune_level :
 
                 kommune = [self.my.kommune[agent] for agent in possible_agents if self.my.agent_is_infectious(agent)]

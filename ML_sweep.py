@@ -10,10 +10,10 @@ from contexttimer import Timer
 params, start_date = utils.load_params("cfg/simulation_parameters_fit_2021_fase1.yaml")
 
 if utils.is_local_computer():
-    f = 0.05
+    f = 0.2
     n_steps = 1
     num_cores_max = 3
-    N_runs = 3
+    N_runs = 6
 
 else :
     f = 0.2
@@ -89,7 +89,7 @@ for subset in [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fas
             I_tot_scaled, f, _, _= load_from_file(filename)
 
             # Evaluate
-            tmp_ll_s = compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(100_000))
+            tmp_ll_s = compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
             tmp_ll_f = compute_loglikelihood(f, (fraction, fraction_sigma, fraction_offset))
 
             ll_s.append(tmp_ll_s)

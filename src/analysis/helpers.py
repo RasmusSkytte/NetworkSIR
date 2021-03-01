@@ -9,6 +9,7 @@ from scipy.stats import norm
 from src.utils import utils
 from src.utils import file_loaders
 
+ref_tests = 100_000
 
 def aggregate_array(arr, chunk_size=10) :
 

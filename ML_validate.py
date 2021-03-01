@@ -182,7 +182,7 @@ for subset in subsets :
     # Get restriction_thresholds from a cfg
     restriction_thresholds = abm_files.cfgs[0].restriction_thresholds
 
-    axes1[0].set_ylim(0, 10000)
+    axes1[0].set_ylim(0, 2500)
     axes1[0].set_ylabel('Daglige positive')
 
 
@@ -236,7 +236,7 @@ for subset in subsets :
     for i in range(len(axes2)) :
 
         axes2[i].set_xlim([start_date, end_date])
-        axes2[i].set_ylim(0, 500)
+        axes2[i].set_ylim(0, 600)
 
         if not i % 3 == 0 :
             axes2[i].set_yticklabels([])

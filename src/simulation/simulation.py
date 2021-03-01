@@ -214,8 +214,7 @@ class Simulation :
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
         self.state_total_counts     = np.zeros(self.N_states, dtype=np.uint32)
-        self.variant_counts         = np.zeros(2, dtype=np.uint32)  # TODO: Generalize this to work for more variants
-        self.infected_per_age_group = np.zeros(self.N_ages, dtype=np.uint32)
+        self.infected_per_age_group = np.zeros((2, self.N_ages), dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
@@ -228,9 +227,15 @@ class Simulation :
         possible_agents = nb_simulation.find_possible_agents(self.my, self.initial_ages_exposed, self.agents_in_age_group)
 
         # Load the age distribution for infected
-        age_distribution = file_loaders.load_infection_age_distribution(self.cfg.initial_infection_distribution, self.N_ages)
-        age_distribution /= self.cfg.testing_penetration  # Adjust for the untested fraction
-        age_distribution /= age_distribution.sum()        # Convert to probability
+        age_distribution_infected, age_distribution_immunized = file_loaders.load_infection_age_distributions(self.cfg.initial_infection_distribution, self.N_ages)
+
+        # Adjust for the untested fraction
+        age_distribution_infected  /= self.cfg.testing_penetration
+        age_distribution_immunized /= self.cfg.testing_penetration
+
+        # Convert to probability
+        age_distribution_infected  /= age_distribution_infected.sum()
+        age_distribution_immunized /= age_distribution_immunized.sum()
 
         # Set the probability to choose agents
         if self.cfg.initialize_at_kommune_level :
@@ -276,11 +281,15 @@ class Simulation :
                 ages_in_kommune = self.my.age[agents_in_kommune]
                 _, agent_age_distribution = np.unique(ages_in_kommune, return_counts=True)
 
-                # Load the age distribution
-                prior_kommune = age_distribution[ages_in_kommune] / agent_age_distribution[ages_in_kommune]  # Adjust for age distribution of the populaiton
-                prior_kommune /= prior_kommune.sum()   # Convert to probability
+                # Adjust for age distribution of the populaiton
+                prior_infected  = age_distribution_infected[ages_in_kommune]  / agent_age_distribution[ages_in_kommune]
+                prior_immunized = age_distribution_immunized[ages_in_kommune] / agent_age_distribution[ages_in_kommune]
 
-                initialization_subgroups.append((agents_in_kommune, N, R, prior_kommune))
+                # Convert to probability
+                prior_infected  /= prior_infected.sum()
+                prior_immunized /= prior_immunized.sum()
+
+                initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized))
 
         else :
 
@@ -288,28 +297,32 @@ class Simulation :
             ages = self.my.age[possible_agents]
             _, agent_age_distribution = np.unique(ages, return_counts=True)
 
-            # Compute prior  and adjust for age distribution of the populaiton
-            prior  = age_distribution[ages] / agent_age_distribution[ages]
-            prior /= prior.sum()   # Convert to probability
+            # Compute prior and adjust for age distribution of the populaiton
+            prior_infected  = age_distribution_infected[ages]  / agent_age_distribution[ages]
+            prior_immunized = age_distribution_immunized[ages] / agent_age_distribution[ages]
 
-            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior)]
+            # Convert to probability
+            prior_infected  /= prior_infected.sum()
+            prior_immunized /= prior_immunized.sum()
+
+            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized)]
+
 
         # Loop over subgroups and initialize
-        for agents_in_subgroup, N, R, prior in initialization_subgroups :
+        for agents_in_subgroup, N, R, prior_infected, prior_immunized in initialization_subgroups :
 
             nb_simulation.initialize_states(
                 self.my,
                 self.g,
                 self.SIR_transition_rates,
                 self.state_total_counts,
-                self.variant_counts,
                 self.infected_per_age_group,
                 self.agents_in_state,
                 agents_in_subgroup,
                 N,
                 R,
-                prior,
-                prior,
+                prior_infected,
+                prior_immunized,
                 verbose=self.verbose)
 
 
@@ -319,7 +332,7 @@ class Simulation :
             dist = dist / dist.sum()
 
             print("Deviation of distribution for infected per age group (percentage points)")
-            print(np.round(100 * (dist - age_distribution), 1))
+            print(np.round(100 * (dist - age_distribution_infected), 1))
 
 
             if self.my.cfg.initialize_at_kommune_level :
@@ -391,20 +404,18 @@ class Simulation :
             self.intervention,
             self.SIR_transition_rates,
             self.state_total_counts,
-            self.variant_counts,
             self.infected_per_age_group,
             self.agents_in_state,
-            self.N_states,
             self.N_infectious_states,
             self.nts,
             self.verbose)
 
 
-        out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention = res
+        out_time, out_state_counts, out_infected_per_age_group, out_my_state, intervention = res
 
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
-        self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts, out_infected_per_age_group)
+        self.df = utils.counts_to_df(out_time, out_state_counts, out_infected_per_age_group, self.cfg)
         self.intervention = intervention
 
         return self.df

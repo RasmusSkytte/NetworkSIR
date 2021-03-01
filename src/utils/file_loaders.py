@@ -478,9 +478,6 @@ def download_SSI_data(date=None, download_municipality=True, path_municipality='
 
 def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False) :
 
-    if date == "newest" :
-        date = newest_SSI_filename()
-
     filename = date + '.csv'
 
     filename_municipality = os.path.join('Data', 'municipality_cases', filename)
@@ -513,23 +510,43 @@ def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False)
 
 
 
-def load_infection_age_distribution(initial_distribution_file, N_ages) :
+def load_infection_age_distributions(initial_distribution_file, N_ages) :
 
     if initial_distribution_file.lower() == "random" :
-        age_distribution  = np.ones(N_ages)
+        age_distribution_infected  = np.ones(N_ages)
+        age_distribution_immunized = np.ones(N_ages)
 
     else :
 
         if initial_distribution_file.lower() == "newest" :
-            _, df = get_SSI_data(date="newest", return_data=True)
+            date_current = newest_SSI_filename()
         else :
-            df = pd.read_csv('Data/age_cases/' + initial_distribution_file + ".csv", index_col=0)
+            date_current = initial_distribution_file
 
-        age_distribution_raw = df.to_numpy().flatten()
-        age_distribution = age_distribution_raw[:N_ages]
-        age_distribution[-1] += np.sum(age_distribution_raw[N_ages:])
+        date_delayed = datetime.datetime.strptime(date_current, "%Y_%m_%d") - datetime.timedelta(days=7)
+        date_delayed = date_delayed.strftime("%Y_%m_%d")
 
-    return age_distribution
+        _, df_current = get_SSI_data(date=date_current, return_data=True)
+        _, df_delayed = get_SSI_data(date=date_delayed, return_data=True)
+
+        age_distribution_current_raw = df_current.to_numpy().flatten()
+        age_distribution_delayed_raw = df_delayed.to_numpy().flatten()
+
+        # Filter out ages of 70 and below
+        age_distribution_current = age_distribution_current_raw[:N_ages]
+        age_distribution_delayed = age_distribution_delayed_raw[:N_ages]
+
+        # Add the data for the ages above 70
+        age_distribution_current[-1] += np.sum(age_distribution_current[N_ages:])
+        age_distribution_delayed[-1] += np.sum(age_distribution_delayed[N_ages:])
+
+        age_distribution_infected  = age_distribution_current - age_distribution_delayed
+        age_distribution_immunized = age_distribution_delayed
+
+        if np.any(age_distribution_infected < 0) :
+            raise ValueError("Age distribution is corrupted")
+
+    return age_distribution_infected, age_distribution_immunized
 
 def load_kommune_infection_distribution(df_coordinates, initial_distribution_file) :
 

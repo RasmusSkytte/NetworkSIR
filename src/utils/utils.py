@@ -1,4 +1,3 @@
-from numba.core.types.scalars import Float
 import numpy as np
 import pandas as pd
 import multiprocessing as mp
@@ -6,11 +5,16 @@ from pathlib import Path
 import yaml
 
 import numba as nb
-from numba import njit, prange, objmode, typeof #TODO delete prange, objmode
+from numba import njit, typeof
 from numba.typed import List, Dict
-# import platform #TODO delete line
 import datetime
 import os
+
+import h5py
+
+from scipy.stats import uniform as sp_uniform
+from scipy.stats import randint
+from sklearn.model_selection import ParameterSampler
 
 import awkward1 as ak
 import dict_hash
@@ -1396,48 +1400,43 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
 
 
 
-def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  #
+def counts_to_df(time, state_counts, infected_per_age_group, cfg) :  #
 
     time = np.array(time)
     state_counts = np.array(state_counts)
-    variant_counts = np.array(variant_counts)
     infected_per_age_group = np.array(infected_per_age_group)
 
     N_states     = np.size(state_counts, 1)
-    N_variants   = np.size(variant_counts, 1)
-    N_age_groups = np.size(infected_per_age_group, 1)
+    N_variants   = np.size(infected_per_age_group, 1)
+    N_age_groups = np.size(infected_per_age_group, 2)
 
     header = [
-        "Time",
-        "E1", "E2", "E3", "E4",
-        "I1", "I2", "I3", "I4",
-        "R"]
+        'Time',
+        'E1', 'E2', 'E3', 'E4',
+        'I1', 'I2', 'I3', 'I4',
+        'R']
 
-    header.extend(["I^V_" + str(i) for i in range(N_variants)])
-    header.extend(["I^A_" + str(i) for i in range(N_age_groups)])
+    for j in range(N_variants) :
+        header.extend(['T^' + str(j) + '_A_' + str(i) for i in range(N_age_groups)])
 
     k_start = 0
     k_stop  = 1
-    df_time     = pd.DataFrame(time, columns=header[k_start:k_stop])
+    df_time = pd.DataFrame(time, columns=header[k_start:k_stop])
 
     k_start = k_stop
     k_stop  += N_states
-    df_states   = pd.DataFrame(state_counts, columns=header[k_start:k_stop])
+    df_states = pd.DataFrame(state_counts, columns=header[k_start:k_stop])
 
-    k_start = k_stop
-    k_stop  += N_variants
-    df_variants = pd.DataFrame(variant_counts, columns=header[k_start:k_stop])
+    df = pd.concat([df_time, df_states], axis=1)
 
-    k_start = k_stop
-    k_stop  += N_age_groups
-    df_age_groups = pd.DataFrame(infected_per_age_group, columns=header[k_start:k_stop])
+    for j in range(N_variants) :
+        k_start = k_stop
+        k_stop  += N_age_groups
+        df_age_group = pd.DataFrame(infected_per_age_group[:, j, :] * cfg.testing_penetration, columns=header[k_start:k_stop])
 
-    df = pd.concat([df_time, df_states, df_variants, df_age_groups], axis=1)  # .convert_dtypes()
+        df = pd.concat([df, df_age_group], axis=1)  # .convert_dtypes()
 
     return df
-
-
-
 
 
 def parse_memory_file(filename) :
@@ -1905,7 +1904,6 @@ def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True) :
 
 
 
-import h5py
 
 def add_cfg_to_hdf5_file(f, cfg) :
 
@@ -1974,10 +1972,6 @@ def get_simulation_parameters() :
 
 
 
-
-from scipy.stats import uniform as sp_uniform
-from scipy.stats import randint
-from sklearn.model_selection import ParameterSampler
 
 
 def uniform(a=0, b=1) :

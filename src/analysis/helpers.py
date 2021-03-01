@@ -12,10 +12,25 @@ from src.utils import file_loaders
 
 def aggregate_array(arr, chunk_size=10) :
 
-    chunks = int(len(arr) / chunk_size)
+    tmp = arr.copy()
+
+    shp = np.shape(tmp)
+
+    if len(shp) == 1 :
+        tmp = tmp.reshape(shp[0], 1)
+        shp = np.shape(tmp)
+
+    chunks = int(shp[0] / chunk_size)
+
+    out_arr = np.zeros((chunks, shp[1]))
     for k in range(chunks) :
-        arr[k] = np.mean(arr[k*chunk_size:(k+1)*chunk_size])
-    return arr[:chunks]
+        out_arr[k, :] = np.mean(tmp[k*chunk_size:(k+1)*chunk_size, :], axis=0)
+
+    if len(shp) == 1 :
+        out_arr.reshape(shp[0],)
+
+    return out_arr
+
 
 def load_from_file(filename) :
 
@@ -25,26 +40,31 @@ def load_from_file(filename) :
     df = file_loaders.pandas_load_file(filename)
 
     # Extract the values
-    I_tot    = df["I"].to_numpy()
-    I_uk     = df["I^V_1"].to_numpy()
+    T_age_groups_variant_0 = aggregate_array(df[['T^0_A_0', 'T^0_A_1', 'T^0_A_2', 'T^0_A_3', 'T^0_A_4', 'T^0_A_5', 'T^0_A_6', 'T^0_A_7']].to_numpy())
+    T_age_groups_variant_1 = aggregate_array(df[['T^1_A_0', 'T^1_A_1', 'T^1_A_2', 'T^1_A_3', 'T^1_A_4', 'T^1_A_5', 'T^1_A_6', 'T^1_A_7']].to_numpy())
 
-    # Get daily averages
-    I_tot = aggregate_array(I_tot)
-    I_uk = aggregate_array(I_uk)
+    # Scale the tests
+    T_age_groups_variant_0 *= (5_800_000 / cfg.network.N_tot) / 2.7
+    T_age_groups_variant_1 *= (5_800_000 / cfg.network.N_tot) / 2.7
 
-    # Scale the number of infected
-    I_tot_scaled = I_tot / 2.7 * (5_800_000 / cfg.network.N_tot)
+    # Convert to observables
+    T_dk = np.sum(T_age_groups_variant_0, axis=1)
+    T_uk = np.sum(T_age_groups_variant_1, axis=1)
+
+    T_tot = T_dk + T_uk
+
+    T_age_groups = T_age_groups_variant_0 + T_age_groups_variant_1
 
     # Get weekly values
-    I_tot_week = aggregate_array(I_tot, chunk_size=7)
-    I_uk_week  = aggregate_array(I_uk,  chunk_size=7)
+    T_tot_week = aggregate_array(T_tot, chunk_size=7)
+    T_uk_week  = aggregate_array(T_uk,  chunk_size=7)
 
     # Get the fraction of UK variants
     with np.errstate(divide='ignore', invalid='ignore'):
-        f = I_uk_week / I_tot_week
+        f = T_uk_week / T_tot_week
         f[np.isnan(f)] = -1
 
-    return(I_tot_scaled, f)
+    return(T_tot, f, T_age_groups, np.stack((T_dk, T_uk), axis=1))
 
 
 def compute_loglikelihood(arr, data, transformation_function = lambda x : x) :

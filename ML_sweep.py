@@ -12,27 +12,39 @@ from p_tqdm import p_umap, p_uimap
 from contexttimer import Timer
 
 
-params, start_date = utils.load_params("cfg/simulation_parameters_debugging.yaml")
+params, start_date = utils.load_params("cfg/simulation_parameters_fit_2021_fase1.yaml")
 
 if utils.is_local_computer():
-    f = 0.1
-    n_sigma = 0
+    f = 0.01
+    n_steps = 2
     num_cores_max = 3
     N_runs = 1
+
 else :
     f = 0.2
-    n_sigma = 0
+    n_steps = 1
     num_cores_max = 15
     N_runs = 1
 
-noise = lambda m, d : np.round(m + np.linspace(-(d), (d), 2*n_sigma + 1), 5)
+
+if num_cores_max == 1 :
+    verbose = True
+else :
+    verbose = False
+
+noise = lambda m, d : np.round(m + np.linspace(-d, d, 2*(n_steps - 1) + 1), 5)
 
 # Sweep around parameter set
 #params["beta"]               = [0.0102, 0.0103, 0.0104, 0.0105]
+params["beta"]               = noise(params["beta"], 0.0025)
 #params["beta_UK_multiplier"] = [1.5]
-#params["N_init"]             = noise(params["N_init"] * f, 1000 * f)
-params["N_init"] = int(params["N_init"] * f)
+#params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.1)
+
+params["N_init"]             = noise(params["N_init"] * f, 500 * f)
+#params["N_init"] = int(params["N_init"] * f)
+
 #params["N_init_UK_frac"]     = [0.02, 0.025, 0.03]
+params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.005)
 
 # Scale the population
 params["N_tot"]  = int(params["N_tot"]  * f)
@@ -42,7 +54,7 @@ N_files_total = 0
 if __name__ == "__main__":
     with Timer() as t:
 
-        N_files_total +=  simulation.run_simulations(params, N_runs=N_runs, num_cores_max=num_cores_max)
+        N_files_total +=  simulation.run_simulations(params, N_runs=N_runs, num_cores_max=num_cores_max, verbose=verbose)
 
     print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
     print("Finished simulating!")
@@ -56,9 +68,8 @@ logK, logK_sigma, beta, covid_index_offset, _ = load_covid_index(start_date)
 fraction, fraction_sigma, fraction_offset, _ = load_b117_fraction()
 
 
-for subset in [{"contact_matrices_name" : "2021_fase1"}] :
+for subset in [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]}] :
 
-    print(subset)
 
     # Load the ABM simulations
     abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=subset, verbose=True)
@@ -77,7 +88,7 @@ for subset in [{"contact_matrices_name" : "2021_fase1"}] :
         for filename in abm_files.cfg_to_filenames(cfg) :
 
             # Load
-            I_tot_scaled, f = load_from_file(filename)
+            I_tot_scaled, f, _, _= load_from_file(filename)
 
             # Evaluate
             tmp_ll_s = compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))

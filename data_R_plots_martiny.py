@@ -11,18 +11,11 @@ from src import file_loaders
 from src import rc_params
 
 from matplotlib.backends.backend_pdf import PdfPages
-try:
-    from src.utils import utils
 
-    # from src import simulation_utils
-    from src import file_loaders
-    from src import SIR
-except ImportError:
-    import utils
+from src.utils import utils
+from src.utils import file_loaders
+from src import SIR
 
-    # import simulation_utils
-    import file_loaders
-    import SIR
 
 def fit_exponential(x, y):
 	y = np.array(y)

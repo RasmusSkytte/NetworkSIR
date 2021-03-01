@@ -1,24 +1,19 @@
 import numpy as np
-from scipy.stats import norm
 
 from src.utils import utils
 from src.simulation import simulation
 
-from tinydb import Query
-
 from tqdm import tqdm
-from functools import partial
-from p_tqdm import p_umap, p_uimap
 from contexttimer import Timer
 
 
 params, start_date = utils.load_params("cfg/simulation_parameters_fit_2021_fase1.yaml")
 
 if utils.is_local_computer():
-    f = 0.01
-    n_steps = 2
+    f = 0.05
+    n_steps = 1
     num_cores_max = 3
-    N_runs = 1
+    N_runs = 3
 
 else :
     f = 0.2
@@ -73,6 +68,9 @@ for subset in [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fas
 
     # Load the ABM simulations
     abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=subset, verbose=True)
+
+    if len(abm_files.cfgs) == 0 :
+        raise ValueError("No files found")
 
     lls_f     = []
     lls_s     = []

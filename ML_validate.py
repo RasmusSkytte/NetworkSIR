@@ -236,7 +236,7 @@ for subset in subsets :
     for i in range(len(axes2)) :
 
         axes2[i].set_xlim([start_date, end_date])
-        axes2[i].set_ylim(0, 3000)
+        axes2[i].set_ylim(0, 500)
 
         if not i % 3 == 0 :
             axes2[i].set_yticklabels([])

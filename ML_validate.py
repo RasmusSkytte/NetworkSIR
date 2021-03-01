@@ -229,11 +229,21 @@ for subset in subsets :
 
 
 
-
-
-
+    # Load tests per age group
+    raw = pd.read_csv("allCases_hosp_2021-02-16.txt", sep="\t")
+    data = pd.pivot_table(raw, values=['test', 'pos'], index=['PrDate', 'AgeGr'],  aggfunc=np.sum)
+    idx = pd.IndexSlice
 
     for i in range(len(axes2)) :
+
+        T = data.loc[idx[i, :]]['test'].to_numpy()
+        P = data.loc[idx[i, :]]['pos'].to_numpy()
+        t = pd.to_datetime(data.loc[idx[0, :]].index).to_numpy()
+
+        # Adjust for the number of tests
+        P = P * (100_000 / T)**beta
+
+        axes2[i].scatter(t, P, c = plt.cm.tab10(i))
 
         axes2[i].set_xlim([start_date, end_date])
         axes2[i].set_ylim(0, 600)

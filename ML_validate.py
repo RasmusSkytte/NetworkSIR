@@ -130,7 +130,7 @@ for subset in subsets :
         h.extend(h3)
 
         # Evaluate
-        ll =  compute_loglikelihood(total_tests, (logK,         logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
+        ll =  compute_loglikelihood(total_tests, (logK,         logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(100_000))
         ll += compute_loglikelihood(f,            (fraction, fraction_sigma, fraction_offset))
 
         # Store the plot handles and loglikelihoods

@@ -2393,12 +2393,12 @@ def matrix_restriction_on_label(my, g, intervention, label, n, verbose=False) :
     # ie : [[0,0.2,0.2],[0,0.8,0.8]] means that your wear mask when around 20% of job and other contacts, and your rates to those is reduced by 80%
     # loop over all agents
 
-    #if verbose :
-    prev = 0
-    for agent in range(my.cfg_network.N_tot) :
-        for i in range(my.number_of_contacts[agent]) :
-            if my.agent_is_connected(agent, i) :
-                prev += 1
+    if verbose :
+        prev = 0
+        for agent in range(my.cfg_network.N_tot) :
+            for i in range(my.number_of_contacts[agent]) :
+                if my.agent_is_connected(agent, i) :
+                    prev += 1
 
     for agent in range(my.cfg_network.N_tot) :
         if intervention.labels[agent] == label :
@@ -2407,20 +2407,20 @@ def matrix_restriction_on_label(my, g, intervention, label, n, verbose=False) :
             remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n)
 
 
-    #if verbose :
-    after = 0
-    for agent in range(my.cfg_network.N_tot) :
-        for i in range(my.number_of_contacts[agent]) :
-            if my.agent_is_connected(agent, i) :
-                after += 1
+    if verbose :
+        after = 0
+        for agent in range(my.cfg_network.N_tot) :
+            for i in range(my.number_of_contacts[agent]) :
+                if my.agent_is_connected(agent, i) :
+                    after += 1
 
-    print("--------------")
-    print("Contacts before")
-    print(prev)
-    print("Contacts after")
-    print(after)
-    print("Ratio")
-    print(after / prev)
+        print("--------------")
+        print("Contacts before")
+        print(prev)
+        print("Contacts after")
+        print(after)
+        print("Ratio")
+        print(after / prev)
 
 
 @njit

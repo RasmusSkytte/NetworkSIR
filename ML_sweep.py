@@ -89,7 +89,7 @@ for subset in [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fas
             I_tot_scaled, f, _, _= load_from_file(filename)
 
             # Evaluate
-            tmp_ll_s = compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
+            tmp_ll_s = compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(100_000))
             tmp_ll_f = compute_loglikelihood(f, (fraction, fraction_sigma, fraction_offset))
 
             ll_s.append(tmp_ll_s)

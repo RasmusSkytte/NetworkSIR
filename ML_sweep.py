@@ -19,7 +19,7 @@ else :
     f = 0.2
     n_steps = 1
     num_cores_max = 15
-    N_runs = 1
+    N_runs = 2
 
 
 if num_cores_max == 1 :
@@ -33,7 +33,7 @@ noise = lambda m, d : np.round(m + np.linspace(-d, d, 2*(n_steps - 1) + 1), 5)
 #params["beta"]               = [0.0102, 0.0103, 0.0104, 0.0105]
 params["beta"]               = noise(params["beta"], 0.0025)
 #params["beta_UK_multiplier"] = [1.5]
-#params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.1)
+params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.1)
 
 params["N_init"]             = noise(params["N_init"] * f, 500 * f)
 #params["N_init"] = int(params["N_init"] * f)

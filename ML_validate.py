@@ -17,7 +17,6 @@ from src import rc_params
 
 from src.analysis.helpers import *
 
-
 # Define the subset to plot on
 subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]}]
 
@@ -130,7 +129,7 @@ for subset in subsets :
         h.extend(h3)
 
         # Evaluate
-        ll =  compute_loglikelihood(total_tests, (logK,         logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(100_000))
+        ll =  compute_loglikelihood(total_tests, (logK,         logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
         ll += compute_loglikelihood(f,            (fraction, fraction_sigma, fraction_offset))
 
         # Store the plot handles and loglikelihoods
@@ -167,12 +166,27 @@ for subset in subsets :
                 line.set_alpha(0.05 + 0.95*ll)
 
     # Plot the covid index
-    m  = np.exp(logK) * (80_000 ** beta)
-    ub = np.exp(logK + logK_sigma) * (80_000 ** beta) - m
-    lb = m - np.exp(logK - logK_sigma) * (80_000 ** beta)
+    m  = np.exp(logK) * (ref_tests ** beta)
+    ub = np.exp(logK + logK_sigma) * (ref_tests ** beta) - m
+    lb = m - np.exp(logK - logK_sigma) * (ref_tests ** beta)
     s  = np.stack((lb.to_numpy(), ub.to_numpy()))
 
     axes1[0].errorbar(t_index, m, yerr=s, fmt='o', lw=2)
+
+
+    # Load tests per age group
+    raw = pd.read_csv("Data/region_data/allCases_hosp_2021-02-16.txt", sep="\t")
+    data = pd.pivot_table(raw, values=['test', 'pos'], index=['PrDate'],  aggfunc=np.sum)
+    idx = pd.IndexSlice
+
+    T = data['test'].to_numpy().astype(float)
+    P = data['pos'].to_numpy().astype(float)
+    t = pd.to_datetime(data.index).to_numpy()
+
+    # Adjust for the number of tests
+    P *=  (ref_tests / T)**beta
+
+    axes1[0].scatter(t, P, color='r', s=10)
 
 
     # Plot the WGS B.1.1.7 fraction
@@ -182,7 +196,7 @@ for subset in subsets :
     # Get restriction_thresholds from a cfg
     restriction_thresholds = abm_files.cfgs[0].restriction_thresholds
 
-    axes1[0].set_ylim(0, 10000)
+    axes1[0].set_ylim(0, 2500)
     axes1[0].set_ylabel('Daglige positive')
 
 
@@ -230,23 +244,27 @@ for subset in subsets :
 
 
     # Load tests per age group
-    raw = pd.read_csv("allCases_hosp_2021-02-16.txt", sep="\t")
-    data = pd.pivot_table(raw, values=['test', 'pos'], index=['PrDate', 'AgeGr'],  aggfunc=np.sum)
+    raw = pd.read_csv("Data/region_data/allCases_hosp_2021-02-16.txt", sep="\t")
+    data = pd.pivot_table(raw, values=['test', 'pos'], index=['AgeGr', 'PrDate'],  aggfunc=np.sum)
     idx = pd.IndexSlice
+
+    tests_per_age_group = pd.pivot_table(raw, values=['test'], index=['PrDate'], columns=['AgeGr'],  aggfunc=np.sum).to_numpy().astype(float)
+    tests_per_day = np.sum(tests_per_age_group, axis = 1)
+
+    # Adjust to ref_tests level
+    tests_per_age_group_adjusted = tests_per_age_group * ref_tests / np.repeat(tests_per_day.reshape(-1, 1), tests_per_age_group.shape[1], axis=1)
+
+
+    positive_per_age_group = pd.pivot_table(raw, values=['pos'], index=['PrDate'], columns=['AgeGr'],  aggfunc=np.sum).to_numpy().astype(float)
+    positive_per_age_group *= (tests_per_age_group_adjusted / tests_per_age_group)**beta
+
 
     for i in range(len(axes2)) :
 
-        T = data.loc[idx[i, :]]['test'].to_numpy()
-        P = data.loc[idx[i, :]]['pos'].to_numpy()
-        t = pd.to_datetime(data.loc[idx[0, :]].index).to_numpy()
-
-        # Adjust for the number of tests
-        P = P * (100_000 / T)**beta
-
-        axes2[i].scatter(t, P, c = plt.cm.tab10(i))
+        axes2[i].scatter(t, positive_per_age_group[:, i], color=plt.cm.tab10(i), s=10)
 
         axes2[i].set_xlim([start_date, end_date])
-        axes2[i].set_ylim(0, 500)
+        axes2[i].set_ylim(0, 600)
 
         if not i % 3 == 0 :
             axes2[i].set_yticklabels([])

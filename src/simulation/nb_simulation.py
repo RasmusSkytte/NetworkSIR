@@ -104,10 +104,12 @@ def nb_random_choice(arr, prob, size=1, replace=False, verbose=False) :
                 out.add(x)
         return set_to_array(out)
 
+
 @njit
 def exp_func(x, a, b, c) :
-
     return a * np.exp(b * x) + c
+
+
 @njit
 def make_random_initial_infections(my, possible_agents, N, prior) :
     if my.cfg.weighted_random_initial_infections :
@@ -218,11 +220,11 @@ def calc_E_I_distribution(my, r_guess) :
     p_E = 4/my.cfg.lambda_E
     p_I = 4/my.cfg.lambda_I
     gen = p_E + p_I
-    E_I_weight_list = np.ones(8,dtype=np.float64)
+    E_I_weight_list = np.ones(8, dtype=np.float64)
     for i in range(1,4) :
-        E_I_weight_list[i :] = E_I_weight_list[i :]* r_guess**(1/my.cfg.lambda_I/(p_E*p_I))
+        E_I_weight_list[i :] = E_I_weight_list[i :] * r_guess**(1/my.cfg.lambda_I/(p_E*p_I))
     for i in range(4,8) :
-        E_I_weight_list[i :] = E_I_weight_list[i :]* r_guess**(1/my.cfg.lambda_E/(p_E*p_I))
+        E_I_weight_list[i :] = E_I_weight_list[i :] * r_guess**(1/my.cfg.lambda_E/(p_E*p_I))
     E_I_weight_list = E_I_weight_list[ : :-1]
     return E_I_weight_list
 
@@ -281,8 +283,8 @@ def initialize_states(
             g.cumulative_sum_of_state_changes[R_state :] += SIR_transition_rates[R_state]
 
             # Disable incomming rates
-            #multiply_incoming_rates(my, g, agent, np.array([0, 0, 0]))
             update_infection_list_for_newly_infected_agent(my, g, agent)
+
 
     #  Make initial infections
     for agent in choose_initial_agents(my, possible_agents, N_init, prior_infected) :
@@ -417,8 +419,7 @@ def do_bug_check(
     accept,
     ra1,
     s,
-    x,
-) :
+    x) :
 
     if my.cfg.day_max > 0 and day > my.cfg.day_max :
         if verbose :
@@ -475,8 +476,6 @@ def do_bug_check(
 
     return continue_run
 
-
-#%%
 
 
 @njit
@@ -666,6 +665,7 @@ def run_simulation(
                                 accept = True
                                 agent_getting_infected = contact
                                 break
+
                             ith_contact += 1
                 else :
                     g.cumulative_sum = suggested_cumulative_sum
@@ -798,14 +798,13 @@ def run_simulation(
     #return out_time, out_state_counts, out_variant_counts, out_my_state, intervention
 
 
-#%%
 # ███    ███  █████  ██████  ████████ ██ ███    ██ ██    ██
 # ████  ████ ██   ██ ██   ██    ██    ██ ████   ██  ██  ██
 # ██ ████ ██ ███████ ██████     ██    ██ ██ ██  ██   ████
 # ██  ██  ██ ██   ██ ██   ██    ██    ██ ██  ██ ██    ██
 # ██      ██ ██   ██ ██   ██    ██    ██ ██   ████    ██
-#
-#%%
+
+
 @njit
 def calculate_contact_distribution(my, contact_type) :
     contact_dist = np.zeros(100)
@@ -816,6 +815,7 @@ def calculate_contact_distribution(my, contact_type) :
                 agent_sum += 1
         contact_dist[agent_sum] += 1
     return contact_dist
+
 
 @njit
 def calculate_contact_distribution_label(my, intervention):
@@ -883,6 +883,7 @@ def calculate_R_True(my, g) :
             N_infected += 1
     return rate_sum / lambda_I / np.maximum(N_infected, 1.0) * 4
 
+
 @njit
 def calculate_R_True_brit(my, g) :
     lambda_I = my.cfg.lambda_I
@@ -893,6 +894,7 @@ def calculate_R_True_brit(my, g) :
             N_infected += 1
             rate_sum += g.sum_of_rates[agent]
     return rate_sum / lambda_I / np.maximum(N_infected, 1.0) * 4
+
 
 @njit
 def calculate_population_freedom_impact(intervention) :
@@ -921,7 +923,8 @@ def compute_my_cluster_coefficient(my) :
     return cluster_coefficient
 
 
-# @njit
+
+@njit
 def initialize_kommuner(my, df_coordinates) :
     my.kommune = np.array(df_coordinates["idx"].values, dtype=np.uint8)
     kommune_counter = df_coordinates["idx"].value_counts().sort_index()
@@ -929,12 +932,13 @@ def initialize_kommuner(my, df_coordinates) :
     return kommune_counter
 
 
+
 @njit
 def check_if_label_needs_intervention(
     intervention,
     day,
-    threshold_info,
-) :
+    threshold_info) :
+
     infected_per_label = np.zeros_like(intervention.label_counter, dtype=np.uint32)
 
     for agent, day_found in enumerate(intervention.day_found_infected) :
@@ -973,7 +977,6 @@ def check_if_label_needs_intervention(
                 intervention.types[i_label] = threshold_info[0][ith_intervention]
                 break
 
-    return None
 
 @njit
 def find_reverse_connection(my, agent, ith_contact) :
@@ -1112,8 +1115,7 @@ def check_if_intervention_on_labels_can_be_removed(my, g, intervention, day, cli
 
 @njit
 def loop_update_rates_of_contacts(
-    my, g, intervention, agent, contact, rate, agent_update_rate, rate_reduction
-) :
+    my, g, intervention, agent, contact, rate, agent_update_rate, rate_reduction) :
 
     # updates to gillespie sums, if agent is infected and contact is susceptible
     if my.agent_is_infectious(agent) and my.agent_is_susceptible(contact) :
@@ -1172,7 +1174,7 @@ def cut_rates_of_agent(my, g, intervention, agent, rate_reduction) :
 
     # actually updates to gillespie sums
     g.update_rates(my, -agent_update_rate, agent)
-    return None
+
 
 
 @njit
@@ -1211,7 +1213,6 @@ def reduce_frac_rates_of_agent(my, g, intervention, agent, rate_reduction) :
 
     # actually updates to gillespie sums
     g.update_rates(my, -agent_update_rate, agent)
-    return None
 
 
 @njit
@@ -1250,24 +1251,24 @@ def remove_and_reduce_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
     # actually updates to gillespie sums
     g.update_rates(my, -agent_update_rate, agent)
-    return None
+
 
 @njit
-def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n) :
+def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label) :
 
     # Extract the contact matrices
     if n == 0 :
-        work_matrix_previous  = my.cfg_network.work_matrix
-        other_matrix_previous = my.cfg_network.other_matrix
+        work_matrix_previous  = my.cfg_network.work_matrix[label]
+        other_matrix_previous = my.cfg_network.other_matrix[label]
     else :
-        work_matrix_previous  = intervention.work_matrix_restrict[n-1]
-        other_matrix_previous = intervention.other_matrix_restrict[n-1]
+        work_matrix_previous  = intervention.work_matrix_restrict[label][n-1]
+        other_matrix_previous = intervention.other_matrix_restrict[label][n-1]
 
     work_matrix_max  = my.cfg_network.work_matrix
     other_matrix_max = my.cfg_network.other_matrix
 
-    work_matrix_current  = intervention.work_matrix_restrict[n]
-    other_matrix_current = intervention.other_matrix_restrict[n]
+    work_matrix_current  = intervention.work_matrix_restrict[label][n]
+    other_matrix_current = intervention.other_matrix_restrict[label][n]
 
 
     # Step 1, determine the contacts and their connection probability
@@ -1384,10 +1385,8 @@ def matrix_restriction_on_label(my, g, intervention, label, n, verbose=False) :
                     prev += 1
 
     for agent in range(my.cfg_network.N_tot) :
-        if intervention.labels[agent] == label :
-            my.restricted_status[agent] = 1
-
-            remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n)
+        my.restricted_status[agent] = 1
+        remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label)
 
 
     if verbose :
@@ -1440,8 +1439,6 @@ def test_agent(my, g, intervention, agent, click) :
     intervention.reason_for_test[agent] = -1
 
 
-    return None
-
 
 @njit
 def apply_symptom_testing(my, intervention, agent, click) :
@@ -1476,9 +1473,11 @@ def apply_random_testing(my, intervention, click) :
 
 @njit
 def apply_interventions_on_label(my, g, intervention, day, click, verbose=False) :
+
     if intervention.start_interventions_by_real_incidens_rate or intervention.start_interventions_by_meassured_incidens_rate :
         threshold_info = np.array([[1, 2], [200, 100], [20, 20]]) #TODO : remove
         check_if_intervention_on_labels_can_be_removed(my, g, intervention, day, click, threshold_info)
+
         for i_label, clicks_when_restriction_stops in enumerate(intervention.clicks_when_restriction_stops) :
             if clicks_when_restriction_stops == click :
                 remove_intervention_at_label(my, g, intervention, i_label)

@@ -40,12 +40,12 @@ for subset in subsets :
 
         return [tmp_handles_0, tmp_handles_1]
 
-    def plot_simulation_age_groups(tests_by_age_group, start_date, axes) :
+    def plot_simulation_category(tests_by_category, start_date, axes) :
 
         tmp_handles = []
         # Create the plots
-        for i in range(np.size(tests_by_age_group, 1)) :
-            tmp_handle = axes[i].plot(pd.date_range(start=start_date, periods = np.size(tests_by_age_group, 0), freq="D"), tests_by_age_group[:, i], lw = 4, c = plt.cm.tab10(i))[0]
+        for i in range(np.size(tests_by_category, 1)) :
+            tmp_handle = axes[i].plot(pd.date_range(start=start_date, periods = np.size(tests_by_category, 0), freq="D"), tests_by_category[:, i], lw = 4, c = plt.cm.tab10(i))[0]
             tmp_handles.append(tmp_handle)
 
         return tmp_handles
@@ -82,6 +82,7 @@ for subset in subsets :
 
         return tmp_handles
 
+
     rc_params.set_rc_params()
 
 
@@ -106,11 +107,14 @@ for subset in subsets :
     fig1, axes1 = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(12, 12))
     axes1 = axes1.flatten()
 
-    fig2, axes2 = plt.subplots(nrows=3, ncols=3, sharex=True, figsize=(12, 12))
+    fig2, axes2 = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(12, 12))
     axes2 = axes2.flatten()
 
-    fig3, axes3 = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(12, 12))
+    fig3, axes3 = plt.subplots(nrows=3, ncols=3, sharex=True, figsize=(12, 12))
     axes3 = axes3.flatten()
+
+    fig4, axes4 = plt.subplots(nrows=2, ncols=3, sharex=True, figsize=(12, 12))
+    axes4 = axes4.flatten()
 
     print("Plotting the individual ABM simulations. Please wait", flush=True)
     for filename in tqdm(
@@ -118,19 +122,22 @@ for subset in subsets :
         total=len(abm_files.all_filenames)) :
 
         # Load
-        total_tests, f, T_per_age_group, tests_by_variant = load_from_file(filename)
+        total_tests, f, tests_per_age_group, tests_by_variant = load_from_file(filename)
 
         # Plot
         h  = plot_simulation(total_tests, f, start_date, axes1)
-        h2 = plot_simulation_age_groups(T_per_age_group, start_date, axes2)
-        h3 = plot_simulation_growth_rates(tests_by_variant, start_date, axes3)
+        h2 = plot_simulation_growth_rates(tests_by_variant, start_date, axes2)
+        h3 = plot_simulation_category(tests_per_age_group, start_date, axes3)
+        #h4 = plot_simulation_category(tests_by_region, start_date, axes4)
+
 
         h.extend(h2)
         h.extend(h3)
+        #h.extend(h4)
 
         # Evaluate
         ll =  compute_loglikelihood(total_tests, (logK,         logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
-        ll += compute_loglikelihood(f,            (fraction, fraction_sigma, fraction_offset))
+        ll += compute_loglikelihood(f,           (fraction, fraction_sigma, fraction_offset))
 
         # Store the plot handles and loglikelihoods
         plot_handles.append(h)
@@ -165,6 +172,19 @@ for subset in subsets :
             for line in handles :
                 line.set_alpha(0.05 + 0.95*ll)
 
+
+
+
+
+
+     ######     ###     ######  ########  ######       ####       ########     ##      ##   ########
+    ##    ##   ## ##   ##    ## ##       ##    ##     ##  ##      ##     ##  ####    ####   ##    ##
+    ##        ##   ##  ##       ##       ##            ####       ##     ##    ##      ##       ##
+    ##       ##     ##  ######  ######    ######      ####        ########     ##      ##      ##
+    ##       #########       ## ##             ##    ##  ## ##    ##     ##    ##      ##     ##
+    ##    ## ##     ## ##    ## ##       ##    ##    ##   ##      ##     ##    ##      ##     ##
+    ######  ##     ##  ######  ########  ######      ####  ##    ########   ######  ######   ##
+
     # Plot the covid index
     m  = np.exp(logK) * (ref_tests ** beta)
     ub = np.exp(logK + logK_sigma) * (ref_tests ** beta) - m
@@ -173,20 +193,6 @@ for subset in subsets :
 
     axes1[0].errorbar(t_index, m, yerr=s, fmt='o', lw=2)
 
-
-    # Load tests per age group
-    raw = pd.read_csv("Data/region_data/allCases_hosp_2021-02-16.txt", sep="\t")
-    data = pd.pivot_table(raw, values=['test', 'pos'], index=['PrDate'],  aggfunc=np.sum)
-    idx = pd.IndexSlice
-
-    T = data['test'].to_numpy().astype(float)
-    P = data['pos'].to_numpy().astype(float)
-    t = pd.to_datetime(data.index).to_numpy()
-
-    # Adjust for the number of tests
-    P *=  (ref_tests / T)**beta
-
-    axes1[0].scatter(t, P, color='r', s=10)
 
 
     # Plot the WGS B.1.1.7 fraction
@@ -238,50 +244,32 @@ for subset in subsets :
 
 
 
+    ########          ########
+    ##     ##            ##
+    ##     ##            ##
+    ########             ##
+    ##   ##              ##
+    ##    ##             ##
+    ##     ## #######    ##
 
-
-
-
-
-    # Load tests per age group
-    raw = pd.read_csv("Data/region_data/allCases_hosp_2021-02-16.txt", sep="\t")
-    data = pd.pivot_table(raw, values=['test', 'pos'], index=['AgeGr', 'PrDate'],  aggfunc=np.sum)
-    idx = pd.IndexSlice
-
-    tests_per_age_group = pd.pivot_table(raw, values=['test'], index=['PrDate'], columns=['AgeGr'],  aggfunc=np.sum).to_numpy().astype(float)
-    tests_per_day = np.sum(tests_per_age_group, axis = 1)
-
-    # Adjust to ref_tests level
-    tests_per_age_group_adjusted = tests_per_age_group * ref_tests / np.repeat(tests_per_day.reshape(-1, 1), tests_per_age_group.shape[1], axis=1)
-
-
-    positive_per_age_group = pd.pivot_table(raw, values=['pos'], index=['PrDate'], columns=['AgeGr'],  aggfunc=np.sum).to_numpy().astype(float)
-    positive_per_age_group *= (tests_per_age_group_adjusted / tests_per_age_group)**beta
-
-
+    R_ref = 0.75 * np.array([1, 1.55])
     for i in range(len(axes2)) :
 
-        axes2[i].scatter(t, positive_per_age_group[:, i], color=plt.cm.tab10(i), s=10)
+        axes2[i].plot([start_date, end_date], [R_ref[i], R_ref[i]], 'b--', lw=2)
 
         axes2[i].set_xlim([start_date, end_date])
-        axes2[i].set_ylim(0, 600)
-
-        if not i % 3 == 0 :
-            axes2[i].set_yticklabels([])
+        axes2[i].set_ylim(0, 2)
 
         axes2[i].xaxis.set_major_locator(months)
         axes2[i].xaxis.set_major_formatter(months_fmt)
 
-        axes2[i].set_title(f"{10*i}-{10*(i+1)-1}", fontsize=24, pad=5)
+        axes2[i].set_title(f"Variant {i}", fontsize=24, pad=5)
 
         axes2[i].tick_params(axis='x', labelsize=24)
         axes2[i].tick_params(axis='y', labelsize=24)
 
-    axes2[-2].set_title(f"{10*i}+", fontsize=24, pad=5)
-    axes2[-1].remove()
 
-
-    fig2.savefig(os.path.splitext(fig_name)[0] + '_age_groups.png')
+    fig2.savefig(os.path.splitext(fig_name)[0] + '_growth_rates.png')
 
 
 
@@ -289,22 +277,41 @@ for subset in subsets :
 
 
 
+       ###     ######   ########     ######   ########   #######  ##     ## ########   ######
+      ## ##   ##    ##  ##          ##    ##  ##     ## ##     ## ##     ## ##     ## ##    ##
+     ##   ##  ##        ##          ##        ##     ## ##     ## ##     ## ##     ## ##
+    ##     ## ##   #### ######      ##   #### ########  ##     ## ##     ## ########   ######
+    ######### ##    ##  ##          ##    ##  ##   ##   ##     ## ##     ## ##              ##
+    ##     ## ##    ##  ##          ##    ##  ##    ##  ##     ## ##     ## ##        ##    ##
+    ##     ##  ######   ########     ######   ##     ##  #######   #######  ##         ######
 
-
-
+    # Load tests per age group
+    t, positive_per_age_group = load_infected_per_age_group(beta)
 
     for i in range(len(axes3)) :
 
+        axes3[i].scatter(t, positive_per_age_group[:, i], color='k', s=10)
+
         axes3[i].set_xlim([start_date, end_date])
-        axes3[i].set_ylim(0.5, 1.5)
+        axes3[i].set_ylim(0, 600)
+
+        if not i % 3 == 0 :
+            axes3[i].set_yticklabels([])
 
         axes3[i].xaxis.set_major_locator(months)
         axes3[i].xaxis.set_major_formatter(months_fmt)
 
-        axes3[i].set_title(f"Variant {i}", fontsize=24, pad=5)
+        axes3[i].set_title(f"{10*i}-{10*(i+1)-1}", fontsize=24, pad=5)
 
         axes3[i].tick_params(axis='x', labelsize=24)
         axes3[i].tick_params(axis='y', labelsize=24)
 
+    axes3[-2].set_title(f"{10*i}+", fontsize=24, pad=5)
+    axes3[-1].remove()
 
-    fig3.savefig(os.path.splitext(fig_name)[0] + '_growth_rates.png')
+
+    fig3.savefig(os.path.splitext(fig_name)[0] + '_age_groups.png')
+
+
+
+

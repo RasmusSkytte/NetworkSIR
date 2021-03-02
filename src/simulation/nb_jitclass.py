@@ -141,9 +141,9 @@ spec_network = {
     "mu" : nb.float32,
     "sigma_mu" : nb.float32,
     "contact_matrices_name" : nb.types.unicode_type,
-    "work_matrix" : nb.float32[:, :, :],
-    "other_matrix" : nb.float32[:, :, :],
-    "work_other_ratio" : nb.float32[:],  # 0.2 = 20% work, 80% other
+    "work_matrix" : nb.float64[:, :, :],
+    "other_matrix" : nb.float64[:, :, :],
+    "work_other_ratio" : nb.float64[:],  # 0.2 = 20% work, 80% other
     "N_contacts_max" : nb.uint16,
     # ID
     "ID" : nb.uint16,
@@ -159,9 +159,9 @@ class Network(object) :
         self.epsilon_rho = 0.04
         self.mu = 40.0
         self.sigma_mu = 0.0
-        self.work_matrix  = np.ones((1, 8, 8), dtype=np.float32)
-        self.other_matrix = np.ones((1, 8, 8), dtype=np.float32)
-        self.work_other_ratio = np.full(1, fill_value=0.5, dtype=np.float32)
+        self.work_matrix  = np.ones((1, 8, 8), dtype=np.float64)
+        self.other_matrix = np.ones((1, 8, 8), dtype=np.float64)
+        self.work_other_ratio = np.full(1, fill_value=0.5, dtype=np.float64)
         self.N_contacts_max = 0
         self.ID = 0
 
@@ -360,8 +360,8 @@ spec_intervention = {
     "started_as" : nb.uint8[:],
     "vaccinations_per_age_group" : nb.int64[:, :, :],
     "vaccination_schedule" : nb.int64[:, :],
-    "work_matrix_restrict" : nb.float32[:, :, :, :],
-    "other_matrix_restrict" : nb.float32[:, :, :, :],
+    "work_matrix_restrict" : nb.float64[:, :, :, :],
+    "other_matrix_restrict" : nb.float64[:, :, :, :],
     "verbose" : nb.boolean,
 }
 
@@ -440,7 +440,7 @@ class Intervention(object) :
         self.started_as = np.zeros(self.N_labels, dtype=np.uint8)
         self.vaccinations_per_age_group = vaccinations_per_age_group
         self.vaccination_schedule = vaccination_schedule
-        self.work_matrix_restrict = work_matrix_restrict
+        self.work_matrix_restrict  = work_matrix_restrict
         self.other_matrix_restrict = other_matrix_restrict
 
         self.verbose = verbose

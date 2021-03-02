@@ -90,7 +90,7 @@ def compute_loglikelihood(arr, data, transformation_function = lambda x : x) :
 def load_covid_index(start_date) :
 
     # Load the covid index data
-    df_index = pd.read_feather("Data/covid_index_2021.feather")
+    df_index = pd.read_feather(file_loaders.load_yaml('cfg/files.yaml')['CovidIndex'])
 
     # Get the beta value (Here, scaling parameter for the index cases)
     beta       = df_index["beta"][0]
@@ -125,3 +125,20 @@ def load_b117_fraction() :
     t = pd.date_range(start = datetime.datetime(2020, 12, 28), periods = len(fraction), freq = "W-SUN")
 
     return (fraction, fraction_sigma, fraction_offset, t)
+
+
+def load_infected_per_age_group(beta) :
+
+    raw_data = pd.read_csv(file_loaders.load_yaml("cfg/files.yaml")["RegionData"], sep="\t")
+
+    tests_per_age_group = pd.pivot_table(raw_data, values=['test'], index=['PrDate'], columns=['AgeGr'],  aggfunc=np.sum).to_numpy().astype(float)
+    tests_per_day = np.sum(tests_per_age_group, axis = 1)
+
+    # Adjust to ref_tests level
+    tests_per_age_group_adjusted = tests_per_age_group * ref_tests / np.repeat(tests_per_day.reshape(-1, 1), tests_per_age_group.shape[1], axis=1)
+
+    data = pd.pivot_table(raw_data, values=['pos'], index=['PrDate'], columns=['AgeGr'],  aggfunc=np.sum)
+    positive_per_age_group = data.to_numpy().astype(float)
+    positive_per_age_group *= (tests_per_age_group_adjusted / tests_per_age_group)**beta
+
+    return pd.to_datetime(data.index), positive_per_age_group

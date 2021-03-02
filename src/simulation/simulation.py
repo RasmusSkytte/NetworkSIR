@@ -215,6 +215,7 @@ class Simulation :
 
         self.state_total_counts     = np.zeros(self.N_states, dtype=np.uint32)
         self.infected_per_age_group = np.zeros((2, self.N_ages), dtype=np.uint32)
+        self.infected_per_label     = np.zeros((2, self.N_ages), dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
@@ -372,10 +373,17 @@ class Simulation :
         if self.verbose :
             print("\nRUN SIMULATION")
 
-        if self.cfg.make_restrictions_at_kommune_level :
+        if self.cfg.labels.lower() == "kommune" :
             labels = self.df_coordinates["idx"].values
-        else :
+
+        elif self.cfg.labels.lower() == "landsdele" :
+            labels = self.df_coordinates["idx"].values
+
+        elif self.cfg.labels.lower() == "none" :
             labels = self.df_coordinates["idx"].values * 0
+
+        else :
+            raise ValueError(f'Label name: {self.cfg.labels.lower()} not known')
 
         if verbose_interventions is None :
             verbose_interventions = self.verbose

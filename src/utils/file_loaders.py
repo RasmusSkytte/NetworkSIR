@@ -320,11 +320,35 @@ def load_contact_matrices(scenario = 'reference') :
         Parameters :
             scenario (string) : Name for the scenario to load
     """
+
+
+    matrix_work  = []
+    matrix_other = []
+    work_other_ratio = []
+    age_groups_work = []
+
+    filenames = []
+    for filename in os.listdir('Data/contact_matrices/') :
+        if re.match(scenario + '.*_work.csv', filename) is not None :
+            filenames.append('Data/contact_matrices/' + filename.replace('_work.csv',''))
+
+    for filename_set in filenames:
+        tmp_matrix_work, tmp_matrix_other, tmp_work_other_ratio, tmp_age_groups_work = load_contact_matrix_set(filename_set)
+
+        matrix_work.append(tmp_matrix_work)
+        matrix_other.append(tmp_matrix_other)
+        work_other_ratio.append(tmp_work_other_ratio)
+        age_groups_work.append(tmp_age_groups_work)
+
+    return matrix_work, matrix_other, work_other_ratio, age_groups_work
+
+
+def load_contact_matrix_set(matrix_path) :
+
     # Load the contact matrices
-    matrix_work,   _, age_groups_work   = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
-    matrix_school, _, age_groups_school = load_age_stratified_file('Data/contact_matrices/' + scenario + '_school.csv')
-    matrix_other,  _, age_groups_other  = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
-    # TODO : Load the school contact matrix
+    matrix_work,   _, age_groups_work   = load_age_stratified_file(matrix_path + '_work.csv')
+    matrix_school, _, age_groups_school = load_age_stratified_file(matrix_path + '_school.csv')
+    matrix_other,  _, age_groups_other  = load_age_stratified_file(matrix_path + '_other.csv')
 
     # Assert the age_groups are the same
     if not age_groups_work == age_groups_other :
@@ -337,8 +361,6 @@ def load_contact_matrices(scenario = 'reference') :
     # Normalize the contact matrices after this ratio has been determined
     # TODO : Find out if lists or numpy arrays are better --- I am leaning towards using only numpy arrays
     return matrix_work.tolist(), matrix_other.tolist(), work_other_ratio, age_groups_work
-
-
 
 
 

@@ -16,7 +16,7 @@ from numba.core import types
 from numba.typed import List, Dict
 from numba.experimental import jitclass
 
-
+import copy
 
 import yaml
 import h5py
@@ -625,9 +625,6 @@ def to_nested_numba_lists(content, offsets) :
 
 
 
-
-
-
 class DotDict(AttrDict) :
     """
     Class that allows a dict to indexed using dot-notation.
@@ -638,17 +635,17 @@ class DotDict(AttrDict) :
     """
 
     def deepcopy(self) :
-        copy = DotDict()
+        out = DotDict()
 
         for key, val in self.items() :
 
             if isinstance(val, type(self)) :
-                copy[key] = val.deepcopy()
+                out[key] = val.deepcopy()
 
             else :
-                copy[key] = val
+                out[key] =  copy.deepcopy(val)
 
-        return copy
+        return out
 
     def to_dict(self, exclude='') :
         out = {}
@@ -669,6 +666,7 @@ class DotDict(AttrDict) :
 
             elif isinstance(val, np.ndarray) :
                 out[key] = val.tolist()
+
             else :
                 out[key] = val
 
@@ -680,6 +678,7 @@ class DotDict(AttrDict) :
 
             with open(filename, "w") as yaml_file :
                 yaml.dump(self.to_dict(exclude="ID"), yaml_file, default_flow_style=False, sort_keys=False)
+
         else :
             raise AssertionError("This filetype is not yet implemented. Currently only yamls")
 
@@ -688,11 +687,6 @@ class DotDict(AttrDict) :
         s += "\n".join(f"\t{repr(k)} : {repr(v)}," for k, v in self.items())
         s += "\n    }\n)"
         return s
-
-
-# dotdict = DotDict({"first_name" : "Christian", "last_name" : "Michelsen"})
-# dotdict.middle = 'XXX'
-
 
 
 

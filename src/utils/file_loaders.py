@@ -499,6 +499,9 @@ def download_SSI_data(date=None, download_municipality=True, path_municipality='
 
 def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False) :
 
+    if date.lower() == 'newest' :
+        date = newest_SSI_filename()
+
     filename = date + '.csv'
 
     filename_municipality = os.path.join('Data', 'municipality_cases', filename)
@@ -565,7 +568,7 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
         age_distribution_immunized = age_distribution_delayed
 
         if np.any(age_distribution_infected < 0) :
-            raise ValueError("Age distribution is corrupted")
+            raise ValueError(f'Age distribution is corrupted for {date_current}')
 
     return age_distribution_infected, age_distribution_immunized
 

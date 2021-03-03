@@ -35,6 +35,7 @@ spec_cfg = {
     "weighted_random_initial_infections" : nb.boolean,
     "initialize_at_kommune_level" : nb.boolean,
     "labels" : nb.types.unicode_type,
+    "label_map" : ListType(ListType(nb.int64)),
     "clustering_connection_retries" : nb.uint32,
     "beta_UK_multiplier" : nb.float32,
     "outbreak_position_UK" : nb.types.unicode_type,
@@ -111,13 +112,23 @@ def initialize_nb_cfg(obj, cfg, spec) :
     for key, val in cfg.items() :
         if isinstance(val, list) :
             if isinstance(spec[key], nb.types.ListType) :
+
+                # Check for nested list
+                if isinstance(val[0], list) :
+                    for ind in range(len(val)) :
+                        val[ind] = List(val[ind])
+
                 val = List(val)
+
             elif isinstance(spec[key], nb.types.Array) :
                 val = np.array(val, dtype=spec[key].dtype.name)
+
             else :
                 raise AssertionError(f"Got {key} : {val}, not working")
+
         elif isinstance(val, dict) :
             continue
+
         setattr(obj, key, val)
     return obj
 

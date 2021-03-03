@@ -58,8 +58,8 @@ class Simulation :
         self.N_tot = cfg.network.N_tot
 
         self.hash = cfg.hash
+        self.my = nb_jitclass.initialize_My(self.cfg.deepcopy())
 
-        self.my = nb_jitclass.initialize_My(self.cfg)
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
         if self.cfg.version == 1 :
@@ -102,7 +102,7 @@ class Simulation :
                 mu_counter,
                 counter_ages,
                 agents_in_age_group,
-            ) = nb_simulation.place_and_connect_families_kommune_specific(
+            ) = nb_network.place_and_connect_families_kommune_specific(
                 self.my,
                 household_size_dist_per_kommune,
                 age_distribution_per_person_in_house_per_kommune,
@@ -111,10 +111,11 @@ class Simulation :
                 self.N_ages,
                 verbose=self.verbose)
 
+
             if self.verbose :
                 print("Connecting work and others, currently slow, please wait")
 
-            nb_simulation.connect_work_and_others(
+            nb_network.connect_work_and_others(
                 self.my,
                 N_ages,
                 mu_counter,
@@ -127,11 +128,11 @@ class Simulation :
 
             if self.verbose :
                 print("SETUP WEIGHTS AND COORDINATES")
-            nb_simulation.v1_initialize_my(self.my, coordinates_raw)
+            nb_network.v1_initialize_my(self.my, coordinates_raw)
 
             if self.verbose :
                 print("CONNECT NODES")
-            nb_simulation.v1_connect_nodes(self.my)
+            nb_network.v1_connect_nodes(self.my)
 
             agents_in_age_group = List()
             agents_in_age_group.append(np.arange(self.cfg.network.N_tot, dtype=np.uint32))
@@ -152,8 +153,10 @@ class Simulation :
             self._add_cfg_to_hdf5_file(f)
 
     def _load_initialized_network(self, filename) :
+
         if self.verbose :
             print(f"Loading previously initialized network, please wait", flush=True)
+
         with h5py.File(filename, "r") as f :
             self.agents_in_age_group = utils.NestedArray.from_hdf5(
                 f, "agents_in_age_group"
@@ -161,12 +164,13 @@ class Simulation :
             self.N_ages = f["N_ages"][()]
 
             my_hdf5ready = file_loaders.load_jitclass_to_dict(f["my"])
-            self.my = file_loaders.load_My_from_dict(my_hdf5ready, self.cfg)
+            self.my = file_loaders.load_My_from_dict(my_hdf5ready, self.cfg.deepcopy())
         self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.network.ID)
 
         # Update connection weights
         for agent in range(self.cfg.network.N_tot) :
             nb_network.set_infection_weight(self.my, agent)
+
 
     def initialize_network(self, force_rerun=False, save_initial_network=False, only_initialize_network=False, force_load_initial_network=False) :
         filename = "Initialized_networks/"
@@ -282,7 +286,9 @@ class Simulation :
 
                 # Determine the age distribution in the simulation
                 ages_in_kommune = self.my.age[agents_in_kommune]
-                _, agent_age_distribution = np.unique(ages_in_kommune, return_counts=True)
+                agent_age_distribution = np.zeros(self.N_ages)
+                age_inds, age_counts = np.unique(ages_in_kommune, return_counts=True)
+                agent_age_distribution[age_inds] += age_counts
 
                 # Adjust for age distribution of the populaiton
                 prior_infected  = age_distribution_infected[ages_in_kommune]  / agent_age_distribution[ages_in_kommune]
@@ -378,14 +384,24 @@ class Simulation :
         if self.cfg.labels.lower() == "kommune" :
             labels = self.df_coordinates["idx"].values
 
-        elif self.cfg.labels.lower() == "landsdele" :
-            labels = self.df_coordinates["idx"].values
+        elif self.cfg.labels.lower() == "custom" :
+            labels_raw = self.df_coordinates["idx"].values
+
+            labels = np.zeros(np.shape(labels_raw))
+            for new_label, label_group in enumerate(self.cfg.label_map) :
+                labels[np.isin(labels_raw, label_group)] = new_label + 1
 
         elif self.cfg.labels.lower() == "none" :
             labels = self.df_coordinates["idx"].values * 0
 
         else :
             raise ValueError(f'Label name: {self.cfg.labels.lower()} not known')
+
+
+        # Check the loaded contact matrices have the right size
+        if not len(self.my.cfg_network.work_matrix) == len(np.unique(labels)) :
+            raise ValueError(f'Number of labels ({len(np.unique(labels))}) does not match the number of contact matrices ({len(self.my.cfg_network.work_matrix)}) for label: {self.cfg.labels}')
+
 
         if verbose_interventions is None :
             verbose_interventions = self.verbose
@@ -402,6 +418,10 @@ class Simulation :
         for scenario in self.cfg.Intervention_contact_matrices_name :
             tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario)
 
+            # Check the loaded contact matrices have the right size
+            if not len(tmp_other_matrix_restrict) == len(np.unique(labels)) :
+                raise ValueError(f'Number of labels ({len(np.unique(labels))}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for label: {self.cfg.labels}')
+
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
 
@@ -415,6 +435,7 @@ class Simulation :
             work_matrix_restrict = np.array(work_matrix_restrict),
             other_matrix_restrict = np.array(other_matrix_restrict),
             verbose=verbose_interventions)
+
 
         res = nb_simulation.run_simulation(
             self.my,
@@ -515,8 +536,8 @@ def run_single_simulation(
     force_rerun=False,
     only_initialize_network=False,
     save_initial_network=False,
-    save_csv=False,
-) :
+    save_csv=False) :
+
     with Timer() as t, warnings.catch_warnings() :
         if not verbose :
             # ignore warning about run_algo
@@ -595,8 +616,10 @@ def run_simulations(
 
     if isinstance(simulation_parameters, dict) :
         s_simulation_parameters = str(simulation_parameters)
+
     elif isinstance(simulation_parameters, list) :
         s_simulation_parameters = f"{len(simulation_parameters)} runs"
+
     else :
         raise AssertionError("simulation_parameters neither list nor dict")
 

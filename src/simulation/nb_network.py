@@ -480,7 +480,7 @@ def find_two_age_groups(N_ages, matrix) :
     raise AssertionError("find_two_age_groups couldn't find two age groups")
 
 
-@njit
+#@njit
 def connect_work_and_others(
     my,
     N_ages,

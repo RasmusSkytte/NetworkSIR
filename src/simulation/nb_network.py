@@ -480,7 +480,7 @@ def find_two_age_groups(N_ages, matrix) :
     raise AssertionError("find_two_age_groups couldn't find two age groups")
 
 
-#@njit
+@njit
 def connect_work_and_others(
     my,
     N_ages,
@@ -502,31 +502,20 @@ def connect_work_and_others(
     progress_delta_print = 0.1  # 10 percent
     progress_counter = 1
 
-    # Store the activity (to choose the labels)
-    activity_per_label = np.zeros(matrix_work.shape[0])
 
-    # Record the activity and normalize the matrices
-    for i in range(len(activity_per_label)) :
-        activity_per_label[i] = np.sum(matrix_work[i, :, :]) + np.sum(matrix_other[i, :, :])
-        matrix_work[i, :, :]  = matrix_work[i, :, :]  / np.sum(matrix_work[i, :, :])
-        matrix_other[i, :, :] = matrix_other[i, :, :] / np.sum(matrix_other[i, :, :])
-
-    # Convert activity to probability for choosing the label
-    label_probability = np.cumsum(activity_per_label) / np.max(activity_per_label)
+    matrix_work  = matrix_work  / np.sum(matrix_work)
+    matrix_other = matrix_other / np.sum(matrix_other)
 
     mu_tot = my.cfg_network.mu / 2 * my.cfg_network.N_tot # total number of connections in the network, when done
     while mu_counter < mu_tot : # continue until all connections are made
 
-        # Choose label
-        label = np.argmax(np.random.rand() < label_probability)
-
         # determining if next connections is work or other.
         ra_work_other = np.random.rand()
-        if ra_work_other < my.cfg_network.work_other_ratio[label] :
-            matrix   = matrix_work[label, :, :]
+        if ra_work_other < my.cfg_network.work_other_ratio :
+            matrix   = matrix_work
             run_algo = run_algo_work
         else :
-            matrix   = matrix_other[label, :, :]
+            matrix   = matrix_other
             run_algo = run_algo_other
 
         #draw ages from connectivity matrix

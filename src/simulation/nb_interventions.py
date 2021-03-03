@@ -459,14 +459,14 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label
 
     # Extract the contact matrices
     if n == 0 :
-        work_matrix_previous  = my.cfg_network.work_matrix[label]
-        other_matrix_previous = my.cfg_network.other_matrix[label]
+        work_matrix_previous  = my.cfg_network.work_matrix
+        other_matrix_previous = my.cfg_network.other_matrix
     else :
         work_matrix_previous  = intervention.work_matrix_restrict[n-1][label]
         other_matrix_previous = intervention.other_matrix_restrict[n-1][label]
 
-    work_matrix_max  = my.cfg_network.work_matrix[label]
-    other_matrix_max = my.cfg_network.other_matrix[label]
+    work_matrix_max  = my.cfg_network.work_matrix
+    other_matrix_max = my.cfg_network.other_matrix
 
     work_matrix_current  = intervention.work_matrix_restrict[n][label]
     other_matrix_current = intervention.other_matrix_restrict[n][label]

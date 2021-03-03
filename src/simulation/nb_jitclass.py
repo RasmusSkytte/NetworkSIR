@@ -152,9 +152,9 @@ spec_network = {
     "mu" : nb.float32,
     "sigma_mu" : nb.float32,
     "contact_matrices_name" : nb.types.unicode_type,
-    "work_matrix" : nb.float64[:, :, :],
-    "other_matrix" : nb.float64[:, :, :],
-    "work_other_ratio" : nb.float64[:],  # 0.2 = 20% work, 80% other
+    "work_matrix" : nb.float64[:, :],
+    "other_matrix" : nb.float64[:, :],
+    "work_other_ratio" : nb.float64,  # 0.2 = 20% work, 80% other
     "N_contacts_max" : nb.uint16,
     # ID
     "ID" : nb.uint16,
@@ -170,9 +170,9 @@ class Network(object) :
         self.epsilon_rho = 0.04
         self.mu = 40.0
         self.sigma_mu = 0.0
-        self.work_matrix  = np.ones((1, 8, 8), dtype=np.float64)
-        self.other_matrix = np.ones((1, 8, 8), dtype=np.float64)
-        self.work_other_ratio = np.full(1, fill_value=0.5, dtype=np.float64)
+        self.work_matrix  = np.ones((8, 8), dtype=np.float64)
+        self.other_matrix = np.ones((8, 8), dtype=np.float64)
+        self.work_other_ratio = 0.5
         self.N_contacts_max = 0
         self.ID = 0
 

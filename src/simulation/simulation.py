@@ -398,11 +398,6 @@ class Simulation :
             raise ValueError(f'Label name: {self.cfg.labels.lower()} not known')
 
 
-        # Check the loaded contact matrices have the right size
-        if not len(self.my.cfg_network.work_matrix) == len(np.unique(labels)) :
-            raise ValueError(f'Number of labels ({len(np.unique(labels))}) does not match the number of contact matrices ({len(self.my.cfg_network.work_matrix)}) for label: {self.cfg.labels}')
-
-
         if verbose_interventions is None :
             verbose_interventions = self.verbose
 

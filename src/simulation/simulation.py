@@ -39,6 +39,8 @@ from src.utils import utils
 from src.utils import file_loaders
 
 from src.simulation import nb_simulation
+from src.simulation import nb_jitclass
+from src.simulation import nb_network
 
 hdf5_kwargs = dict(track_order=True)
 np.set_printoptions(linewidth=200)
@@ -57,7 +59,7 @@ class Simulation :
 
         self.hash = cfg.hash
 
-        self.my = nb_simulation.initialize_My(self.cfg)
+        self.my = nb_jitclass.initialize_My(self.cfg)
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
         if self.cfg.version == 1 :
@@ -164,7 +166,7 @@ class Simulation :
 
         # Update connection weights
         for agent in range(self.cfg.network.N_tot) :
-            nb_simulation.set_infection_weight(self.my, agent)
+            nb_network.set_infection_weight(self.my, agent)
 
     def initialize_network(self, force_rerun=False, save_initial_network=False, only_initialize_network=False, force_load_initial_network=False) :
         filename = "Initialized_networks/"
@@ -219,7 +221,7 @@ class Simulation :
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
-        self.g = nb_simulation.Gillespie(self.my, self.N_states)
+        self.g = nb_jitclass.Gillespie(self.my, self.N_states)
 
         self.SIR_transition_rates = utils.initialize_SIR_transition_rates(self.N_states, self.N_infectious_states, self.cfg)
 
@@ -404,7 +406,7 @@ class Simulation :
             other_matrix_restrict.append(tmp_other_matrix_restrict)
 
 
-        self.intervention = nb_simulation.Intervention(
+        self.intervention = nb_jitclass.Intervention(
             self.my.cfg,
             self.my.cfg_network,
             labels = labels,

@@ -3,7 +3,7 @@ import numpy as np
 from numba import njit
 from numba.typed import List
 
-from src.simulation.nb_simulation import *
+import src.simulation.nb_simulation as nb_simulation
 
 ######## ##     ## ######## ##    ## ########  ######
 ##       ##     ## ##       ###   ##    ##    ##    ##
@@ -80,4 +80,4 @@ def add_daily_events(
         g.total_sum_of_state_changes += SIR_transition_rates[0]
         g.cumulative_sum_of_state_changes += SIR_transition_rates[0]
 
-        update_infection_list_for_newly_infected_agent(my, g, agent_getting_infected_at_event)
+        nb_simulation.update_infection_list_for_newly_infected_agent(my, g, agent_getting_infected_at_event)

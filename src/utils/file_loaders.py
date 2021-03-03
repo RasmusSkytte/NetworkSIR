@@ -8,11 +8,10 @@ import os
 import yaml
 from tinydb import Query
 
-# from tqdm import tqdm TODO : delete line
 from src.utils import utils
-from src.simulation import nb_simulation
+from src.simulation import nb_jitclass
 
-from numba.typed import List, Dict  #TODO : delete Dict from line
+from numba.typed import List
 
 
 from io import BytesIO
@@ -686,8 +685,8 @@ def load_jitclass_to_dict(f):
 
 
 def load_My_from_dict(d_in, cfg):
-    spec_my = nb_simulation.spec_my
-    my = nb_simulation.initialize_My(cfg)
+    spec_my = nb_jitclass.spec_my
+    my = nb_jitclass.initialize_My(cfg)
     for key, val in d_in.items():
         if isinstance(val, dict) and "content" in val and "offsets" in val:
             val = utils.NestedArray.from_dict(val).to_nested_numba_lists()

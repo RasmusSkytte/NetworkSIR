@@ -1,19 +1,32 @@
 import numpy as np
-import pandas as pd
-import multiprocessing as mp
-from pathlib import Path
-import yaml
-
 import numba as nb
-from numba import njit, typeof
-from numba.typed import List, Dict
+import pandas as pd
+
+import matplotlib.pyplot as plt
+import multiprocessing as mp
+
+import re
 import datetime
 import os
+from pathlib import Path
 
+
+from numba import njit, typeof, generated_jit
+from numba.core import types
+from numba.typed import List, Dict
+from numba.experimental import jitclass
+
+
+
+import yaml
 import h5py
+import csv
+
 
 from scipy.stats import uniform as sp_uniform
 from scipy.stats import randint
+from scipy.special import erf
+
 from sklearn.model_selection import ParameterSampler
 
 import awkward1 as ak
@@ -24,6 +37,18 @@ from attrdict import AttrDict
 from tinydb import TinyDB, Query
 
 from src.utils import file_loaders
+from src.simulation import nb_jitclass
+
+
+from decimal import Decimal
+
+
+from range_key_dict import RangeKeyDict  # pip install range-key-dict
+from itertools import product
+from functools import reduce
+from operator import iand
+
+from sympy.parsing.sympy_parser import parse_expr
 
 
 def sha256(d) :
@@ -134,9 +159,6 @@ def get_size(x, unit="gb") :
 
     return x.size * x.itemsize / d_prefix_conversion[unit.lower()]
 
-
-import re
-from numba import typeof
 
 
 def get_numba_list_dtype(x, as_string=False) :
@@ -257,8 +279,7 @@ def list_of_arrays_to_list_of_lists(list_of_arrays) :
 
 
 # Counters in Numba
-from numba import types
-from numba.experimental import jitclass
+
 
 
 @jitclass({"_counter" : types.DictType(types.int32, types.uint16)})
@@ -396,7 +417,6 @@ def numba_cumsum_3D(x, axis) :
     return y
 
 
-from numba import generated_jit, types
 
 # overload
 # https ://jcristharif.com/numba-overload.html
@@ -424,9 +444,6 @@ def numba_cumsum(x, axis=None) :
 
 
 # Counters in Numba
-from numba import types
-from numba.experimental import jitclass
-
 
 def NumbaMutableArray(offsets, content, dtype) :
 
@@ -609,9 +626,6 @@ def to_nested_numba_lists(content, offsets) :
 
 
 
-
-
-# from collections import UserDict
 
 
 class DotDict(AttrDict) :
@@ -830,8 +844,6 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
 #     return dict_to_title(d, N, exclude, in_two_line)
 
 
-from decimal import Decimal
-
 
 def round_to_uncertainty(value, uncertainty) :
     # round the uncertainty to 1-2 significant digits
@@ -842,8 +854,6 @@ def round_to_uncertainty(value, uncertainty) :
     # round the value to remove excess digits
     return round(Decimal(value).scaleb(-exponent).quantize(u)), u, exponent
 
-
-# import sigfig
 
 
 def format_asymmetric_uncertanties(value, errors, name="I") :
@@ -974,7 +984,6 @@ def numba_random_choice_list(l) :
 
 
 
-from scipy.special import erf
 
 
 def get_central_confidence_intervals(x, agg_func=np.median, N_sigma=1) :
@@ -1009,20 +1018,6 @@ def SDOM(x) :
 
 
 
-import numpy as np
-from range_key_dict import RangeKeyDict  # pip install range-key-dict
-from itertools import product
-from numba import njit
-from numba.typed import List, Dict
-import pandas as pd
-from pathlib import Path
-import matplotlib.pyplot as plt
-import csv
-import numba as nb
-
-from src.simulation import nb_simulation
-
-
 def get_cfg_default() :
     """ Default Simulation Parameters """
     cfg              = file_loaders.load_yaml("cfg/simulation_parameters_default.yaml")
@@ -1037,8 +1032,8 @@ def get_cfg_default() :
 #     return file_loaders.load_yaml(yaml_filename)
 
 # Load numba specifications
-spec_cfg            = nb_simulation.spec_cfg
-spec_network        = nb_simulation.spec_network
+spec_cfg            = nb_jitclass.spec_cfg
+spec_network        = nb_jitclass.spec_network
 #spec_intervention   = nb_simulation.spec_intervention
 spec = {**spec_cfg, **spec_network}
 
@@ -1448,8 +1443,6 @@ def parse_memory_file(filename) :
     next_is_change_point = 0
     # zero_time = None
 
-    import csv
-
     with open(filename, "r") as f :
         reader = csv.reader(f, delimiter="\t")
         for irow, row in enumerate(reader) :
@@ -1706,10 +1699,6 @@ def PyDict2NumbaDict(d_python) :
     return d_numba
 
 
-from numba.core import types
-from numba.typed import Dict
-from numba import generated_jit
-
 
 @njit
 def normalize_probabilities(p) :
@@ -1823,10 +1812,6 @@ def load_kommune_shapefiles(shapefile_size, verbose=False) :
 
 
 
-from tinydb import Query
-from functools import reduce
-from operator import iand
-
 
 def multiple_queries(*lst) :
     """
@@ -1930,8 +1915,8 @@ def read_cfg_from_hdf5_file(filename) :
     with h5py.File(filename, "r") as f :
         cfg = read_cfg_from_hdf5_file_recursively(f)
 
-    cfg              = format_cfg(cfg,         nb_simulation.spec_cfg)
-    cfg.network      = format_cfg(cfg.network, nb_simulation.spec_network)
+    cfg              = format_cfg(cfg,         nb_jitclass.spec_cfg)
+    cfg.network      = format_cfg(cfg.network, nb_jitclass.spec_network)
 
     return cfg
 
@@ -2023,7 +2008,7 @@ def get_random_samples(simulation_parameter, random_state=0) :
     return cfgs
 
 
-from sympy.parsing.sympy_parser import parse_expr
+
 def load_params(filename) :
     params = file_loaders.load_yaml(filename)
     params = params.to_dict()

@@ -3,7 +3,6 @@ import numpy as np
 from numba import njit
 
 from src.utils import utils
-from src.simulation.nb_simulation import *
 
 #     ## ######## ########   ######  ####  #######  ##    ##          ##
 ##     ## ##       ##     ## ##    ##  ##  ##     ## ###   ##        ####

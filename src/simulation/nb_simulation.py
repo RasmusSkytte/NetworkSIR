@@ -122,8 +122,7 @@ def make_random_initial_infections(my, possible_agents, N, prior) :
         possible_agents,
         prob=prob,
         size=N,
-        replace=False,
-    )
+        replace=False)
 
 
 @njit
@@ -165,6 +164,22 @@ def find_outbreak_agent(my, possible_agents, coordinate, rho, max_tries=10_000) 
 
 
 @njit
+def calc_E_I_distribution_expo(k) :
+
+    if k == 0 :   # System is in steady-state
+        return np.ones(8, dtype=np.float64)
+    else :
+        return np.exp(-np.arange(8)*k).astype(np.float64)
+
+
+@njit
+def calc_E_I_distribution_linear(R_guess) :
+    delta = 4 / 8 * (R_guess - 1) / (R_guess + 1)
+    return np.ones(8, dtype=np.float64) - np.array([4, 3, 2, 1, -1, -2, -3, -4]) * delta
+
+
+
+@njit
 def calc_E_I_distribution(my, r_guess) :
     p_E = 4/my.cfg.lambda_E
     p_I = 4/my.cfg.lambda_I
@@ -176,7 +191,6 @@ def calc_E_I_distribution(my, r_guess) :
         E_I_weight_list[i :] = E_I_weight_list[i :] * r_guess**(1/my.cfg.lambda_E/(p_E*p_I))
     E_I_weight_list = E_I_weight_list[ : :-1]
     return E_I_weight_list
-
 
 
 @njit
@@ -195,7 +209,7 @@ def find_possible_agents(my, initial_ages_exposed, agents_in_age_group) :
     return possible_agents
 
 
-@njit
+#@njit
 def initialize_states(
     my,
     g,
@@ -208,6 +222,7 @@ def initialize_states(
     R_init,
     prior_infected,
     prior_immunized,
+    k_values,
     verbose=False) :
 
 
@@ -242,13 +257,21 @@ def initialize_states(
         if my.state[agent] == R_state :
             continue
 
-        weights = calc_E_I_distribution(my, 1)
+        # Choose corona type
+        if np.random.rand() < my.cfg.N_init_UK_frac :
+            my.corona_type[agent] = 1
+            k = k_values[1]
+            rel_beta = my.cfg.beta_UK_multiplier
+        else :
+            k = k_values[0]
+            rel_beta = 1
+
+        #weights = calc_E_I_distribution(k)
+        #weights = calc_E_I_distribution_linear(my.cfg.R_guess * rel_beta)
+        weights = calc_E_I_distribution(my, my.cfg.R_guess * rel_beta)
         states = np.arange(g.N_states - 1, dtype=np.int8)
         new_state = nb_random_choice(states, weights, verbose=verbose)[0]  # E1-E4 or I1-I4, uniformly distributed
         my.state[agent] = new_state
-
-        if np.random.rand() < my.cfg.N_init_UK_frac :
-            my.corona_type[agent] = 1  # IMPORTANT LINE!
 
         agents_in_state[new_state].append(np.uint32(agent))
         state_total_counts[new_state] += 1
@@ -258,9 +281,12 @@ def initialize_states(
 
         # Moves into a infectious State
         if my.agent_is_infectious(agent) :
-            for contact, rate in zip(my.connections[agent], g.rates[agent]) :
+            for ith_contact, contact in enumerate(my.connections[agent]) :
                 # update rates if contact is susceptible
-                if my.agent_is_susceptible(contact) :
+                if my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact) :
+                    if my.corona_type[agent] == 1 :
+                        g.rates[agent][ith_contact] *= my.cfg.beta_UK_multiplier
+                    rate = g.rates[agent][ith_contact]
                     g.update_rates(my, +rate, agent)
 
             # Update the counters

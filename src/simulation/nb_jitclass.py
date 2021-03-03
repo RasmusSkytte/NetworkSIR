@@ -22,6 +22,7 @@ spec_cfg = {
     "beta" : nb.float32,
     "sigma_beta" : nb.float32,
     "beta_connection_type" : nb.float32[:],
+    "R_guess": nb.float32,
     "algo" : nb.uint8,
     "N_init" : nb.uint16,
     "N_init_UK_frac" : nb.float32,
@@ -79,6 +80,7 @@ class Config(object) :
         self.version = 2.0
         self.beta = 0.01
         self.sigma_beta = 0.0
+        self.R_guess = 1.0
         self.algo = 2
         self.N_init = 100
         self.N_init_UK_frac = 0
@@ -114,9 +116,10 @@ def initialize_nb_cfg(obj, cfg, spec) :
             if isinstance(spec[key], nb.types.ListType) :
 
                 # Check for nested list
-                if isinstance(val[0], list) :
-                    for ind in range(len(val)) :
-                        val[ind] = List(val[ind])
+                if len(val) > 0 :
+                    if any(isinstance(v, list) for v in val) :
+                        for ind in range(len(val)) :
+                            val[ind] = List(val[ind])
 
                 val = List(val)
 

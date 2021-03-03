@@ -7,6 +7,9 @@ from numba.core.errors import (
     NumbaPendingDeprecationWarning, # TODO : Delete line
 )
 
+
+from scipy.optimize import fsolve
+
 from pathlib import Path
 import os
 
@@ -280,9 +283,9 @@ class Simulation :
 
                 # Check if too many have been selected
                 if len(agents_in_kommune) < (N + R) :
+                    warnings.warn(f"{N+R} agents selected for initialization in a kommune {kommune_id} but only {len(agents_in_kommune)} agents exists")
                     N = int(len(agents_in_kommune) * N / (N + R))
                     R = int(len(agents_in_kommune) * R / (N + R))
-                    warnings.warn(f"{N+R} agents selected for initialization in a kommune {kommune_id} but only {len(agents_in_kommune)} agents exists")
 
                 # Determine the age distribution in the simulation
                 ages_in_kommune = self.my.age[agents_in_kommune]
@@ -317,6 +320,23 @@ class Simulation :
             initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized)]
 
 
+        # TODO: See if this can be implemented more elegantly
+        k_values = []
+        for rel_beta in [1, self.my.cfg.beta_UK_multiplier] :
+
+            if self.my.cfg.R_guess * rel_beta == 1 :
+                k_values.append(0)
+                continue
+
+            # Determine the distribution of the E to I states depedning on R
+            if self.my.cfg.R_guess * rel_beta < 1 :    # Infections are slowing down
+                k0 = -1
+            else :              # Infections are increasing
+                k0 = 0.1
+
+            k_values.append(fsolve(lambda k : 1-np.exp(-4*k) - self.my.cfg.R_guess * rel_beta * (np.exp(-4*k) - np.exp(-8*k)), k0)[0])
+
+
         # Loop over subgroups and initialize
         for agents_in_subgroup, N, R, prior_infected, prior_immunized in initialization_subgroups :
 
@@ -332,6 +352,7 @@ class Simulation :
                 R,
                 prior_infected,
                 prior_immunized,
+                np.array(k_values),
                 verbose=self.verbose)
 
 

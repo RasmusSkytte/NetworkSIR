@@ -7,6 +7,8 @@ N_init: 2000  # Initial Infected
 beta: 0.012  # Daily infection rate (SIR, init: 0-1, but beta = (2mu/N_tot)* betaSIR)
 sigma_beta: 0.0  # Spread in rates, beta
 
+R_guess: 1  # Set the guess for the reproduction number
+
 # english type corona
 N_init_UK_frac: 0
 beta_UK_multiplier: 1.7
@@ -24,7 +26,7 @@ make_random_initial_infections: True # Infections around a single agent
 weighted_random_initial_infections: True # Infections weighted by the number of contacts
 initialize_at_kommune_level: False # Initiate infections at kommune basis
 labels: none  #none, kommune, custom (needs a label_map)
-label_map: []
+label_map: [[-1]]
 day_max: 0 # 5 weeks. Sets the maximum number of days the algorithm runs
 
 

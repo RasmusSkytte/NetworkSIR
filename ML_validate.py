@@ -202,7 +202,7 @@ for subset in subsets :
     # Get restriction_thresholds from a cfg
     restriction_thresholds = abm_files.cfgs[0].restriction_thresholds
 
-    axes1[0].set_ylim(0, 2500)
+    axes1[0].set_ylim(0, 4000)
     axes1[0].set_ylabel('Daglige positive')
 
 

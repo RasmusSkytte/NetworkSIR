@@ -209,6 +209,65 @@ class Simulation :
         elif not only_initialize_network :
             self._load_initialized_network(filename)
 
+
+    def intialize_interventions(self, verbose_interventions=None) :
+
+        if self.verbose :
+            print("\nINITIALING INTERVENTIONS")
+
+        if self.cfg.labels.lower() == "kommune" :
+            labels = self.df_coordinates["idx"].values
+
+        elif self.cfg.labels.lower() == "custom" :
+            labels_raw = self.df_coordinates["idx"].values
+
+            labels = np.zeros(np.shape(labels_raw))
+            for new_label, label_group in enumerate(self.cfg.label_map) :
+                labels[np.isin(labels_raw, label_group)] = new_label + 1
+
+        elif self.cfg.labels.lower() == "none" :
+            labels = self.df_coordinates["idx"].values * 0
+
+        else :
+            raise ValueError(f'Label name: {self.cfg.labels.lower()} not known')
+
+
+        if verbose_interventions is None :
+            verbose_interventions = self.verbose
+
+        # Load the projected vaccination schedule
+        # TODO: This should properably be done at cfg generation for consistent hashes
+        vaccinations_per_age_group, vaccination_schedule = file_loaders.load_vaccination_schedule(self.cfg)
+
+        # Load the restriction contact matrices
+        # TODO: This should properably be done at cfg generation for consistent hashes
+        work_matrix_restrict = []
+        other_matrix_restrict = []
+
+        for scenario in self.cfg.Intervention_contact_matrices_name :
+            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario)
+
+            # Check the loaded contact matrices have the right size
+            if not len(tmp_other_matrix_restrict) == len(np.unique(labels)) :
+                raise ValueError(f'Number of labels ({len(np.unique(labels))}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for scenario: {scenario} and label: {self.cfg.labels}')
+
+            work_matrix_restrict.append(tmp_work_matrix_restrict)
+            other_matrix_restrict.append(tmp_other_matrix_restrict)
+
+        # Store the labels in my
+        self.my.initialize_labels(labels)
+
+        self.intervention = nb_jitclass.Intervention(
+            self.my.cfg,
+            self.my.cfg_network,
+            labels = labels,
+            vaccinations_per_age_group = np.array(vaccinations_per_age_group),
+            vaccination_schedule = np.array(vaccination_schedule),
+            work_matrix_restrict = np.array(work_matrix_restrict),
+            other_matrix_restrict = np.array(other_matrix_restrict),
+            verbose=verbose_interventions)
+
+
     def initialize_states(self) :
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
@@ -222,9 +281,8 @@ class Simulation :
         self.N_infectious_states = 4  # This means the 5'th state
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
-        self.state_total_counts     = np.zeros(self.N_states, dtype=np.uint32)
-        self.infected_per_age_group = np.zeros((2, self.N_ages), dtype=np.uint32)
-        self.infected_per_label     = np.zeros((2, self.N_ages), dtype=np.uint32)
+        self.state_total_counts          = np.zeros(self.N_states, dtype=np.uint32)
+        self.stratified_infection_counts = np.zeros((self.intervention.N_labels, 2, self.N_ages), dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
@@ -345,7 +403,7 @@ class Simulation :
                 self.g,
                 self.SIR_transition_rates,
                 self.state_total_counts,
-                self.infected_per_age_group,
+                self.stratified_infection_counts,
                 self.agents_in_state,
                 agents_in_subgroup,
                 N,
@@ -402,75 +460,24 @@ class Simulation :
         if self.verbose :
             print("\nRUN SIMULATION")
 
-        if self.cfg.labels.lower() == "kommune" :
-            labels = self.df_coordinates["idx"].values
-
-        elif self.cfg.labels.lower() == "custom" :
-            labels_raw = self.df_coordinates["idx"].values
-
-            labels = np.zeros(np.shape(labels_raw))
-            for new_label, label_group in enumerate(self.cfg.label_map) :
-                labels[np.isin(labels_raw, label_group)] = new_label + 1
-
-        elif self.cfg.labels.lower() == "none" :
-            labels = self.df_coordinates["idx"].values * 0
-
-        else :
-            raise ValueError(f'Label name: {self.cfg.labels.lower()} not known')
-
-
-        if verbose_interventions is None :
-            verbose_interventions = self.verbose
-
-        # Load the projected vaccination schedule
-        # TODO: This should properably be done at cfg generation for consistent hashes
-        vaccinations_per_age_group, vaccination_schedule = file_loaders.load_vaccination_schedule(self.cfg)
-
-        # Load the restriction contact matrices
-        # TODO: This should properably be done at cfg generation for consistent hashes
-        work_matrix_restrict = []
-        other_matrix_restrict = []
-
-        for scenario in self.cfg.Intervention_contact_matrices_name :
-            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario)
-
-            # Check the loaded contact matrices have the right size
-            if not len(tmp_other_matrix_restrict) == len(np.unique(labels)) :
-                raise ValueError(f'Number of labels ({len(np.unique(labels))}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for label: {self.cfg.labels}')
-
-            work_matrix_restrict.append(tmp_work_matrix_restrict)
-            other_matrix_restrict.append(tmp_other_matrix_restrict)
-
-
-        self.intervention = nb_jitclass.Intervention(
-            self.my.cfg,
-            self.my.cfg_network,
-            labels = labels,
-            vaccinations_per_age_group = np.array(vaccinations_per_age_group),
-            vaccination_schedule = np.array(vaccination_schedule),
-            work_matrix_restrict = np.array(work_matrix_restrict),
-            other_matrix_restrict = np.array(other_matrix_restrict),
-            verbose=verbose_interventions)
-
-
         res = nb_simulation.run_simulation(
             self.my,
             self.g,
             self.intervention,
             self.SIR_transition_rates,
             self.state_total_counts,
-            self.infected_per_age_group,
+            self.stratified_infection_counts,
             self.agents_in_state,
             self.N_infectious_states,
             self.nts,
             self.verbose)
 
 
-        out_time, out_state_counts, out_infected_per_age_group, out_my_state, intervention = res
+        out_time, out_state_counts, out_stratified_infection_counts, out_my_state, intervention = res
 
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
-        self.df = utils.counts_to_df(out_time, out_state_counts, out_infected_per_age_group, self.cfg)
+        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_infection_counts, self.cfg)
         self.intervention = intervention
 
         return self.df
@@ -569,6 +576,8 @@ def run_single_simulation(
 
         if only_initialize_network :
             return None
+
+        simulation.intialize_interventions()
 
         simulation.initialize_states()
 

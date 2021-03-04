@@ -18,7 +18,7 @@ from src import rc_params
 from src.analysis.helpers import *
 
 # Define the subset to plot on
-subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]}]
+subsets = [ {"Intervention_contact_matrices_name" : ["test"]}]
 
 start_date = datetime.datetime(2021, 1, 1)
 end_date   = datetime.datetime(2021, 3, 1)
@@ -122,18 +122,18 @@ for subset in subsets :
         total=len(abm_files.all_filenames)) :
 
         # Load
-        total_tests, f, tests_per_age_group, tests_by_variant = load_from_file(filename)
+        total_tests, f, tests_per_age_group, tests_by_variant, tests_by_region = load_from_file(filename)
 
         # Plot
         h  = plot_simulation(total_tests, f, start_date, axes1)
         h2 = plot_simulation_growth_rates(tests_by_variant, start_date, axes2)
         h3 = plot_simulation_category(tests_per_age_group, start_date, axes3)
-        #h4 = plot_simulation_category(tests_by_region, start_date, axes4)
+        h4 = plot_simulation_category(tests_by_region, start_date, axes4)
 
 
         h.extend(h2)
         h.extend(h3)
-        #h.extend(h4)
+        h.extend(h4)
 
         # Evaluate
         ll =  compute_loglikelihood(total_tests, (logK,         logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
@@ -312,6 +312,44 @@ for subset in subsets :
 
     fig3.savefig(os.path.splitext(fig_name)[0] + '_age_groups.png')
 
+
+
+
+
+
+
+    ########  ########  ######   ####  #######  ##    ##  ######
+    ##     ## ##       ##    ##   ##  ##     ## ###   ## ##    ##
+    ##     ## ##       ##         ##  ##     ## ####  ## ##
+    ########  ######   ##   ####  ##  ##     ## ## ## ##  ######
+    ##   ##   ##       ##    ##   ##  ##     ## ##  ####       ##
+    ##    ##  ##       ##    ##   ##  ##     ## ##   ### ##    ##
+    ##     ## ########  ######   ####  #######  ##    ##  ######
+
+    # Load tests per age group
+#    t, positive_per_age_group = load_infected_per_age_group(beta)
+
+    for i in range(len(axes4)) :
+
+   #     axes3[i].scatter(t, positive_per_age_group[:, i], color='k', s=10)
+
+    #    axes3[i].set_xlim([start_date, end_date])
+    #    axes3[i].set_ylim(0, 600)
+
+    #    if not i % 3 == 0 :
+    #        axes3[i].set_yticklabels([])
+
+        axes4[i].xaxis.set_major_locator(months)
+        axes4[i].xaxis.set_major_formatter(months_fmt)
+
+        #    axes3[i].set_title(f"{10*i}-{10*(i+1)-1}", fontsize=24, pad=5)
+
+        axes4[i].tick_params(axis='x', labelsize=24)
+        axes4[i].tick_params(axis='y', labelsize=24)
+
+
+
+    fig4.savefig(os.path.splitext(fig_name)[0] + '_regions.png')
 
 
 

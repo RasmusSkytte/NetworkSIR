@@ -205,6 +205,7 @@ spec_my = {
     "number_of_contacts" : nb.uint16[:],
     "state" : nb.int8[:],
     "kommune" : nb.uint8[:],
+    "label" : nb.uint8[:],
     "infectious_states" : ListType(nb.int64),
     "corona_type" : nb.uint8[:],
     "vaccination_type" : nb.int8[:],
@@ -238,6 +239,9 @@ class My(object) :
         self.restricted_status = np.zeros(N_tot, dtype=np.uint8)
         self.cfg = nb_cfg
         self.cfg_network = nb_cfg_network
+
+    def initialize_labels(self, labels) :
+        self.label = np.asarray(labels, dtype=np.uint8)
 
     def dist(self, agent1, agent2) :
         point1 = self.coordinates[agent1]
@@ -356,7 +360,6 @@ class Gillespie(object) :
 spec_intervention = {
     "cfg" : nb_cfg_type,
     "cfg_network" : nb_cfg_network_type,
-    "labels" : nb.uint8[:],
     "label_counter" : nb.uint32[:],
     "N_labels" : nb.uint32,
     "freedom_impact" : nb.float64[:],
@@ -384,7 +387,6 @@ spec_intervention = {
 class Intervention(object) :
     """
     - N_labels : Number of labels. "Label" here can refer to either tent or kommune.
-    - labels : a label or ID which is either the nearest tent or the kommune which the agent belongs to
     - label_counter : count how many agent belong to a particular label
 
     - day_found_infected : -1 if not infected, otherwise the day of infection
@@ -460,7 +462,6 @@ class Intervention(object) :
         self.verbose = verbose
 
     def _initialize_labels(self, labels) :
-        self.labels = np.asarray(labels, dtype=np.uint8)
         unique, counts = utils.numba_unique_with_counts(labels)
         self.label_counter = np.asarray(counts, dtype=np.uint32)
         self.N_labels = len(unique)

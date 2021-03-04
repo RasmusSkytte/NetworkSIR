@@ -40,32 +40,55 @@ def load_from_file(filename) :
     # Load the csv summery file
     df = file_loaders.pandas_load_file(filename)
 
-    # Extract the values
-    T_age_groups_variant_0 = aggregate_array(df[['T^0_A_0', 'T^0_A_1', 'T^0_A_2', 'T^0_A_3', 'T^0_A_4', 'T^0_A_5', 'T^0_A_6', 'T^0_A_7']].to_numpy())
-    T_age_groups_variant_1 = aggregate_array(df[['T^1_A_0', 'T^1_A_1', 'T^1_A_2', 'T^1_A_3', 'T^1_A_4', 'T^1_A_5', 'T^1_A_6', 'T^1_A_7']].to_numpy())
+    # Find all columns with "T_"
+    data_cols = [col for col in df.columns if 'T_l' in col]
+
+    # Determine the output dimension
+    N_labels     = len(np.unique(np.array([int(col.split('_')[2]) for col in data_cols])))
+    N_variants   = len(np.unique(np.array([int(col.split('_')[4]) for col in data_cols])))
+    N_age_groups = len(np.unique(np.array([int(col.split('_')[6]) for col in data_cols])))
+
+
+    # Load into a multidimensional array
+    stratified_infections = np.zeros((len(df), N_labels, N_variants, N_age_groups))
+
+    for col in data_cols :
+        l, v, a = (int(col.split('_')[2]), int(col.split('_')[4]), int(col.split('_')[6]))
+
+        stratified_infections[:, l, v, a] = df[col]
+
 
     # Scale the tests
-    T_age_groups_variant_0 *= (5_800_000 / cfg.network.N_tot) / 2.7
-    T_age_groups_variant_1 *= (5_800_000 / cfg.network.N_tot) / 2.7
+    stratified_infections *= (5_800_000 / cfg.network.N_tot) / 2.7
+
 
     # Convert to observables
-    T_dk = np.sum(T_age_groups_variant_0, axis=1)
-    T_uk = np.sum(T_age_groups_variant_1, axis=1)
+    T_total      = np.sum(stratified_infections, axis=(1, 2, 3))
 
-    T_tot = T_dk + T_uk
+    T_variants   = np.sum(stratified_infections, axis=(1, 3))
+    T_uk         = T_variants[:, 1]
 
-    T_age_groups = T_age_groups_variant_0 + T_age_groups_variant_1
+    T_age_groups = np.sum(stratified_infections, axis=(1, 2))
+
+    T_regions    = np.sum(stratified_infections, axis=(2, 3))
+
+    # Get daily values
+    T_total      = aggregate_array(T_total)
+    T_variants   = aggregate_array(T_variants)
+    T_uk         = aggregate_array(T_uk)
+    T_age_groups = aggregate_array(T_age_groups)
+    T_regions    = aggregate_array(T_regions)
 
     # Get weekly values
-    T_tot_week = aggregate_array(T_tot, chunk_size=7)
-    T_uk_week  = aggregate_array(T_uk,  chunk_size=7)
+    T_total_week = aggregate_array(T_total, chunk_size=7)
+    T_uk_week    = aggregate_array(T_uk,    chunk_size=7)
 
     # Get the fraction of UK variants
     with np.errstate(divide='ignore', invalid='ignore'):
-        f = T_uk_week / T_tot_week
+        f = T_uk_week / T_total_week
         f[np.isnan(f)] = -1
 
-    return(T_tot, f, T_age_groups, np.stack((T_dk, T_uk), axis=1))
+    return T_total, f, T_age_groups, T_variants, T_regions
 
 
 def compute_loglikelihood(arr, data, transformation_function = lambda x : x) :

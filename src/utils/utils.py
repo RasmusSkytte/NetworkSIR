@@ -1388,24 +1388,25 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
 
 
 
-def counts_to_df(time, state_counts, infected_per_age_group, cfg) :  #
+def counts_to_df(time, state_counts, stratified_infected, cfg) :  #
 
     time = np.array(time)
     state_counts = np.array(state_counts)
-    infected_per_age_group = np.array(infected_per_age_group)
+    stratified_infected = np.array(stratified_infected)
+
+    print(np.shape(stratified_infected))
 
     N_states     = np.size(state_counts, 1)
-    N_variants   = np.size(infected_per_age_group, 1)
-    N_age_groups = np.size(infected_per_age_group, 2)
+    N_labels     = np.size(stratified_infected, 1)
+    N_variants   = np.size(stratified_infected, 2)
+    N_age_groups = np.size(stratified_infected, 3)
+
 
     header = [
         'Time',
         'E1', 'E2', 'E3', 'E4',
         'I1', 'I2', 'I3', 'I4',
         'R']
-
-    for j in range(N_variants) :
-        header.extend(['T^' + str(j) + '_A_' + str(i) for i in range(N_age_groups)])
 
     k_start = 0
     k_stop  = 1
@@ -1417,12 +1418,14 @@ def counts_to_df(time, state_counts, infected_per_age_group, cfg) :  #
 
     df = pd.concat([df_time, df_states], axis=1)
 
-    for j in range(N_variants) :
-        k_start = k_stop
-        k_stop  += N_age_groups
-        df_age_group = pd.DataFrame(infected_per_age_group[:, j, :] * cfg.testing_penetration, columns=header[k_start:k_stop])
+    for l in range(N_labels) :
+        for v in range(N_variants) :
 
-        df = pd.concat([df, df_age_group], axis=1)  # .convert_dtypes()
+            headers = ['T_l_' + str(l) + '_v_' + str(v) + '_A_' + str(i) for i in range(N_age_groups)]
+
+            df_age_group = pd.DataFrame(stratified_infected[:, l, v, :] * cfg.testing_penetration, columns=headers)
+
+            df = pd.concat([df, df_age_group], axis=1)  # .convert_dtypes()
 
     return df
 

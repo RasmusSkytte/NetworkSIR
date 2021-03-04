@@ -32,7 +32,7 @@ def calculate_contact_distribution_label(my, intervention):
     label_people = np.zeros(intervention.N_labels)
     label_infected = np.zeros(intervention.N_labels)
     for agent in range(my.cfg_network.N_tot) :
-        label = intervention.labels[agent]
+        label = my.label[agent]
 
         if my.agent_is_infectious(agent):
             label_infected[label] += 1
@@ -140,6 +140,7 @@ def initialize_kommuner(my, df_coordinates) :
 
 @njit
 def check_if_label_needs_intervention(
+    my,
     intervention,
     day,
     threshold_info) :
@@ -148,7 +149,7 @@ def check_if_label_needs_intervention(
 
     for agent, day_found in enumerate(intervention.day_found_infected) :
         if day_found > max(0, day - intervention.cfg.days_looking_back) :
-            infected_per_label[intervention.labels[agent]] += 1
+            infected_per_label[my.label[agent]] += 1
 
 
     it = enumerate(
@@ -289,7 +290,7 @@ def multiply_incoming_rates(my, g, agent, rate_multiplication) :
 @njit
 def remove_intervention_at_label(my, g, intervention, ith_label) :
     for agent in range(my.cfg_network.N_tot) :
-        if intervention.labels[agent] == ith_label and my.restricted_status[agent] == 1 : #TODO: Only if not tested positive
+        if my.label[agent] == ith_label and my.restricted_status[agent] == 1 : #TODO: Only if not tested positive
             reset_rates_of_agent(my, g, agent, intervention)
             my.restricted_status[agent] = 0
 
@@ -300,7 +301,7 @@ def check_if_intervention_on_labels_can_be_removed(my, g, intervention, day, cli
     infected_per_label = np.zeros(intervention.N_labels, dtype=np.int32)
     for agent, day_found in enumerate(intervention.day_found_infected) :
         if day_found > day - intervention.cfg.days_looking_back :
-            infected_per_label[intervention.labels[agent]] += 1
+            infected_per_label[my.label[agent]] += 1
 
     it = enumerate(
         zip(
@@ -555,7 +556,7 @@ def lockdown_on_label(my, g, intervention, label, rate_reduction) :
     # ie : [[0,0.8,0.8],[0,0.8,0.8]] means that 80% of your contacts on job and other is set to 0, and the remaining 20% is reduced by 80%.
     # loop over all agents
     for agent in range(my.cfg_network.N_tot) :
-        if intervention.labels[agent] == label :
+        if my.label[agent] == label :
             my.restricted_status[agent] = 1
             remove_and_reduce_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
@@ -567,7 +568,7 @@ def masking_on_label(my, g, intervention, label, rate_reduction) :
     # ie : [[0,0.2,0.2],[0,0.8,0.8]] means that your wear mask when around 20% of job and other contacts, and your rates to those is reduced by 80%
     # loop over all agents
     for agent in range(my.cfg_network.N_tot) :
-        if intervention.labels[agent] == label :
+        if my.label[agent] == label :
             my.restricted_status[agent] = 1
             reduce_frac_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
@@ -691,6 +692,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                     )
 
         check_if_label_needs_intervention(
+            my,
             intervention,
             day,
             threshold_info,

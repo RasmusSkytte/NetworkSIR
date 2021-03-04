@@ -1,0 +1,4 @@
+PeopleInHousehold: "Data/population_information/household_dist.csv"
+AgeDistribution: "Data/population_information/age_dist.csv"
+RegionData: "Data/region_data/allCases_hosp_2021-02-16.txt"
+CovidIndex: "Data/covid_index_2021.feather"

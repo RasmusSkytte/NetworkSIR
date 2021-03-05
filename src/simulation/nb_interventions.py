@@ -20,7 +20,7 @@ def calculate_contact_distribution(my, contact_type) :
     for agent in range(my.cfg_network.N_tot) :
         agent_sum = 0
         for ith_contact in range(len(my.connections[agent])) :
-            if my.connections_type[agent][ith_contact] == contact_type :
+            if my.connection_type[agent][ith_contact] == contact_type :
                 agent_sum += 1
         contact_dist[agent_sum] += 1
     return contact_dist
@@ -236,7 +236,7 @@ def reset_rates_of_connection(my, g, agent, ith_contact, intervention, two_way=T
     contact = my.connections[agent][ith_contact]
 
     # Compute the infection rate
-    infection_rate = my.infection_weight[agent] * my.beta_connection_type[my.connections_type[agent][ith_contact]]
+    infection_rate = my.infection_weight[agent] * my.beta_connection_type[my.connection_type[agent][ith_contact]]
 
     # TODO: Here we should implement transmission risk for vaccinted persons
 
@@ -276,7 +276,7 @@ def multiply_incoming_rates(my, g, agent, rate_multiplication) :
 
         ith_contact_of_contact, contact = find_reverse_connection(my, agent, ith_contact)
 
-        target_rate = g.rates[contact][ith_contact_of_contact] * rate_multiplication[my.connections_type[contact][ith_contact_of_contact]]
+        target_rate = g.rates[contact][ith_contact_of_contact] * rate_multiplication[my.connection_type[contact][ith_contact_of_contact]]
 
         # Update the g.rates
         rate = target_rate - g.rates[contact][ith_contact_of_contact]
@@ -336,9 +336,9 @@ def loop_update_rates_of_contacts(
             # update rates from contact to agent. Rate_reduction makes it depending on connection type
             c_rate = (
                 g.rates[contact][ith_contact_of_contact]
-                * rate_reduction[my.connections_type[contact][ith_contact_of_contact]]
+                * rate_reduction[my.connection_type[contact][ith_contact_of_contact]]
             )
-            intervention.freedom_impact[contact] += rate_reduction[my.connections_type[contact][ith_contact_of_contact]]/my.number_of_contacts[contact]
+            intervention.freedom_impact[contact] += rate_reduction[my.connection_type[contact][ith_contact_of_contact]]/my.number_of_contacts[contact]
             g.rates[contact][ith_contact_of_contact] -= c_rate
 
             # updates to gillespie sums, if contact is infectious and agent is susceptible
@@ -359,8 +359,8 @@ def cut_rates_of_agent(my, g, intervention, agent, rate_reduction) :
 
         # update rates from agent to contact. Rate_reduction makes it depending on connection type
 
-        rate = g.rates[agent][ith_contact] * rate_reduction[my.connections_type[agent][ith_contact]]
-        intervention.freedom_impact[contact] += rate_reduction[my.connections_type[agent][ith_contact]]/my.number_of_contacts[agent]
+        rate = g.rates[agent][ith_contact] * rate_reduction[my.connection_type[agent][ith_contact]]
+        intervention.freedom_impact[contact] += rate_reduction[my.connection_type[agent][ith_contact]]/my.number_of_contacts[agent]
 
         g.rates[agent][ith_contact] -= rate
 
@@ -390,16 +390,16 @@ def reduce_frac_rates_of_agent(my, g, intervention, agent, rate_reduction) :
     for ith_contact, contact in enumerate(my.connections[agent]) :
 
         # update rates from agent to contact. Rate_reduction makes it depending on connection type
-        if np.random.rand() > remove_rates[my.connections_type[agent][ith_contact]] :
+        if np.random.rand() > remove_rates[my.connection_type[agent][ith_contact]] :
             act_rate_reduction = np.array([0, 0, 0], dtype=np.float64)
         else :
             act_rate_reduction = reduce_rates
 
         rate = (
             g.rates[agent][ith_contact]
-            * act_rate_reduction[my.connections_type[agent][ith_contact]]
+            * act_rate_reduction[my.connection_type[agent][ith_contact]]
         )
-        intervention.freedom_impact[agent] += act_rate_reduction[my.connections_type[agent][ith_contact]]/my.number_of_contacts[agent]
+        intervention.freedom_impact[agent] += act_rate_reduction[my.connection_type[agent][ith_contact]]/my.number_of_contacts[agent]
         g.rates[agent][ith_contact] -= rate
 
         agent_update_rate = loop_update_rates_of_contacts(
@@ -429,16 +429,16 @@ def remove_and_reduce_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
         # update rates from agent to contact. Rate_reduction makes it depending on connection type
         act_rate_reduction = reduce_rates
-        if np.random.rand() < remove_rates[my.connections_type[agent][ith_contact]] :
+        if np.random.rand() < remove_rates[my.connection_type[agent][ith_contact]] :
             act_rate_reduction = np.array([1.0, 1.0, 1.0], dtype=np.float64)
 
         rate = (
             g.rates[agent][ith_contact]
-            * act_rate_reduction[my.connections_type[agent][ith_contact]]
+            * act_rate_reduction[my.connection_type[agent][ith_contact]]
         )
 
         g.rates[agent][ith_contact] -= rate
-        intervention.freedom_impact[agent] += act_rate_reduction[my.connections_type[agent][ith_contact]]/my.number_of_contacts[agent]
+        intervention.freedom_impact[agent] += act_rate_reduction[my.connection_type[agent][ith_contact]]/my.number_of_contacts[agent]
 
         agent_update_rate = loop_update_rates_of_contacts(
             my,
@@ -488,14 +488,14 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label
             current_contacts[ith_contact] = True
 
         # Compute connection probabilities for non-home contacts
-        if not my.connections_type[agent][ith_contact] == 0 :
+        if not my.connection_type[agent][ith_contact] == 0 :
 
-            if my.connections_type[agent][ith_contact] == 1 :
+            if my.connection_type[agent][ith_contact] == 1 :
                 sc = work_matrix_current[my.age[agent], my.age[contact]]
                 sp = work_matrix_previous[my.age[agent], my.age[contact]]
                 sm = work_matrix_max[my.age[agent], my.age[contact]]
 
-            elif my.connections_type[agent][ith_contact] == 2 :
+            elif my.connection_type[agent][ith_contact] == 2 :
                 sc = other_matrix_current[my.age[agent], my.age[contact]]
                 sp = other_matrix_previous[my.age[agent], my.age[contact]]
                 sm = other_matrix_max[my.age[agent], my.age[contact]]
@@ -617,7 +617,7 @@ def test_agent(my, g, intervention, agent, click) :
             for ith_contact, contact in enumerate(my.connections[agent]) :
                 if (
                     np.random.rand()
-                    < intervention.cfg.tracing_rates[my.connections_type[agent][ith_contact]]
+                    < intervention.cfg.tracing_rates[my.connection_type[agent][ith_contact]]
                     and intervention.clicks_when_tested[contact] == -1
                 ) :
                     intervention.reason_for_test[contact] = 2
@@ -640,11 +640,11 @@ def test_agent(my, g, intervention, agent, click) :
 
 
 @njit
-def apply_symptom_testing(my, intervention, agent, click) :
+def apply_symptom_testing(my, intervention, agent, state, click) :
 
     if my.agent_is_infectious(agent) :
 
-        prob = intervention.cfg.chance_of_finding_infected[my.state[agent] - 4] # TODO: Fjern hardcoded 4
+        prob = intervention.cfg.chance_of_finding_infected[state - 4] # TODO: Fjern hardcoded 4
         randomly_selected = np.random.rand() < prob
         not_tested_before = (intervention.clicks_when_tested[agent] == -1)
 

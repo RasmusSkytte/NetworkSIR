@@ -13,7 +13,7 @@ if utils.is_local_computer():
     f = 0.01
     n_steps = 1
     num_cores_max = 1
-    N_runs = 1
+    N_runs = 3
 else :
     f = 0.2
     n_steps = 1
@@ -22,7 +22,7 @@ else :
 
 
 if num_cores_max == 1 :
-    verbose = True
+    verbose = False
 else :
     verbose = False
 

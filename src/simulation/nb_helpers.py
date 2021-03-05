@@ -52,15 +52,17 @@ def nb_random_choice(arr, prob, size=1, replace=False, verbose=False) :
         return arr[idx]
     else :
         if size / len(arr) > 0.5 and verbose :
-            print("Warning : choosing more than 50% of the input array with replacement, can be slow.")
+            print('Warning : choosing more than 50% of the input array with replacement, can be slow.')
 
         out = set()
         while len(out) < size :
             ra = np.random.random()
             idx = np.searchsorted(np.cumsum(prob), ra, side="right")
             x = arr[idx]
+
             if not x in out :
                 out.add(x)
+
         return set_to_array(out)
 
 

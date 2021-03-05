@@ -17,13 +17,15 @@ outbreak_position_UK: random
 R_init : 0
 
 initial_infection_distribution : newest
+initial_infections_fraction_in_households: 0.5  # 50 % of initial infections should occur in households
+
 
 lambda_E: 1.0  # E->I, Lambda(from E states)
 lambda_I: 1.0  # I->R, Lambda(from I states)
 
 # Other:
 make_random_initial_infections: True # Infections around a single agent
-weighted_random_initial_infections: True # Infections weighted by the number of contacts
+weighted_random_initial_infections: False # Infections weighted by the number of contacts
 initialize_at_kommune_level: False # Initiate infections at kommune basis
 labels: none  #none, kommune, custom (needs a label_map)
 label_map: [[-1]]
@@ -54,9 +56,9 @@ threshold_type: 0
 
 threshold_interventions_to_apply: [3]
   # 0: Do nothing
-  # 1: lockdown (cut some contacts and reduce the rest),
-  # 2: Masking (reduce some contacts),
-  # 3: Matrix based (used loaded contact matrices. )
+  # 1: lockdown (cut some contacts and reduce the rest)
+  # 2: Masking (reduce some contacts)
+  # 3: Matrix based (used loaded contact matrices)
 
 continuous_interventions_to_apply: [1, 2, 3, 4, 5]
     # 0: Do nothing
@@ -67,7 +69,7 @@ continuous_interventions_to_apply: [1, 2, 3, 4, 5]
     # 5: vaccinations
 
 
-daily_tests: 100000 # Daily tests for the full population
+daily_tests: 100_000 # Daily tests for the full population
 
 test_delay_in_clicks: [0, 0, 10] #clicks until test. [symptoms, random_test, tracing]
 results_delay_in_clicks: [10, 10, 5] #clicks from test until results. [symptoms, random_test, tracing]
@@ -76,8 +78,8 @@ chance_of_finding_infected: [0.0, 0.15, 0.15, 0.15] # chance of being detected i
 days_looking_back: 7 # When looking for local outbreaks, how many days are we looking back, e.g. number of people infected within the last 7 days
 
 # What fraction of the agegroups gets testet?
-#                     0-9, 10-19, 20-29, 30-39, 40-49, 50-59, 60-69,   70+
-testing_penetration: [0.4,   0.4,   0.4,   0.4,   0.4,   0.4,   0.7,   0.7]
+#                      0-9, 10-19, 20-29, 30-39, 40-49, 50-59, 60-69,   70+
+testing_penetration: [0.45,  0.45,  0.45,  0.45,  0.50,  0.70,  0.75,  0.75]
 
 
 # Reductions.

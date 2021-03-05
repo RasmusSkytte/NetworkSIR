@@ -10,15 +10,13 @@ from tqdm import tqdm
 from pathlib import Path
 import os
 
-import warnings
-
 from src.utils import file_loaders
 from src import rc_params
 
 from src.analysis.helpers import *
 
 # Define the subset to plot on
-subsets = [ {"Intervention_contact_matrices_name" : ["test"]}]
+subsets = [ {"Intervention_contact_matrices_name" : ["2021_fase1"]}]
 
 start_date = datetime.datetime(2021, 1, 1)
 end_date   = datetime.datetime(2021, 3, 1)
@@ -92,7 +90,6 @@ for subset in subsets :
 
     logK, logK_sigma, beta, covid_index_offset, t_index   = load_covid_index(start_date.date())
     fraction, fraction_sigma, fraction_offset, t_fraction = load_b117_fraction()
-
 
     # Load the ABM simulations
     abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=subset, verbose=True)
@@ -338,6 +335,7 @@ for subset in subsets :
 
     #    if not i % 3 == 0 :
     #        axes3[i].set_yticklabels([])
+        axes4[i].set_title(f"Region {i}", fontsize=24, pad=5)
 
         axes4[i].xaxis.set_major_locator(months)
         axes4[i].xaxis.set_major_formatter(months_fmt)

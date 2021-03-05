@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from numba.typed import List
 from numba.core.errors import (
@@ -8,7 +9,6 @@ from numba.core.errors import (
 )
 
 
-from scipy.optimize import fsolve
 
 from pathlib import Path
 import os
@@ -78,67 +78,49 @@ class Simulation :
 
         # generate coordinates based on population density
         self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.network.ID)
-        coordinates_raw = utils.df_coordinates_to_coordinates(self.df_coordinates)
+
+        coordinates_raw   = utils.df_coordinates_to_coordinates(self.df_coordinates)
+        self.kommune_dict = utils.df_coordinates_to_kommune_dict(self.df_coordinates)
 
         if self.verbose :
             print(f"\nINITIALIZE VERSION {self.cfg.version} NETWORK")
 
-        #Version 1 do not have [house, work, other], from version 2 this is implemented.
-        if self.cfg.version >= 2 :
 
-            # TODO: not currently being used
-            people_in_household, age_distribution_per_people_in_household = file_loaders.load_household_data()
+        household_size_distribution, age_distribution_in_households = file_loaders.load_household_data(self.kommune_dict)
 
-            household_size_dist_per_kommune, age_distribution_per_person_in_house_per_kommune, kommune_id = file_loaders.load_household_data_kommune_specific()
-
-            N_ages = len(age_distribution_per_person_in_house_per_kommune[0,0])
-            kommune_ids = []
-            for val in self.df_coordinates["kommune"].values :
-                kommune_ids.append(kommune_id.get_loc(val))
-            kommune_ids = np.array(kommune_ids)
-
-            self.N_ages = N_ages
-            if self.verbose :
-                print("Connect Household") #was household and families are used interchangebly. Most places it is changed to house(hold) since it just is people living at the same adress.
-
-            (
-                mu_counter,
-                counter_ages,
-                agents_in_age_group,
-            ) = nb_network.place_and_connect_families_kommune_specific(
-                self.my,
-                household_size_dist_per_kommune,
-                age_distribution_per_person_in_house_per_kommune,
-                coordinates_raw,
-                kommune_ids,
-                self.N_ages,
-                verbose=self.verbose)
+        self.N_ages = len(age_distribution_in_households[0, 0])
+        kommune_ids = np.array(self.df_coordinates.idx)
 
 
-            if self.verbose :
-                print("Connecting work and others, currently slow, please wait")
+        if self.verbose :
+            print("Connect Household") #was household and families are used interchangebly. Most places it is changed to house(hold) since it just is people living at the same adress.
 
-            nb_network.connect_work_and_others(
-                self.my,
-                N_ages,
-                mu_counter,
-                np.array(self.cfg.network.work_matrix),
-                np.array(self.cfg.network.other_matrix),
-                agents_in_age_group,
-                verbose=self.verbose)
+        (
+            mu_counter,
+            counter_ages,
+            agents_in_age_group,
+        ) = nb_network.place_and_connect_families_kommune_specific(
+            self.my,
+            household_size_distribution,
+            age_distribution_in_households,
+            coordinates_raw,
+            kommune_ids,
+            self.N_ages,
+            verbose=self.verbose)
 
-        else :
 
-            if self.verbose :
-                print("SETUP WEIGHTS AND COORDINATES")
-            nb_network.v1_initialize_my(self.my, coordinates_raw)
+        if self.verbose :
+            print("Connecting work and others, currently slow, please wait")
 
-            if self.verbose :
-                print("CONNECT NODES")
-            nb_network.v1_connect_nodes(self.my)
+        nb_network.connect_work_and_others(
+            self.my,
+            self.N_ages,
+            mu_counter,
+            np.array(self.cfg.network.work_matrix),
+            np.array(self.cfg.network.other_matrix),
+            agents_in_age_group,
+            verbose=self.verbose)
 
-            agents_in_age_group = List()
-            agents_in_age_group.append(np.arange(self.cfg.network.N_tot, dtype=np.uint32))
 
         self.agents_in_age_group = agents_in_age_group
 
@@ -169,6 +151,8 @@ class Simulation :
             my_hdf5ready = file_loaders.load_jitclass_to_dict(f["my"])
             self.my = file_loaders.load_My_from_dict(my_hdf5ready, self.cfg.deepcopy())
         self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.network.ID)
+        self.kommune_dict   = utils.df_coordinates_to_kommune_dict(self.df_coordinates)
+
 
         # Update connection weights
         for agent in range(self.cfg.network.N_tot) :
@@ -308,13 +292,13 @@ class Simulation :
         # Set the probability to choose agents
         if self.cfg.initialize_at_kommune_level :
 
-            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.df_coordinates, self.cfg.initial_infection_distribution)
+            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.kommune_dict)
 
             infected_per_kommune  /= infected_per_kommune.sum()
             immunized_per_kommune /= immunized_per_kommune.sum()
 
             # Choose the a number of initially infected and immunized per kommune
-            kommune_ids = np.arange(len(infected_per_kommune)) # TODO: See if this should be updated after new coordinates are updated
+            kommune_ids = np.arange(len(infected_per_kommune))
             N_kommune   = np.zeros(np.shape(kommune_ids), dtype=int)
             R_kommune   = np.zeros(np.shape(kommune_ids), dtype=int)
 
@@ -341,7 +325,7 @@ class Simulation :
 
                 # Check if too many have been selected
                 if len(agents_in_kommune) < (N + R) :
-                    warnings.warn(f"{N+R} agents selected for initialization in a kommune {kommune_id} but only {len(agents_in_kommune)} agents exists")
+                    warnings.warn(f"{N+R} agents selected for initialization in a kommune {kommune_id} : {self.kommune_dict['id_to_name'][kommune_id]} but only {len(agents_in_kommune)} agents exists")
                     N = int(len(agents_in_kommune) * N / (N + R))
                     R = int(len(agents_in_kommune) * R / (N + R))
 
@@ -378,29 +362,13 @@ class Simulation :
             initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized)]
 
 
-        # TODO: See if this can be implemented more elegantly
-        k_values = []
-        for rel_beta in [1, self.my.cfg.beta_UK_multiplier] :
-
-            if self.my.cfg.R_guess * rel_beta == 1 :
-                k_values.append(0)
-                continue
-
-            # Determine the distribution of the E to I states depedning on R
-            if self.my.cfg.R_guess * rel_beta < 1 :    # Infections are slowing down
-                k0 = -1
-            else :              # Infections are increasing
-                k0 = 0.1
-
-            k_values.append(fsolve(lambda k : 1-np.exp(-4*k) - self.my.cfg.R_guess * rel_beta * (np.exp(-4*k) - np.exp(-8*k)), k0)[0])
-
-
         # Loop over subgroups and initialize
         for agents_in_subgroup, N, R, prior_infected, prior_immunized in initialization_subgroups :
 
             nb_simulation.initialize_states(
                 self.my,
                 self.g,
+                self.intervention,
                 self.SIR_transition_rates,
                 self.state_total_counts,
                 self.stratified_infection_counts,
@@ -410,7 +378,6 @@ class Simulation :
                 R,
                 prior_infected,
                 prior_immunized,
-                np.array(k_values),
                 verbose=self.verbose)
 
 

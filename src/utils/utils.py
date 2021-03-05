@@ -1259,11 +1259,19 @@ def load_df_coordinates(N_tot, ID) :
     )
     return df_coordinates
 
+
 def df_coordinates_to_coordinates(df_coordinates) :
     return df_coordinates[["Longitude", "Lattitude"]].values
 
 
 
+def df_coordinates_to_kommune_dict(df_coordinates) :
+
+    # Construct the kommune dict
+    IDs, inds = np.unique(df_coordinates.idx, return_index=True)
+    names = df_coordinates.kommune[inds].values
+
+    return {'id_to_name' : pd.Series(names, index=IDs), 'name_to_id' : pd.Series(IDs, index=names)}
 
 
 @njit
@@ -1393,8 +1401,6 @@ def counts_to_df(time, state_counts, stratified_infected, cfg) :  #
     time = np.array(time)
     state_counts = np.array(state_counts)
     stratified_infected = np.array(stratified_infected)
-
-    print(np.shape(stratified_infected))
 
     N_states     = np.size(state_counts, 1)
     N_labels     = np.size(stratified_infected, 1)

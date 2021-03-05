@@ -210,8 +210,8 @@ def update_node_connections(
     # store connection type
     if code_version >= 2 :
         connection_type = np.uint8(connection_type)
-        my.connections_type[agent1].append(connection_type)
-        my.connections_type[agent2].append(connection_type)
+        my.connection_type[agent1].append(connection_type)
+        my.connection_type[agent2].append(connection_type)
 
     # keep track of number of contacts
     my.number_of_contacts[agent1] += 1
@@ -298,8 +298,8 @@ def place_and_connect_families(
                     my.connections[agent2].append(np.uint32(agent1))
                     my.connection_status[agent1].append(True)
                     my.connection_status[agent2].append(True)
-                    my.connections_type[agent1].append(np.uint8(0))
-                    my.connections_type[agent2].append(np.uint8(0))
+                    my.connection_type[agent1].append(np.uint8(0))
+                    my.connection_type[agent2].append(np.uint8(0))
                     my.number_of_contacts[agent1] += 1
                     my.number_of_contacts[agent2] += 1
                     mu_counter += 1
@@ -386,8 +386,8 @@ def place_and_connect_families_kommune_specific(
                     my.connections[agent2].append(np.uint32(agent1))
                     my.connection_status[agent1].append(True)
                     my.connection_status[agent2].append(True)
-                    my.connections_type[agent1].append(np.uint8(0))
-                    my.connections_type[agent2].append(np.uint8(0))
+                    my.connection_type[agent1].append(np.uint8(0))
+                    my.connection_type[agent2].append(np.uint8(0))
                     my.number_of_contacts[agent1] += 1
                     my.number_of_contacts[agent2] += 1
                     mu_counter += 1

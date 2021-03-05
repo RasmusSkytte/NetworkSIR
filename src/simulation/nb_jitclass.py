@@ -34,6 +34,7 @@ spec_cfg = {
     "day_max" : nb.int32,
     "make_random_initial_infections" : nb.boolean,
     "weighted_random_initial_infections" : nb.boolean,
+    "initial_infections_fraction_in_households" : nb.float32,
     "initialize_at_kommune_level" : nb.boolean,
     "labels" : nb.types.unicode_type,
     "label_map" : ListType(ListType(nb.int64)),
@@ -92,6 +93,7 @@ class Config(object) :
         # other
         self.make_random_initial_infections = True
         self.weighted_random_initial_infections = False
+        self.initial_infections_fraction_in_households = 0.5
         self.initialize_at_kommune_level = False
         self.labels = 'none'
         self.day_max = 0
@@ -197,7 +199,7 @@ spec_my = {
     "age" : nb.uint8[:],
     "connections" : ListType(ListType(nb.uint32)),
     "connection_status" : ListType(ListType(nb.boolean)),
-    "connections_type" : ListType(ListType(nb.uint8)),
+    "connection_type" : ListType(ListType(nb.uint8)),
     "beta_connection_type" : nb.float32[:],
     "coordinates" : nb.float32[:, :],
     "connection_weight" : nb.float32[:],
@@ -224,7 +226,7 @@ class My(object) :
         self.coordinates = np.zeros((N_tot, 2), dtype=np.float32)
         self.connections = utils.initialize_nested_lists(N_tot, np.uint32)
         self.connection_status = utils.initialize_nested_lists(N_tot, nb.boolean)
-        self.connections_type = utils.initialize_nested_lists(N_tot, np.uint8)
+        self.connection_type = utils.initialize_nested_lists(N_tot, np.uint8)
         self.beta_connection_type = np.array(
             [3.0, 1.0, 1.0, 1.0], dtype=np.float32
         )  # beta multiplier for [House, work, others, events]
@@ -332,7 +334,7 @@ class Gillespie(object) :
             # )
             x = np.zeros(my.number_of_contacts[i])
             for j in range(my.number_of_contacts[i]) :
-                x[j] = my.beta_connection_type[my.connections_type[i][j]] * my.infection_weight[i]
+                x[j] = my.beta_connection_type[my.connection_type[i][j]] * my.infection_weight[i]
 
             rates.append(x)
         self.rates = rates

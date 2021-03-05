@@ -60,7 +60,11 @@ from src.simulation.nb_helpers         import nb_random_choice, single_random_ch
 
 
 @njit
-def make_random_initial_infections(my, possible_agents, N, prior) :
+def make_random_initial_infections(my, possible_agents, N, prior = None) :
+
+    if prior is None :
+        prior = np.ones(len(possible_agents)) / len(possible_agents)
+
     if my.cfg.weighted_random_initial_infections :
         prior_contacts = np.array([7.09189651e+00, 7.21828639e+00, 7.35063322e+00, 7.48921778e+00,
            7.63433406e+00, 7.78628991e+00, 7.94540769e+00, 8.11202496e+00,
@@ -124,13 +128,44 @@ def make_random_initial_infections(my, possible_agents, N, prior) :
         size=N,
         replace=False)
 
+@njit
+def make_initial_infections_in_households(my, possible_agents, N) :
+
+    household_contacts = np.array([contact for agent in possible_agents for ith_contact, contact in enumerate(my.connections[agent]) if my.connection_type[agent][ith_contact] == 0])
+
+    if N >= len(household_contacts) :
+        return household_contacts
+
+    else :
+        return nb_random_choice(
+            household_contacts,
+            prob=np.ones(len(household_contacts)),
+            size=N,
+            replace=False)
+
 
 @njit
 def choose_initial_agents(my, possible_agents, N, prior) :
 
-    ##  Standard outbreak type, infecting randomly
+    #  Standard outbreak type, infecting randomly
     if my.cfg.make_random_initial_infections :
-        return make_random_initial_infections(my, possible_agents, N, prior)
+
+        # Determine the number of in-household infections
+        N_household = int(my.cfg.initial_infections_fraction_in_households * N)
+
+        # Choose agents randomly
+        agents = make_random_initial_infections(my, possible_agents, N - N_household, prior)
+
+        # Determine their household contacts
+        household_contacts = np.array([contact for agent in possible_agents for ith_contact, contact in enumerate(my.connections[agent]) if my.connection_type[agent][ith_contact] == 0 and agent not in possible_agents])
+
+        # Choose household agents randomly
+        if N_household >= len(household_contacts) :
+            household_agents = household_contacts
+        else :
+            household_agents = make_random_initial_infections(my, household_contacts, N_household, np.ones(len(household_contacts)))
+
+        return np.sort(np.hstack((agents, household_agents)))
 
     # Local outbreak type, infecting around a point :
     else :
@@ -161,15 +196,6 @@ def find_outbreak_agent(my, possible_agents, coordinate, rho, max_tries=10_000) 
         counter += 1
         if counter >= max_tries :
             raise AssertionError("Couldn't find any outbreak agent!")
-
-
-@njit
-def calc_E_I_distribution_expo(k) :
-
-    if k == 0 :   # System is in steady-state
-        return np.ones(8, dtype=np.float64)
-    else :
-        return np.exp(-np.arange(8)*k).astype(np.float64)
 
 
 @njit
@@ -213,6 +239,7 @@ def find_possible_agents(my, initial_ages_exposed, agents_in_age_group) :
 def initialize_states(
     my,
     g,
+    intervention,
     SIR_transition_rates,
     state_total_counts,
     stratified_infection_counts,
@@ -222,7 +249,6 @@ def initialize_states(
     R_init,
     prior_infected,
     prior_immunized,
-    k_values,
     verbose=False) :
 
 
@@ -250,50 +276,54 @@ def initialize_states(
             update_infection_list_for_newly_infected_agent(my, g, agent)
 
 
-    #  Make initial infections
-    for agent in choose_initial_agents(my, possible_agents, N_init, prior_infected) :
+    if N_init > 0 :
 
-        # If infected, do not immunize # TODO: Discuss if this is the best way to immunize agents
-        if my.state[agent] == R_state :
-            continue
+        #  Make initial infections
+        for agent in choose_initial_agents(my, possible_agents, N_init, prior_infected) :
 
-        # Choose corona type
-        if np.random.rand() < my.cfg.N_init_UK_frac :
-            my.corona_type[agent] = 1
-            k = k_values[1]
-            rel_beta = my.cfg.beta_UK_multiplier
-        else :
-            k = k_values[0]
-            rel_beta = 1
+            # If infected, do not immunize # TODO: Discuss if this is the best way to immunize agents
+            if my.state[agent] == R_state :
+                continue
 
-        #weights = calc_E_I_distribution(k)
-        #weights = calc_E_I_distribution_linear(my.cfg.R_guess * rel_beta)
-        weights = calc_E_I_distribution(my, my.cfg.R_guess * rel_beta)
-        states = np.arange(g.N_states - 1, dtype=np.int8)
-        new_state = nb_random_choice(states, weights, verbose=verbose)[0]  # E1-E4 or I1-I4, uniformly distributed
-        my.state[agent] = new_state
+            # Choose corona type
+            if np.random.rand() < my.cfg.N_init_UK_frac :
+                my.corona_type[agent] = 1
+                rel_beta = my.cfg.beta_UK_multiplier
+            else :
+                rel_beta = 1
 
-        agents_in_state[new_state].append(np.uint32(agent))
-        state_total_counts[new_state] += 1
+            #weights = calc_E_I_distribution_linear(my.cfg.R_guess * rel_beta)
+            weights = calc_E_I_distribution(my, my.cfg.R_guess * rel_beta)
+            states = np.arange(g.N_states - 1, dtype=np.int8)
+            new_state = nb_random_choice(states, weights, verbose=verbose)[0]  # E1-E4 or I1-I4, uniformly distributed
+            my.state[agent] = new_state
 
-        g.total_sum_of_state_changes += SIR_transition_rates[new_state]
-        g.cumulative_sum_of_state_changes[new_state :] += SIR_transition_rates[new_state]
+            agents_in_state[new_state].append(np.uint32(agent))
+            state_total_counts[new_state] += 1
 
-        # Moves into a infectious State
-        if my.agent_is_infectious(agent) :
-            for ith_contact, contact in enumerate(my.connections[agent]) :
-                # update rates if contact is susceptible
-                if my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact) :
-                    if my.corona_type[agent] == 1 :
-                        g.rates[agent][ith_contact] *= my.cfg.beta_UK_multiplier
-                    rate = g.rates[agent][ith_contact]
-                    g.update_rates(my, +rate, agent)
+            g.total_sum_of_state_changes += SIR_transition_rates[new_state]
+            g.cumulative_sum_of_state_changes[new_state :] += SIR_transition_rates[new_state]
 
-            # Update the counters
-            stratified_infection_counts[my.label[agent]][my.corona_type[agent]][my.age[agent]] += 1
+            if intervention.apply_interventions and intervention.apply_symptom_testing :
+                for i in range(new_state) :
+                    apply_symptom_testing(my, intervention, agent, i, 0)
 
-        # Make sure agent can not be re-infected
-        update_infection_list_for_newly_infected_agent(my, g, agent)
+
+            # Moves into a infectious State
+            if my.agent_is_infectious(agent) :
+                for ith_contact, contact in enumerate(my.connections[agent]) :
+                    # update rates if contact is susceptible
+                    if my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact) :
+                        if my.corona_type[agent] == 1 :
+                            g.rates[agent][ith_contact] *= my.cfg.beta_UK_multiplier
+                        rate = g.rates[agent][ith_contact]
+                        g.update_rates(my, +rate, agent)
+
+                # Update the counters
+                stratified_infection_counts[my.label[agent]][my.corona_type[agent]][my.age[agent]] += 1
+
+            # Make sure agent can not be re-infected
+            update_infection_list_for_newly_infected_agent(my, g, agent)
 
 
 
@@ -576,7 +606,7 @@ def run_simulation(
             accept = True
 
             if intervention.apply_interventions and intervention.apply_symptom_testing and day >= 0 :
-                apply_symptom_testing(my, intervention, agent, click)
+                apply_symptom_testing(my, intervention, agent, my.state[agent], click)
 
             # Moves TO infectious State from non-infectious
             if my.state[agent] == N_infectious_states :
@@ -630,7 +660,7 @@ def run_simulation(
 
                             # here agent infect contact
                             if g.cumulative_sum > ra1 :
-                                where_infections_happened_counter[my.connections_type[agent][ith_contact]] += 1
+                                where_infections_happened_counter[my.connection_type[agent][ith_contact]] += 1
                                 my.state[contact] = 0
 
                                 my.corona_type[contact] = my.corona_type[agent]

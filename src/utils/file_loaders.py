@@ -243,53 +243,49 @@ class ABM_simulations :
 ##         #######  ##         #######  ######## ##     ##    ##    ####  #######  ##    ##
 
 
-def parse_age_distribution_data(filename, kommune_level=False) :
+def parse_age_distribution_data(filename, kommune_dict=None) :
 
-    age_dist_raw = pd.read_csv(filename, index_col=0)
+    age_dist_raw      = pd.read_csv(filename, index_col=0)
+    kommune_names_raw = age_dist_raw.index
+    age_dist_raw      = age_dist_raw.to_numpy()
 
-    age_dist_raw = age_dist_raw.to_numpy()
+    age_dist = np.zeros( (np.max(kommune_dict['name_to_id']) + 1, age_dist_raw.shape[1], len(eval(age_dist_raw[0, 0]))), dtype=float)
 
-    age_dist = np.ones( (age_dist_raw.shape[0], age_dist_raw.shape[1], len(eval(age_dist_raw[0, 0]))), dtype=float)
     for i in range(age_dist_raw.shape[0]) :
-        for j in range(age_dist_raw.shape[1]) :
-            age_dist[i, j, :] = eval(age_dist_raw[i, j])
 
-    if not kommune_level :
-        age_dist = np.sum(age_dist, axis=0)
+        i_out = kommune_dict['name_to_id'][kommune_names_raw[i]]
+
+        for j in range(age_dist_raw.shape[1]) :
+            age_dist[i_out, j, :] = eval(age_dist_raw[i, j])
+
 
     return age_dist
 
 
-def parse_household_data(filename, kommune_level=False) :
+def parse_household_data(filename, kommune_dict=None) :
 
     household_dist_raw = pd.read_csv(filename, index_col=0)
-    kommune_id = household_dist_raw.index
+    kommune_names_raw  = household_dist_raw.index
+    household_dist_raw = household_dist_raw.to_numpy()
 
-    household_dist = household_dist_raw.to_numpy()
+    household_dist = np.zeros((np.max(kommune_dict['name_to_id']) + 1, household_dist_raw.shape[1]))
 
-    for i in range(household_dist.shape[0]) :
-        for j in range(household_dist.shape[1]) :
-            household_dist[i, j] /= j + 1
+    for i in range(household_dist_raw.shape[0]) :
 
-    if not kommune_level :
-        return np.sum(household_dist, axis=0)
-    else :
-        return (household_dist, kommune_id)
+        i_out = kommune_dict['name_to_id'][kommune_names_raw[i]]
+
+        for j in range(household_dist_raw.shape[1]) :
+            household_dist[i_out, j] = household_dist_raw[i, j] / (j + 1)
+
+    return household_dist
 
 
-def load_household_data() :
+def load_household_data(kommune_dict) :
 
-    people_in_household = parse_household_data(load_yaml("cfg/files.yaml")["PeopleInHousehold"])
-    age_distribution_per_people_in_household = parse_age_distribution_data(load_yaml("cfg/files.yaml")["AgeDistribution"])
+    household_dist = parse_household_data(load_yaml("cfg/files.yaml")["PeopleInHousehold"], kommune_dict=kommune_dict)
+    age_dist = parse_age_distribution_data(load_yaml("cfg/files.yaml")["AgeDistribution"],  kommune_dict=kommune_dict)
 
-    return people_in_household, age_distribution_per_people_in_household
-
-def load_household_data_kommune_specific() :
-
-    household_dist, kommune_id = parse_household_data(load_yaml("cfg/files.yaml")["PeopleInHousehold"], kommune_level=True)
-    age_dist = parse_age_distribution_data(load_yaml("cfg/files.yaml")["AgeDistribution"], kommune_level=True)
-
-    return (household_dist, age_dist, kommune_id)
+    return household_dist, age_dist
 
 
 def load_age_stratified_file(file) :
@@ -572,16 +568,12 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
 
     return age_distribution_infected, age_distribution_immunized
 
-def load_kommune_infection_distribution(df_coordinates, initial_distribution_file) :
+def load_kommune_infection_distribution(initial_distribution_file, kommune_dict) :
 
-    my_kommune = df_coordinates["kommune"].to_numpy()
-    my_ids     = df_coordinates["idx"].to_numpy()
+    N_kommuner = np.max(kommune_dict['name_to_id']) + 1
 
-    kommune_names, I = np.unique(my_kommune, return_index=True)
-    kommune_ids = my_ids[I]
-
-    infected_per_kommune  = np.zeros(np.max(kommune_ids) + 1)
-    immunized_per_kommune = np.zeros(np.max(kommune_ids) + 1)
+    infected_per_kommune  = np.zeros(N_kommuner)
+    immunized_per_kommune = np.zeros(N_kommuner)
 
     if initial_distribution_file.lower() == "random" :
         infected_per_kommune  = np.ones(np.shape(infected_per_kommune))
@@ -592,30 +584,23 @@ def load_kommune_infection_distribution(df_coordinates, initial_distribution_fil
         if initial_distribution_file.lower() == "newest" :
             df, _ = get_SSI_data(date="newest", return_data=True)
         else :
-            df = pd.read_csv('Data/municipality_cases/' + initial_distribution_file + '.csv')
+            df = pd.read_csv('Data/municipality_cases/' + initial_distribution_file + '.csv', index_col=0)
 
-        # First fill the immunized per kommune array
-        arr = immunized_per_kommune
+        df = df.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA'])
+        names =  df.columns
+        values = df.to_numpy()
 
-        for i in range(len(df.index)) :
+        # Match the indicies
+        i_out = kommune_dict['name_to_id'][names]
 
-            # Last 7 days counts the currently infected
-            if i == len(df.index) - 7 :
-                arr = infected_per_kommune
+        # Swap arrays for the last 7 days
+        I = len(df.index) - 7
 
-            for kommune, kommune_id in zip(kommune_names, kommune_ids) :
-
-                if kommune == "København" :
-                    arr[kommune_id] += df["Copenhagen"][i]
-                else :
-                    arr[kommune_id] += df[kommune][i]
+        # Fill the arrays
+        immunized_per_kommune[i_out] += np.sum(values[:I, :], axis=0)
+        infected_per_kommune[i_out]  += np.sum(values[I:, :], axis=0)
 
     return infected_per_kommune, immunized_per_kommune
-
-
-
-
-
 
 
 

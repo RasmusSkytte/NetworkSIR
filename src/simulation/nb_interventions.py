@@ -774,7 +774,10 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3 :
 
                                 if verbose :
-                                    print('Intervention type : matrix restriction, name: ', intervention.cfg.Intervention_contact_matrices_name[int(i/2)] + '_label_' + str(ith_label) )
+                                    if intervention.N_labels > 1 :
+                                        print('Intervention type : matrix restriction, name: ', intervention.cfg.Intervention_contact_matrices_name[int(i/2)] + '_label_' + str(ith_label) )
+                                    else :
+                                        print('Intervention type : matrix restriction, name: ', intervention.cfg.Intervention_contact_matrices_name[int(i/2)])
 
                                 matrix_restriction_on_label(
                                     my,

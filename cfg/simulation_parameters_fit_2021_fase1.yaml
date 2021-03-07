@@ -1,23 +1,23 @@
 N_tot: 5_800_000
 rho: 0.1
 
-N_init: 35000
-beta: 0.04
+N_init: 20000
+beta: 0.026
 
 R_guess: 0.75
 
 # english type corona
-N_init_UK_frac: 0.015
-beta_UK_multiplier: 1.5
+N_init_UK_frac: 0.018
+beta_UK_multiplier: 1.55
 
 R_init : 5_800_000 * 0.065
 
-initialize_at_kommune_level: False
+initialize_at_kommune_level: True
 initial_infection_distribution : 2021-01-05
 weighted_random_initial_infections: False
 
 lambda_E: 4 / 2.5
-lambda_I: 4 / 3.52
+lambda_I: 4 / 4.5
 
 start_date : 2020-12-31
 end_date : 2021-03-01

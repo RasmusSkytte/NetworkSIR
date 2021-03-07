@@ -7,12 +7,12 @@ from tqdm import tqdm
 from contexttimer import Timer
 
 
-params, start_date = utils.load_params("cfg/simulation_parameters_debugging.yaml")
+params, start_date = utils.load_params("cfg/simulation_parameters_fit_2021_fase1.yaml")
 
 if utils.is_local_computer():
-    f = 0.01
+    f = 0.2
     n_steps = 1
-    num_cores_max = 1
+    num_cores_max = 3
     N_runs = 3
 else :
     f = 0.2
@@ -22,7 +22,7 @@ else :
 
 
 if num_cores_max == 1 :
-    verbose = False
+    verbose = True
 else :
     verbose = False
 
@@ -68,7 +68,6 @@ fraction, fraction_sigma, fraction_offset, _ = load_b117_fraction()
 
 for subset in [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]}] :
 
-
     # Load the ABM simulations
     abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=subset, verbose=True)
 
@@ -89,7 +88,7 @@ for subset in [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fas
         for filename in abm_files.cfg_to_filenames(cfg) :
 
             # Load
-            I_tot_scaled, f, _, _= load_from_file(filename)
+            I_tot_scaled, f, _, _, _= load_from_file(filename)
 
             # Evaluate
             tmp_ll_s = compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))

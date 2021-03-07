@@ -363,7 +363,7 @@ class Simulation :
 
 
         # Loop over subgroups and initialize
-        for subgroup in tqdm(initialization_subgroups, total=len(initialization_subgroups), disable=(not self.verbose)) :
+        for subgroup in tqdm(initialization_subgroups, total=len(initialization_subgroups), disable=(not self.verbose), position=0, leave=True) :
 
             agents_in_subgroup, N, R, prior_infected, prior_immunized = subgroup
 
@@ -381,7 +381,6 @@ class Simulation :
                 prior_infected,
                 prior_immunized,
                 verbose=self.verbose)
-
 
         if check_distributions:
             ages = [self.my.age[agent] for agent in possible_agents if self.my.agent_is_infectious(agent)]

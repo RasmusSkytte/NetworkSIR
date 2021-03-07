@@ -34,7 +34,6 @@ spec_cfg = {
     "day_max" : nb.int32,
     "make_random_initial_infections" : nb.boolean,
     "weighted_random_initial_infections" : nb.boolean,
-    "initial_infections_fraction_in_households" : nb.float32,
     "initialize_at_kommune_level" : nb.boolean,
     "labels" : nb.types.unicode_type,
     "label_map" : ListType(ListType(nb.int64)),
@@ -93,7 +92,6 @@ class Config(object) :
         # other
         self.make_random_initial_infections = True
         self.weighted_random_initial_infections = False
-        self.initial_infections_fraction_in_households = 0.5
         self.initialize_at_kommune_level = False
         self.labels = 'none'
         self.day_max = 0

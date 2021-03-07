@@ -17,7 +17,6 @@ outbreak_position_UK: random
 R_init : 0
 
 initial_infection_distribution : newest
-initial_infections_fraction_in_households: 0.5  # 50 % of initial infections should occur in households
 
 
 lambda_E: 1.0  # E->I, Lambda(from E states)

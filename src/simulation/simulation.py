@@ -363,7 +363,9 @@ class Simulation :
 
 
         # Loop over subgroups and initialize
-        for agents_in_subgroup, N, R, prior_infected, prior_immunized in initialization_subgroups :
+        for subgroup in tqdm(initialization_subgroups, total=len(initialization_subgroups), disable=(not self.verbose)) :
+
+            agents_in_subgroup, N, R, prior_infected, prior_immunized = subgroup
 
             nb_simulation.initialize_states(
                 self.my,
@@ -421,7 +423,7 @@ class Simulation :
                     print(np.round(100 * (dist - immunized_per_kommune), 1))
 
 
-    def run_simulation(self, verbose_interventions=None) :
+    def run_simulation(self) :
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
         if self.verbose :

@@ -150,22 +150,9 @@ def choose_initial_agents(my, possible_agents, N, prior) :
     #  Standard outbreak type, infecting randomly
     if my.cfg.make_random_initial_infections :
 
-        # Determine the number of in-household infections
-        N_household = int(my.cfg.initial_infections_fraction_in_households * N)
-
         # Choose agents randomly
-        agents = make_random_initial_infections(my, possible_agents, N - N_household, prior)
+        return make_random_initial_infections(my, possible_agents, N, prior)
 
-        # Determine their household contacts
-        household_contacts = np.array([contact for agent in possible_agents for ith_contact, contact in enumerate(my.connections[agent]) if my.connection_type[agent][ith_contact] == 0 and agent not in possible_agents])
-
-        # Choose household agents randomly
-        if N_household >= len(household_contacts) :
-            household_agents = household_contacts
-        else :
-            household_agents = make_random_initial_infections(my, household_contacts, N_household, np.ones(len(household_contacts)))
-
-        return np.sort(np.hstack((agents, household_agents)))
 
     # Local outbreak type, infecting around a point :
     else :
@@ -256,8 +243,10 @@ def initialize_states(
 
     if R_init > 0 :
 
+        agents = choose_initial_agents(my, possible_agents, R_init, prior_immunized)
+
         #  Make initial immunizations
-        for agent in choose_initial_agents(my, possible_agents, R_init, prior_immunized) :
+        for agent in agents :
 
             # Update the state
             my.state[agent] = R_state
@@ -278,8 +267,10 @@ def initialize_states(
 
     if N_init > 0 :
 
+        agents = choose_initial_agents(my, possible_agents, N_init, prior_infected)
+
         #  Make initial infections
-        for agent in choose_initial_agents(my, possible_agents, N_init, prior_infected) :
+        for agent in agents :
 
             # If infected, do not immunize # TODO: Discuss if this is the best way to immunize agents
             if my.state[agent] == R_state :

@@ -16,7 +16,7 @@ from src import rc_params
 from src.analysis.helpers import *
 
 # Define the subset to plot on
-subsets = [ {"Intervention_contact_matrices_name" : ["2021_fase1"]}]
+subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan"], "lambda_I" : np.round(4 / 4.5, 5), "continuous_interventions_to_apply" : [1,2,3,4,5]}] #, 4 / 4, 4 / 4.5, 4 / 5, 4 / 5.5]
 
 start_date = datetime.datetime(2021, 1, 1)
 end_date   = datetime.datetime(2021, 3, 1)
@@ -61,6 +61,9 @@ for subset in subsets :
 
             y = tests_by_variant[:, i]
 
+            if np.all(y == 0) :
+                continue
+
             #with warnings.catch_warnings():
             #    warnings.simplefilter("ignore")
             #    r = np.diff(y) / (0.5 * (y[:-1] + y[1:]))
@@ -69,7 +72,10 @@ for subset in subsets :
             t_w = np.arange(window_size)
             R_w = []
 
-            t_max = np.min([len(y)-window_size, np.where(y > 0)[0][-1]])
+            t_max = len(y)-window_size
+            if np.any(y == 0) :
+                t_max = min(t_max, np.where(y > 0)[0][-1])
+
             for j in range(t_max) :
                 y_w = y[j:(j+window_size)]
                 res, _ = scipy.optimize.curve_fit(lambda t, a, r: a * np.exp(r * t), t_w, y_w, p0=(np.max(y_w), 0))
@@ -249,7 +255,7 @@ for subset in subsets :
     ##    ##             ##
     ##     ## #######    ##
 
-    R_ref = 0.75 * np.array([1, 1.55])
+    R_ref = 1.0 * np.array([1, 1.55])
     for i in range(len(axes2)) :
 
         axes2[i].plot([start_date, end_date], [R_ref[i], R_ref[i]], 'b--', lw=2)

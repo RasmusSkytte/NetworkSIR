@@ -2010,15 +2010,27 @@ def get_random_samples(simulation_parameter, random_state=0) :
     return cfgs
 
 
+def parse_parameter(param, rounding=None) :
+
+    if isinstance(param, list) :
+        param = [parse_parameter(par) for par in param]
+
+    else :
+        param = float(parse_expr(param))
+
+    if rounding is not None :
+        param = np.round(param, rounding)
+
+    return param
 
 def load_params(filename) :
     params = file_loaders.load_yaml(filename)
     params = params.to_dict()
 
     # Parse inputs
-    params["R_init"]   = float(parse_expr(params["R_init"]))
-    params["lambda_E"] = float(parse_expr(params["lambda_E"]))
-    params["lambda_I"] = np.round(float(parse_expr(params["lambda_I"])), 5)
+    params["R_init"]   = parse_parameter(params["R_init"])
+    params["lambda_E"] = parse_parameter(params["lambda_E"])
+    params["lambda_I"] = parse_parameter(params["lambda_I"], rounding=5)
 
     start_date = params["start_date"]
     params.pop("start_date")

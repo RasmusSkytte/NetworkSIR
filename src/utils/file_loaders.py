@@ -725,7 +725,7 @@ def file_is_empty(file) :
 
 
 def load_yaml(filename) :
-    with open(filename) as file :
+    with open(filename, encoding='utf8') as file :
         tmp = yaml.safe_load(file)
 
         for key, val in tmp.items() :

@@ -140,7 +140,7 @@ for subset in subsets :
 
         # Evaluate
         ll =  compute_loglikelihood(total_tests, (logK,         logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
-        ll += compute_loglikelihood(f,           (fraction, fraction_sigma, fraction_offset))
+        #ll += compute_loglikelihood(f,           (fraction, fraction_sigma, fraction_offset))
 
         # Store the plot handles and loglikelihoods
         plot_handles.append(h)
@@ -148,11 +148,13 @@ for subset in subsets :
 
     lls = np.array(lls)
 
+
     # Filter out 'bad' runs
     ulls = lls[~np.isnan(lls)] # Only non-nans
     ulls = np.unique(ulls)     # Only unique values
     ulls = sorted(ulls)[-N:]   # Keep N best
     lls = lls.tolist()
+
 
     if len(ulls) > 1 :
 
@@ -174,7 +176,6 @@ for subset in subsets :
         for ll, handles in zip(lls_best, plot_handles) :
             for line in handles :
                 line.set_alpha(0.05 + 0.95*ll)
-
 
 
 

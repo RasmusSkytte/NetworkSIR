@@ -36,7 +36,7 @@ spec_cfg = {
     "weighted_random_initial_infections" : nb.boolean,
     "initialize_at_kommune_level" : nb.boolean,
     "labels" : nb.types.unicode_type,
-    "label_map" : ListType(ListType(nb.int64)),
+    "label_map" : ListType(ListType(nb.types.unicode_type)),
     "clustering_connection_retries" : nb.uint32,
     "beta_UK_multiplier" : nb.float32,
     "outbreak_position_UK" : nb.types.unicode_type,

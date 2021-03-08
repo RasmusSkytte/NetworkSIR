@@ -204,10 +204,10 @@ class Simulation :
 
         elif self.cfg.labels.lower() == "custom" :
             labels_raw = self.df_coordinates["idx"].values
-
             labels = np.zeros(np.shape(labels_raw))
-            for new_label, label_group in enumerate(self.cfg.label_map) :
-                labels[np.isin(labels_raw, label_group)] = new_label + 1
+
+            for new_label, label_group in enumerate(self.cfg['label_map']) :
+                labels[np.isin(labels_raw, self.kommune_dict['name_to_id'][label_group])] = new_label + 1
 
         elif self.cfg.labels.lower() == "none" :
             labels = self.df_coordinates["idx"].values * 0
@@ -573,7 +573,6 @@ def run_simulations(
         **kwargs) :
 
     if isinstance(simulation_parameters, dict) :
-        simulation_parameters = utils.format_simulation_paramters(simulation_parameters)
         cfgs_all = utils.generate_cfgs(simulation_parameters, N_runs, N_tot_max, verbose=verbose)
 
         N_tot_max = utils.d_num_cores_N_tot[utils.extract_N_tot_max(simulation_parameters)]

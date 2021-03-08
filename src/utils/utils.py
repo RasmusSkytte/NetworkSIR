@@ -1054,7 +1054,11 @@ def format_simulation_paramters(d_simulation_parameters) :
         elif isinstance(val, float) and isinstance(spec[key], nb.types.Integer) :
             d_simulation_parameters[key] = int(val)
 
+        elif key == 'label_map' :
+            d_simulation_parameters[key] = sort_nested_list(val)
+
     return d_simulation_parameters
+
 
 def format_cfg(cfg, spec) :
 
@@ -1123,6 +1127,9 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
         )
 
     else :
+
+        d_simulation_parameters = format_simulation_paramters(d_simulation_parameters)
+
         cfg_default = get_cfg_default()
 
         d_list = []
@@ -2065,3 +2072,20 @@ def load_params(filename) :
         params["initial_infection_distribution"] = params["initial_infection_distribution"].strftime('%Y_%m_%d')
 
     return params, start_date
+
+
+
+def sort_nested_list(arr) :
+    ''' This function takes a nested list, and sorsts the innermost lists'''
+
+    # is arr a NOT nested list?
+    if not any(isinstance(i, list) for i in arr) :
+        arr.sort()
+
+    # Loop deeper
+    else :
+        for ind, val in enumerate(arr):
+            if isinstance(val, list) :
+                arr[ind] = sort_nested_list(val)
+
+    return arr

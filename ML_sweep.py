@@ -7,13 +7,13 @@ from tqdm import tqdm
 from contexttimer import Timer
 
 
-params, start_date = utils.load_params("cfg/simulation_parameters_fit_2021_fase1.yaml")
+params, start_date = utils.load_params("cfg/simulation_parameters_fit_2021_fase2.yaml")
 
 if utils.is_local_computer():
-    f = 0.2
+    f = 0.01
     n_steps = 1
-    num_cores_max = 3
-    N_runs = 3
+    num_cores_max = 1
+    N_runs = 1
 else :
     f = 0.2
     n_steps = 1
@@ -38,7 +38,7 @@ params["beta"]               = noise(params["beta"], 0.0025)
 #params["beta_UK_multiplier"] = [1.5]
 #params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.1)
 
-params["N_init"]             = noise(params["N_init"] * f, 2500 * f)
+params["N_init"]             = noise(params["N_init"] * f, 1000 * f)
 #params["N_init"] = int(params["N_init"] * f)
 
 #params["N_init_UK_frac"]     = [0.02, 0.025, 0.03]

@@ -19,6 +19,7 @@ from zipfile import ZipFile
 import urllib.request
 import datetime
 
+from src.analysis.helpers import load_infected_per_category
 
 
 
@@ -545,33 +546,46 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
 
     else :
 
-        if initial_distribution_file.lower() == 'newest' :
-            date_current = newest_SSI_filename()
-        else :
-            date_current = initial_distribution_file
+        _, positive_per_age_group = load_infected_per_category(0.55, category='AgeGr')
 
-        date_delayed = datetime.datetime.strptime(date_current, '%Y_%m_%d') - datetime.timedelta(days=7)
-        date_delayed = date_delayed.strftime('%Y_%m_%d')
+        age_distribution_immunized = np.sum(positive_per_age_group[:-7, :], axis = 0)
+        age_distribution_infected =  np.sum(positive_per_age_group[-7:, :], axis = 0)
 
-        _, df_current = get_SSI_data(date=date_current, return_data=True)
-        _, df_delayed = get_SSI_data(date=date_delayed, return_data=True)
+        tmp = age_distribution_immunized[-1]
+        age_distribution_immunized = age_distribution_immunized[:-1]
+        age_distribution_immunized[-1] += tmp
 
-        age_distribution_current_raw = df_current.to_numpy().flatten()
-        age_distribution_delayed_raw = df_delayed.to_numpy().flatten()
+        tmp = age_distribution_infected[-1]
+        age_distribution_infected = age_distribution_infected[:-1]
+        age_distribution_infected[-1] += tmp
 
-        # Filter out ages of 70 and below
-        age_distribution_current = age_distribution_current_raw[:N_ages]
-        age_distribution_delayed = age_distribution_delayed_raw[:N_ages]
+        # if initial_distribution_file.lower() == 'newest' :
+        #     date_current = newest_SSI_filename()
+        # else :
+        #     date_current = initial_distribution_file
 
-        # Add the data for the ages above 70
-        age_distribution_current[-1] += np.sum(age_distribution_current[N_ages:])
-        age_distribution_delayed[-1] += np.sum(age_distribution_delayed[N_ages:])
+        # date_delayed = datetime.datetime.strptime(date_current, '%Y_%m_%d') - datetime.timedelta(days=7)
+        # date_delayed = date_delayed.strftime('%Y_%m_%d')
 
-        age_distribution_infected  = age_distribution_current - age_distribution_delayed
-        age_distribution_immunized = age_distribution_delayed
+        # _, df_current = get_SSI_data(date=date_current, return_data=True)
+        # _, df_delayed = get_SSI_data(date=date_delayed, return_data=True)
 
-        if np.any(age_distribution_infected < 0) :
-            raise ValueError(f'Age distribution is corrupted for {date_current}')
+        # age_distribution_current_raw = df_current.to_numpy().flatten()
+        # age_distribution_delayed_raw = df_delayed.to_numpy().flatten()
+
+        # # Filter out ages of 70 and below
+        # age_distribution_current = age_distribution_current_raw[:N_ages]
+        # age_distribution_delayed = age_distribution_delayed_raw[:N_ages]
+
+        # # Add the data for the ages above 70
+        # age_distribution_current[-1] += np.sum(age_distribution_current[N_ages:])
+        # age_distribution_delayed[-1] += np.sum(age_distribution_delayed[N_ages:])
+
+        # age_distribution_infected  = age_distribution_current - age_distribution_delayed
+        # age_distribution_immunized = age_distribution_delayed
+
+        # if np.any(age_distribution_infected < 0) :
+        #     raise ValueError(f'Age distribution is corrupted for {date_current}')
 
     return age_distribution_infected, age_distribution_immunized
 

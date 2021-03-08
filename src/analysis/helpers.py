@@ -150,17 +150,17 @@ def load_b117_fraction() :
     return (fraction, fraction_sigma, fraction_offset, t)
 
 
-def load_infected_per_age_group(beta) :
+def load_infected_per_category(beta, category='AgeGr') :
 
     raw_data = pd.read_csv(file_loaders.load_yaml("cfg/files.yaml")["RegionData"], sep="\t")
 
-    tests_per_age_group = pd.pivot_table(raw_data, values=['test'], index=['PrDate'], columns=['AgeGr'],  aggfunc=np.sum).to_numpy().astype(float)
+    tests_per_age_group = pd.pivot_table(raw_data, values=['test'], index=['PrDate'], columns=[category],  aggfunc=np.sum).to_numpy().astype(float)
     tests_per_day = np.sum(tests_per_age_group, axis = 1)
 
     # Adjust to ref_tests level
     tests_per_age_group_adjusted = tests_per_age_group * ref_tests / np.repeat(tests_per_day.reshape(-1, 1), tests_per_age_group.shape[1], axis=1)
 
-    data = pd.pivot_table(raw_data, values=['pos'], index=['PrDate'], columns=['AgeGr'],  aggfunc=np.sum)
+    data = pd.pivot_table(raw_data, values=['pos'], index=['PrDate'], columns=[category],  aggfunc=np.sum)
     positive_per_age_group = data.to_numpy().astype(float)
     positive_per_age_group *= (tests_per_age_group_adjusted / tests_per_age_group)**beta
 

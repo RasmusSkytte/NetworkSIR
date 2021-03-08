@@ -18,17 +18,14 @@ from src.analysis.helpers import *
 # Define the subset to plot on
 subsets = [ {'Intervention_contact_matrices_name' : ['2021_fase1', '2021_fase1']}]
 
-start_date = datetime.datetime(2021, 1, 1)
-end_date   = datetime.datetime(2021, 3, 1)
+start_date = datetime.datetime(2021, 1, 15)
+end_date   = datetime.datetime(2021, 3, 10)
 
 for subset in subsets :
     fig_name = Path('Figures/' + subset['Intervention_contact_matrices_name'][-1] + '.png')
 
     # Number of plots to keep
     N = 25
-
-    start_date = datetime.datetime(2020, 12, 21)
-
 
     def plot_simulation(total_tests, f, start_date, axes) :
 
@@ -294,7 +291,7 @@ for subset in subsets :
     ##     ##  ######   ########     ######   ##     ##  #######   #######  ##         ######
 
     # Load tests per age group
-    t, positive_per_age_group = load_infected_per_age_group(beta)
+    t, positive_per_age_group = load_infected_per_category(beta, category='AgeGr')
 
     for i in range(len(axes3)) :
 
@@ -335,7 +332,8 @@ for subset in subsets :
     ##     ## ########  ######   ####  #######  ##    ##  ######
 
     # Load tests per region
-    #t, positive_per_region = load_infected_per_region(beta)
+    t, positive_per_region = load_infected_per_category(beta, category='Region')
+    positive_per_region = positive_per_region[:, [3, 0, 2, 1, 4]]
 
     for i in range(len(axes4)) :
 
@@ -345,9 +343,9 @@ for subset in subsets :
                 ax.remove()
             break
 
-   #     axes3[i].scatter(t, positive_per_age_group[:, i], color='k', s=10)
+        axes4[i].scatter(t, positive_per_region[:, i], color='k', s=10)
 
-        axes3[i].set_xlim([start_date, end_date])
+        axes4[i].set_xlim([start_date, end_date])
     #    axes3[i].set_ylim(0, 600)
 
         if not i % 3 == 0 :

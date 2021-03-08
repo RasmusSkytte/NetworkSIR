@@ -37,6 +37,7 @@ spec_cfg = {
     "initialize_at_kommune_level" : nb.boolean,
     "labels" : nb.types.unicode_type,
     "label_map" : ListType(ListType(nb.types.unicode_type)),
+    "label_names" : ListType(nb.types.unicode_type),
     "clustering_connection_retries" : nb.uint32,
     "beta_UK_multiplier" : nb.float32,
     "outbreak_position_UK" : nb.types.unicode_type,
@@ -85,7 +86,7 @@ class Config(object) :
         self.N_init = 100
         self.N_init_UK_frac = 0
         self.R_init = 0
-        self.initial_infection_distribution = "random"
+        self.initial_infection_distribution = 'random'
         self.lambda_E = 1.0
         self.lambda_I = 1.0
 
@@ -94,6 +95,7 @@ class Config(object) :
         self.weighted_random_initial_infections = False
         self.initialize_at_kommune_level = False
         self.labels = 'none'
+        self.label_names = List('Danmark')
         self.day_max = 0
         self.clustering_connection_retries = 0
         self.beta_UK_multiplier = 1.0

@@ -1900,7 +1900,6 @@ def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True) :
 
 
 def add_cfg_to_hdf5_file(f, cfg) :
-
     add_cfg_to_hdf5_file_recursively(f, cfg)
 
 def add_cfg_to_hdf5_file_recursively(f, cfg, path = 'cfg') :
@@ -1911,7 +1910,13 @@ def add_cfg_to_hdf5_file_recursively(f, cfg, path = 'cfg') :
     for key, val in cfg.items() :
 
         if isinstance(val, (int, float, str, np.ndarray, list)) :
-            d.attrs[key] = val
+
+            # Check if list is nested
+            if key == 'label_map' :
+                d.attrs[key] = repr(val)    # TODO: Find a better way to store nested list
+
+            else :
+                d.attrs[key] = val
 
         elif isinstance(val, dict) :
             add_cfg_to_hdf5_file_recursively(f, val, path = path + '/' + key)

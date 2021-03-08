@@ -16,7 +16,7 @@ from src import rc_params
 from src.analysis.helpers import *
 
 # Define the subset to plot on
-subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan', '2021_fase1']}]
+subsets = [ {'Intervention_contact_matrices_name' : ['2021_fase1', '2021_fase1']}]
 
 start_date = datetime.datetime(2021, 1, 1)
 end_date   = datetime.datetime(2021, 3, 1)
@@ -113,10 +113,10 @@ for subset in subsets :
     fig2, axes2 = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(12, 12))
     axes2 = axes2.flatten()
 
-    fig3, axes3 = plt.subplots(nrows=3, ncols=3, sharex=True, figsize=(12, 12))
+    fig3, axes3 = plt.subplots(nrows=3, ncols=3, sharex=True, sharey=True, figsize=(12, 12))
     axes3 = axes3.flatten()
 
-    fig4, axes4 = plt.subplots(nrows=1, ncols=2, sharex=True, figsize=(12, 12))
+    fig4, axes4 = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True, figsize=(12, 12))
     axes4 = axes4.flatten()
 
     print('Plotting the individual ABM simulations. Please wait', flush=True)
@@ -145,6 +145,10 @@ for subset in subsets :
         # Store the plot handles and loglikelihoods
         plot_handles.append(h)
         lls.append(ll)
+
+
+    # Get a cfg out
+    cfg = abm_files.cfgs[0]
 
     lls = np.array(lls)
 
@@ -330,24 +334,29 @@ for subset in subsets :
     ##    ##  ##       ##    ##   ##  ##     ## ##   ### ##    ##
     ##     ## ########  ######   ####  #######  ##    ##  ######
 
-    # Load tests per age group
-#    t, positive_per_age_group = load_infected_per_age_group(beta)
+    # Load tests per region
+    #t, positive_per_region = load_infected_per_region(beta)
 
     for i in range(len(axes4)) :
 
+        # Delete empty axes
+        if i == len(cfg['label_names']) :
+            for ax in axes4[i:] :
+                ax.remove()
+            break
+
    #     axes3[i].scatter(t, positive_per_age_group[:, i], color='k', s=10)
 
-    #    axes3[i].set_xlim([start_date, end_date])
+        axes3[i].set_xlim([start_date, end_date])
     #    axes3[i].set_ylim(0, 600)
 
-    #    if not i % 3 == 0 :
-    #        axes3[i].set_yticklabels([])
-        axes4[i].set_title(f'Region {i}', fontsize=24, pad=5)
+        if not i % 3 == 0 :
+            axes3[i].set_yticklabels([])
+
+        axes4[i].set_title(cfg['label_names'][i], fontsize=24, pad=5)
 
         axes4[i].xaxis.set_major_locator(months)
         axes4[i].xaxis.set_major_formatter(months_fmt)
-
-        #    axes3[i].set_title(f'{10*i}-{10*(i+1)-1}', fontsize=24, pad=5)
 
         axes4[i].tick_params(axis='x', labelsize=24)
         axes4[i].tick_params(axis='y', labelsize=24)

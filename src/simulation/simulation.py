@@ -229,7 +229,7 @@ class Simulation :
         other_matrix_restrict = []
 
         for scenario in self.cfg.Intervention_contact_matrices_name :
-            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario)
+            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=len(np.unique(labels)))
 
             # Check the loaded contact matrices have the right size
             if not len(tmp_other_matrix_restrict) == len(np.unique(labels)) :
@@ -470,15 +470,15 @@ class Simulation :
 
         # Save CSV
         if save_csv :
-            filename_csv = self._get_filename(name="ABM", filetype="csv")
+            filename_csv = self._get_filename(name='ABM', filetype='csv')
             file_loaders.make_sure_folder_exist(filename_csv)
             self.df.to_csv(filename_csv, index=False)
 
         if save_hdf5 :
-            filename_hdf5 = self._get_filename(name="ABM", filetype="hdf5")
+            filename_hdf5 = self._get_filename(name='ABM', filetype='hdf5')
             file_loaders.make_sure_folder_exist(filename_hdf5)
-            with h5py.File(filename_hdf5, "w", **hdf5_kwargs) as f :  #
-                f.create_dataset("df", data=utils.dataframe_to_hdf5_format(self.df))
+            with h5py.File(filename_hdf5, 'w', **hdf5_kwargs) as f :  #
+                f.create_dataset('df', data=utils.dataframe_to_hdf5_format(self.df))
                 self._add_cfg_to_hdf5_file(f)
 
 
@@ -518,7 +518,6 @@ class Simulation :
         self._save_simulation_results(save_only_ID_0=save_only_ID_0, time_elapsed=time_elapsed)
 
 
-#%%
 
 
 def run_single_simulation(

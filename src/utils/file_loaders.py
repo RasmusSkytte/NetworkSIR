@@ -90,7 +90,7 @@ def hash_to_cfg(hash_, cfgs_dir="./Output/cfgs") :
     if len(q_result) == 0 :
         cfgs = [str(file) for file in Path(cfgs_dir).rglob(f"*{hash_}.yaml")]
         if len(cfgs) == 1 :
-            cfg = utils.load_yaml(cfgs[0])
+            cfg = load_yaml(cfgs[0])
             cfg.hash = utils.cfg_to_hash(cfg)
             return cfg
         else :
@@ -282,8 +282,8 @@ def parse_household_data(filename, kommune_dict=None) :
 
 def load_household_data(kommune_dict) :
 
-    household_dist = parse_household_data(load_yaml("cfg/files.yaml")["PeopleInHousehold"], kommune_dict=kommune_dict)
-    age_dist = parse_age_distribution_data(load_yaml("cfg/files.yaml")["AgeDistribution"],  kommune_dict=kommune_dict)
+    household_dist = parse_household_data(load_yaml('cfg/files.yaml')['PeopleInHousehold'], kommune_dict=kommune_dict)
+    age_dist = parse_age_distribution_data(load_yaml('cfg/files.yaml')['AgeDistribution'],  kommune_dict=kommune_dict)
 
     return household_dist, age_dist
 
@@ -308,12 +308,13 @@ def load_age_stratified_file(file) :
 
     return data.to_numpy(), row_names, lower_breaks
 
-def load_contact_matrices(scenario = 'reference') :
+def load_contact_matrices(scenario = 'reference', N_labels = 1) :
     """ Loads and parses the contact matrices corresponding to the chosen scenario.
         The function first determines what the relationship between work activites and other activites are
         After the work_other_ratio has been calculated, the function returns the normalized contact matrices
         Parameters :
             scenario (string) : Name for the scenario to load
+            N_labels (int) : The number of labels in the simulation. I.e the number of contact matrices to output
     """
 
 
@@ -322,10 +323,16 @@ def load_contact_matrices(scenario = 'reference') :
     work_other_ratio = []
     age_groups_work = []
 
+    base_path = load_yaml('cfg/files.yaml')['contactMatrixFolder']
+
     filenames = []
-    for filename in os.listdir('Data/contact_matrices/') :
-        if re.match(scenario + '.*_work.csv', filename) is not None :
-            filenames.append('Data/contact_matrices/' + filename.replace('_work.csv',''))
+    for label in range(N_labels) :
+        # Does a specific contact matrix exist?
+        if file_exists(os.path.join(base_path, scenario + '_label_' + str(label) + '_work.csv')) :
+            filenames.append(os.path.join(base_path, scenario + '_label_' + str(label)))
+        else :
+            filenames.append(os.path.join(base_path, scenario))
+
 
     for filename_set in filenames:
         tmp_matrix_work, tmp_matrix_other, tmp_work_other_ratio, tmp_age_groups_work = load_contact_matrix_set(filename_set)
@@ -437,13 +444,13 @@ def load_vaccination_schedule_file(scenario = "reference") :
 
 
 def load_municipality_data(zfile) :
-    return pd.read_csv(zfile.open("Municipality_cases_time_series.csv"), sep=";", index_col=0)
+    return pd.read_csv(zfile.open('Municipality_cases_time_series.csv'), sep=';', index_col=0)
 
 def load_age_data(zfile) :
-    df = pd.read_csv(zfile.open("Cases_by_age.csv"), usecols=["Aldersgruppe", "Antal_bekræftede_COVID-19"], sep=";", index_col=0)
+    df = pd.read_csv(zfile.open('Cases_by_age.csv'), usecols=['Aldersgruppe', 'Antal_bekræftede_COVID-19'], sep=';', index_col=0)
 
     # Remove thousands seperator
-    col = "Antal_bekræftede_COVID-19"
+    col = 'Antal_bekræftede_COVID-19'
     df[col] = df[col].astype(str)
     df[col] = df[col].str.replace('.', '', regex=False)
     df[col] = df[col].astype(float)
@@ -468,8 +475,8 @@ def SSI_data_missing(filename) :
         return False
 
 
-def download_SSI_data(date=None, download_municipality=True, path_municipality='Data/municipality_cases/', download_age=True, path_age='Data/age_cases/') :
-    url = "https://covid19.ssi.dk/overvagningsdata/download-fil-med-overvaagningdata"
+def download_SSI_data(date=None, download_municipality=True, path_municipality=None, download_age=True, path_age=None) :
+    url = 'https://covid19.ssi.dk/overvagningsdata/download-fil-med-overvaagningdata'
 
     with urllib.request.urlopen(url) as response :
         html = str(response.read())
@@ -500,8 +507,8 @@ def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False)
 
     filename = date + '.csv'
 
-    filename_municipality = os.path.join('Data', 'municipality_cases', filename)
-    filename_age          = os.path.join('Data', 'age_cases', filename)
+    filename_municipality = os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'], filename)
+    filename_age          = os.path.join(load_yaml('cfg/files.yaml')['ageCasesFolder'], filename)
 
     download_municipality = SSI_data_missing(filename_municipality)
     download_age          = SSI_data_missing(filename_age)
@@ -532,19 +539,19 @@ def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False)
 
 def load_infection_age_distributions(initial_distribution_file, N_ages) :
 
-    if initial_distribution_file.lower() == "random" :
+    if initial_distribution_file.lower() == 'random' :
         age_distribution_infected  = np.ones(N_ages)
         age_distribution_immunized = np.ones(N_ages)
 
     else :
 
-        if initial_distribution_file.lower() == "newest" :
+        if initial_distribution_file.lower() == 'newest' :
             date_current = newest_SSI_filename()
         else :
             date_current = initial_distribution_file
 
-        date_delayed = datetime.datetime.strptime(date_current, "%Y_%m_%d") - datetime.timedelta(days=7)
-        date_delayed = date_delayed.strftime("%Y_%m_%d")
+        date_delayed = datetime.datetime.strptime(date_current, '%Y_%m_%d') - datetime.timedelta(days=7)
+        date_delayed = date_delayed.strftime('%Y_%m_%d')
 
         _, df_current = get_SSI_data(date=date_current, return_data=True)
         _, df_delayed = get_SSI_data(date=date_delayed, return_data=True)
@@ -575,16 +582,16 @@ def load_kommune_infection_distribution(initial_distribution_file, kommune_dict)
     infected_per_kommune  = np.zeros(N_kommuner)
     immunized_per_kommune = np.zeros(N_kommuner)
 
-    if initial_distribution_file.lower() == "random" :
+    if initial_distribution_file.lower() == 'random' :
         infected_per_kommune  = np.ones(np.shape(infected_per_kommune))
         immunized_per_kommune = np.ones(np.shape(immunized_per_kommune))
 
     else :
 
-        if initial_distribution_file.lower() == "newest" :
-            df, _ = get_SSI_data(date="newest", return_data=True)
+        if initial_distribution_file.lower() == 'newest' :
+            df, _ = get_SSI_data(date='newest', return_data=True)
         else :
-            df = pd.read_csv('Data/municipality_cases/' + initial_distribution_file + '.csv', index_col=0)
+            df = pd.read_csv(os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'], initial_distribution_file + '.csv'), index_col=0)
 
         df = df.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA'])
         names =  df.columns
@@ -729,7 +736,18 @@ def load_yaml(filename) :
         tmp = yaml.safe_load(file)
 
         for key, val in tmp.items() :
+
+            # Check if val is a vaild path
+            if isinstance(val, str) :
+                try :
+                    p = Path(val)
+                    if p.exists() :
+                        tmp[key] = p.__str__()
+                except :
+                    pass
+
             if isinstance(val, dict) :
+
                 tmp[key] = utils.DotDict(val)
 
         return utils.DotDict(tmp)

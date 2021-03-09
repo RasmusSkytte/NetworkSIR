@@ -91,26 +91,26 @@ def load_from_file(filename) :
     return T_total, f, T_age_groups, T_variants, T_regions
 
 
-def compute_loglikelihood(arr, data, transformation_function = lambda x : x) :
+def compute_loglikelihood(input_data, validation_data, transformation_function = lambda x : x) :
 
     # Unpack values
-    data_values, data_sigma, data_offset = data
-    if len(arr) >= len(data_values) + data_offset :
+    input_values, t_input = input_data
+    data_values, data_sigma, t_data = validation_data
 
-        # Get the range corresponding to the tests
-        arr_model = arr[data_offset:data_offset+len(data_values)]
+    intersection = t_input.intersection(t_data)
 
-        # Calculate (log) proability for every point
-        log_prop = norm.logpdf(transformation_function(arr_model), loc=data_values, scale=data_sigma)
+    arr_model = [val for val, t in zip(input_values, t_input) if t in intersection]
 
-        # Determine scaled the log likelihood
-        return np.sum(log_prop) / len(log_prop)
+    arr_data  = [val for val, t in zip(data_values, t_data) if t in intersection]
+    arr_sigma = [val for val, t in zip(data_sigma, t_data) if t in intersection]
 
-    else :
-        return np.nan
+    # Calculate (log) proability for every point
+    log_prop = norm.logpdf(transformation_function(arr_model), loc=arr_data, scale=arr_sigma)
 
+    # Determine scaled the log likelihood
+    return np.sum(log_prop) / len(log_prop)
 
-def load_covid_index(start_date) :
+def load_covid_index() :
 
     # Load the covid index data
     df_index = pd.read_feather(file_loaders.load_yaml('cfg/files.yaml')['CovidIndex'])
@@ -119,21 +119,18 @@ def load_covid_index(start_date) :
     beta       = df_index["beta"][0]
     beta_sigma = df_index["beta_sd"][0]
 
-    # Find the index for the starting date
-    ind = np.where(df_index["date"] == datetime.datetime(2021, 1, 1).date())[0][0]
 
     # Only fit to data after this date
-    logK       = df_index["logI"][ind:]     # Renaming the index I to index K to avoid confusion with I state in SIR model
-    logK_sigma = df_index["logI_sd"][ind:] / 3
-    t          = df_index["date"][ind:]
+    logK       = df_index["logI"]     # Renaming the index I to index K to avoid confusion with I state in SIR model
+    logK_sigma = df_index["logI_sd"]
+    t          = df_index["date"]
 
-    # Determine the covid_index_offset
-    covid_index_offset = (datetime.datetime(2021, 1, 1).date() - start_date).days
-
-    return (logK, logK_sigma, beta, covid_index_offset, t)
+    return (logK, logK_sigma, beta, t)
 
 
 def load_b117_fraction() :
+
+    fraction_start_date = datetime.datetime(2020, 12, 28).date()
 
     #       uge     53     1     2     3     4     5     6     7     8
     s = np.array([  80,  154,  284,  470,  518,  662,  922, 1570, 1472])
@@ -143,11 +140,10 @@ def load_b117_fraction() :
 
     fraction = p
     fraction_sigma = 2 * np.sqrt(p_var)
-    fraction_offset = 1
 
-    t = pd.date_range(start = datetime.datetime(2020, 12, 28), periods = len(fraction), freq = "W-SUN")
+    t = pd.date_range(start = fraction_start_date, periods = len(fraction), freq = "W-SUN")
 
-    return (fraction, fraction_sigma, fraction_offset, t)
+    return (fraction, fraction_sigma, t)
 
 
 def load_infected_per_category(beta, category='AgeGr') :

@@ -18,9 +18,6 @@ from src.analysis.helpers import *
 # Define the subset to plot on
 subsets = [ {'Intervention_contact_matrices_name' : ['2021_fase1', '2021_fase1']}]
 
-start_date = datetime.datetime(2021, 1, 15)
-end_date   = datetime.datetime(2021, 3, 10)
-
 for subset in subsets :
     fig_name = Path('Figures/' + subset['Intervention_contact_matrices_name'][-1] + '.png')
 
@@ -86,19 +83,29 @@ for subset in subsets :
 
     rc_params.set_rc_params()
 
-
-    # Prepare output file
-    file_loaders.make_sure_folder_exist(fig_name)
-
-
-    logK, logK_sigma, beta, covid_index_offset, t_index   = load_covid_index(start_date.date())
-    fraction, fraction_sigma, fraction_offset, t_fraction = load_b117_fraction()
-
     # Load the ABM simulations
     abm_files = file_loaders.ABM_simulations(base_dir='Output/ABM', subset=subset, verbose=True)
 
     if len(abm_files.all_filenames) == 0 :
         raise ValueError(f'No files loaded with subset: {subset}')
+
+
+    # Get a cfg out
+    cfg = abm_files.cfgs[0]
+    start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
+    end_date   = start_date + datetime.timedelta(days=cfg.day_max)
+
+    t_tests = pd.date_range(start = start_date, end = end_date, freq = "D")
+    t_f     = pd.date_range(start = start_date, end = end_date, freq = "W-SUN")
+
+
+    logK, logK_sigma, beta, t_index   = load_covid_index()
+    fraction, fraction_sigma, t_fraction = load_b117_fraction()
+
+
+
+    # Prepare output file
+    file_loaders.make_sure_folder_exist(fig_name)
 
     plot_handles = []
     lls     = []
@@ -115,6 +122,7 @@ for subset in subsets :
 
     fig4, axes4 = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True, figsize=(12, 12))
     axes4 = axes4.flatten()
+
 
     print('Plotting the individual ABM simulations. Please wait', flush=True)
     for filename in tqdm(
@@ -136,19 +144,14 @@ for subset in subsets :
         h.extend(h4)
 
         # Evaluate
-        ll =  compute_loglikelihood(total_tests, (logK,         logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
-        #ll += compute_loglikelihood(f,           (fraction, fraction_sigma, fraction_offset))
+        ll =  compute_loglikelihood((total_tests, t_tests), (logK,         logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
+        ll += compute_loglikelihood((f, t_f),               (fraction, fraction_sigma, t_fraction))
 
         # Store the plot handles and loglikelihoods
         plot_handles.append(h)
         lls.append(ll)
 
-
-    # Get a cfg out
-    cfg = abm_files.cfgs[0]
-
     lls = np.array(lls)
-
 
     # Filter out 'bad' runs
     ulls = lls[~np.isnan(lls)] # Only non-nans

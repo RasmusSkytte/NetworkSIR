@@ -73,11 +73,11 @@ def load_from_file(filename) :
     T_regions    = np.sum(stratified_infections, axis=(2, 3))
 
     # Get daily values
-    T_total      = aggregate_array(T_total)
-    T_variants   = aggregate_array(T_variants)
-    T_uk         = aggregate_array(T_uk)
-    T_age_groups = aggregate_array(T_age_groups)
-    T_regions    = aggregate_array(T_regions)
+    T_total      = T_total
+    T_variants   = T_variants
+    T_uk         = T_uk
+    T_age_groups = T_age_groups
+    T_regions    = T_regions
 
     # Get weekly values
     T_total_week = aggregate_array(T_total, chunk_size=7)
@@ -125,7 +125,7 @@ def load_covid_index() :
     logK_sigma = df_index["logI_sd"]
     t          = df_index["date"]
 
-    return (logK, logK_sigma, beta, t)
+    return (logK, logK_sigma, beta, pd.to_datetime(t))
 
 
 def load_b117_fraction() :

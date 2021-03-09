@@ -689,14 +689,17 @@ def run_simulation(
         while nts * click  < real_time :
 
             daily_counter += 1
-            if ((len(out_time) == 0) or (real_time != out_time[-1])) and day >= 0 :
 
-                # Update the output variables
-                out_time.append(real_time)
-                out_state_counts.append(state_total_counts.copy())
-                out_stratified_infection_counts.append(stratified_infection_counts.copy())
+
 
             if daily_counter >= 10 :
+
+                if day >= 0 and day < my.cfg.day_max:
+
+                    # Update the output variables
+                    out_time.append(real_time)
+                    out_state_counts.append(state_total_counts.copy())
+                    out_stratified_infection_counts.append(stratified_infection_counts.copy())
 
                 # Advance day
                 day += 1
@@ -714,10 +717,9 @@ def run_simulation(
                     if intervention.apply_vaccinations :
 
                         if start_date_offset > 0 :
-                            for day in range(start_date_offset) :
-                                vaccinate(my, g, intervention, day, verbose=verbose)
+                            for d in range(start_date_offset - 1) :
+                                vaccinate(my, g, intervention, d, verbose=verbose)
 
-                            intervention.vaccination_schedule + start_date_offset
                             start_date_offset = 0
 
                         vaccinate(my, g, intervention, day, verbose=verbose)

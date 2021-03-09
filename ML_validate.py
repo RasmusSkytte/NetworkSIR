@@ -91,12 +91,10 @@ for subset in subsets :
     end_date   = start_date + datetime.timedelta(days=cfg.day_max)
 
     t_tests = pd.date_range(start=start_date, end=end_date, freq="D")
-    t_f     = pd.date_range(start=start_date, end=end_date, freq="W-SUN")
+    t_f     = pd.date_range(start=start_date, end=end_date, freq="W-SUN")[1:]
 
-    logK, logK_sigma, beta, t_index   = load_covid_index()
+    logK, logK_sigma, beta, t_index      = load_covid_index()
     fraction, fraction_sigma, t_fraction = load_b117_fraction()
-
-
 
     # Prepare output file
     file_loaders.make_sure_folder_exist(fig_name)

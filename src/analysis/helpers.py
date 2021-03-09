@@ -27,10 +27,10 @@ def aggregate_array(arr, chunk_size=10) :
     for k in range(chunks) :
         out_arr[k, :] = np.mean(tmp[k*chunk_size:(k+1)*chunk_size, :], axis=0)
 
-    if len(shp) == 1 :
-        out_arr.reshape(shp[0],)
-
-    return out_arr
+    if len(np.shape(arr)) == 1 :
+        return np.squeeze(out_arr)
+    else :
+        return out_arr
 
 
 def load_from_file(filename) :
@@ -130,8 +130,6 @@ def load_covid_index() :
 
 def load_b117_fraction() :
 
-    fraction_start_date = datetime.datetime(2020, 12, 28).date()
-
     #       uge     53     1     2     3     4     5     6     7     8
     s = np.array([  80,  154,  284,  470,  518,  662,  922, 1570, 1472])
     n = np.array([3915, 4154, 4035, 3685, 2659, 2233, 1956, 2388, 1939])
@@ -141,7 +139,7 @@ def load_b117_fraction() :
     fraction = p
     fraction_sigma = 2 * np.sqrt(p_var)
 
-    t = pd.date_range(start = fraction_start_date, periods = len(fraction), freq = "W-SUN")
+    t = pd.date_range(start='2020-12-28', periods=len(fraction), freq="W-SUN")
 
     return (fraction, fraction_sigma, t)
 

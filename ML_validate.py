@@ -16,7 +16,7 @@ from src import rc_params
 from src.analysis.helpers import *
 
 # Define the subset to plot on
-subsets = [ {'Intervention_contact_matrices_name' : ['2021_fase1', '2021_fase2']}]
+subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan', '2021_fase1']}]
 
 for subset in subsets :
     fig_name = Path('Figures/' + subset['Intervention_contact_matrices_name'][-1] + '.png')
@@ -27,8 +27,8 @@ for subset in subsets :
     def plot_simulation(total_tests, f, start_date, axes) :
 
         # Create the plots
-        tmp_handles_0 = axes[0].plot(pd.date_range(start=start_date, periods = len(total_tests), freq='D'),     total_tests, lw = 4, c = 'k')[0]
-        tmp_handles_1 = axes[1].plot(pd.date_range(start=start_date, periods = len(f),           freq='W-SUN'), f,            lw = 4, c = 'k')[0]
+        tmp_handles_0 = axes[0].plot(pd.date_range(start=start_date, periods=len(total_tests), freq='D'),     total_tests,  lw=4, c='k')[0]
+        tmp_handles_1 = axes[1].plot(pd.date_range(start=start_date, periods=len(f),           freq='W-SUN'), f,            lw=4, c='k')[0]
 
         return [tmp_handles_0, tmp_handles_1]
 
@@ -37,19 +37,18 @@ for subset in subsets :
         tmp_handles = []
         # Create the plots
         for i in range(np.size(tests_by_category, 1)) :
-            tmp_handle = axes[i].plot(pd.date_range(start=start_date, periods = np.size(tests_by_category, 0), freq='D'), tests_by_category[:, i], lw = 4, c = plt.cm.tab10(i))[0]
+            tmp_handle = axes[i].plot(pd.date_range(start=start_date, periods = np.size(tests_by_category, 0), freq='D'), tests_by_category[:, i], lw=4, c=plt.cm.tab10(i))[0]
             tmp_handles.append(tmp_handle)
 
         return tmp_handles
 
     def plot_simulation_growth_rates(tests_by_variant, start_date, axes) :
 
-        t = pd.date_range(start=start_date, periods = tests_by_variant.shape[0], freq='D') + datetime.timedelta(days=0.5)
-        tmp_handles = []
+        # Add the total tests also
+        tests_by_variant = np.concatenate((np.sum(tests_by_variant, axis=1).reshape(-1, 1), tests_by_variant), axis=1)
 
-        # y = a * np.exp(b * t)
-        # dy / dt = a * b * np.exp(b * t)
-        # (dy / dt) / y = b
+        t = pd.date_range(start=start_date, periods=tests_by_variant.shape[0], freq='D') + datetime.timedelta(days=0.5)
+        tmp_handles = []
 
         for i in range(tests_by_variant.shape[1]) :
 
@@ -57,10 +56,6 @@ for subset in subsets :
 
             if np.all(y == 0) :
                 continue
-
-            #with warnings.catch_warnings():
-            #    warnings.simplefilter('ignore')
-            #    r = np.diff(y) / (0.5 * (y[:-1] + y[1:]))
 
             window_size = 7 # days
             t_w = np.arange(window_size)
@@ -76,7 +71,7 @@ for subset in subsets :
                 R_w.append(1 + 4.7 * res[1])
 
             t_w = t[window_size:(window_size+t_max)]
-            tmp_handles.append(axes[i].plot(t_w, R_w, lw = 4, c = 'k')[0])
+            tmp_handles.append(axes[i].plot(t_w, R_w, lw=4, c='k')[0])
 
         return tmp_handles
 
@@ -95,9 +90,8 @@ for subset in subsets :
     start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
     end_date   = start_date + datetime.timedelta(days=cfg.day_max)
 
-    t_tests = pd.date_range(start = start_date, end = end_date, freq = "D")
-    t_f     = pd.date_range(start = start_date, end = end_date, freq = "W-SUN")
-
+    t_tests = pd.date_range(start=start_date, end=end_date, freq="D")
+    t_f     = pd.date_range(start=start_date, end=end_date, freq="W-SUN")
 
     logK, logK_sigma, beta, t_index   = load_covid_index()
     fraction, fraction_sigma, t_fraction = load_b117_fraction()
@@ -108,13 +102,13 @@ for subset in subsets :
     file_loaders.make_sure_folder_exist(fig_name)
 
     plot_handles = []
-    lls     = []
+    lls          = []
 
     # Prepare figure
     fig1, axes1 = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(12, 12))
     axes1 = axes1.flatten()
 
-    fig2, axes2 = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(12, 12))
+    fig2, axes2 = plt.subplots(nrows=3, ncols=1, sharex=True, figsize=(12, 12))
     axes2 = axes2.flatten()
 
     fig3, axes3 = plt.subplots(nrows=3, ncols=3, sharex=True, sharey=True, figsize=(12, 12))
@@ -137,7 +131,6 @@ for subset in subsets :
         h2 = plot_simulation_growth_rates(tests_by_variant, start_date, axes2)
         h3 = plot_simulation_category(tests_per_age_group, start_date, axes3)
         h4 = plot_simulation_category(tests_by_region, start_date, axes4)
-
 
         h.extend(h2)
         h.extend(h3)
@@ -260,10 +253,10 @@ for subset in subsets :
     ##    ##             ##
     ##     ## #######    ##
 
-    R_ref = 0.75 * np.array([1, 1.55])
+    R_t = np.array([1, 0.75, 0.75*1.55])
     for i in range(len(axes2)) :
 
-        axes2[i].plot([start_date, end_date], [R_ref[i], R_ref[i]], 'b--', lw=2)
+        axes2[i].plot([start_date, end_date], [R_t[i], R_t[i]], 'b--', lw=2)
 
         axes2[i].set_xlim([start_date, end_date])
         axes2[i].set_ylim(0, 2)
@@ -271,7 +264,10 @@ for subset in subsets :
         axes2[i].xaxis.set_major_locator(months)
         axes2[i].xaxis.set_major_formatter(months_fmt)
 
-        axes2[i].set_title(f'Variant {i}', fontsize=24, pad=5)
+        if i == 0 :
+            axes2[i].set_title(f'All variants', fontsize=24, pad=5)
+        else :
+            axes2[i].set_title(f'Variant {i}', fontsize=24, pad=5)
 
         axes2[i].tick_params(axis='x', labelsize=24)
         axes2[i].tick_params(axis='y', labelsize=24)
@@ -298,13 +294,16 @@ for subset in subsets :
 
     for i in range(len(axes3)) :
 
-        axes3[i].scatter(t, positive_per_age_group[:, i], color='k', s=10)
+        # Delete empty axes
+        if i == np.size(positive_per_age_group, 1) :
+            for ax in axes3[i:] :
+                ax.remove()
+            break
+
+        axes3[i].scatter(t, positive_per_age_group[:, i], color='k', s=10, zorder=100)
 
         axes3[i].set_xlim([start_date, end_date])
-        axes3[i].set_ylim(0, 600)
-
-        if not i % 3 == 0 :
-            axes3[i].set_yticklabels([])
+        axes3[i].set_ylim(0, 300)
 
         axes3[i].xaxis.set_major_locator(months)
         axes3[i].xaxis.set_major_formatter(months_fmt)
@@ -314,8 +313,8 @@ for subset in subsets :
         axes3[i].tick_params(axis='x', labelsize=24)
         axes3[i].tick_params(axis='y', labelsize=24)
 
-    axes3[-2].set_title(f'{10*i}+', fontsize=24, pad=5)
-    axes3[-1].remove()
+    # Adjust the last title
+    axes3[-1].set_title(f'{10*i}+', fontsize=24, pad=5)
 
 
     fig3.savefig(os.path.splitext(fig_name)[0] + '_age_groups.png')
@@ -346,13 +345,10 @@ for subset in subsets :
                 ax.remove()
             break
 
-        axes4[i].scatter(t, positive_per_region[:, i], color='k', s=10)
+        axes4[i].scatter(t, positive_per_region[:, i], color='k', s=10, zorder=100)
 
         axes4[i].set_xlim([start_date, end_date])
-    #    axes3[i].set_ylim(0, 600)
-
-        if not i % 3 == 0 :
-            axes3[i].set_yticklabels([])
+        axes4[i].set_ylim(0, 500)
 
         axes4[i].set_title(cfg['label_names'][i], fontsize=24, pad=5)
 

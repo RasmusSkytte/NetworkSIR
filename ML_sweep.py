@@ -10,15 +10,15 @@ from contexttimer import Timer
 params, start_date = utils.load_params("cfg/simulation_parameters_fit_2021_fase2.yaml")
 
 if utils.is_local_computer():
-    f = 0.01
+    f = 0.05
     n_steps = 1
     num_cores_max = 1
-    N_runs = 3
+    N_runs = 1
 else :
     f = 0.2
-    n_steps = 1
+    n_steps = 2
     num_cores_max = 15
-    N_runs = 2
+    N_runs = 1
 
 
 if num_cores_max == 1 :
@@ -33,12 +33,12 @@ else :
     noise = lambda m, d : np.round(m + np.linspace(-d, d, 2*(n_steps - 1) + 1), 5)
 
 # Sweep around parameter set
-#params["beta"]               = [0.0102, 0.0103, 0.0104, 0.0105]
-params["beta"]               = noise(params["beta"], 0.0025)
+#params["beta"]               = [0.02, 0.025, 0.03, 0.035, 0.04]
+params["beta"]               = noise(params["beta"], 0.005)
 #params["beta_UK_multiplier"] = [1.5]
 #params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.1)
 
-params["N_init"]             = noise(params["N_init"] * f, 1000 * f)
+params["N_init"]             = noise(params["N_init"] * f, 500 * f)
 #params["N_init"] = int(params["N_init"] * f)
 
 #params["N_init_UK_frac"]     = [0.02, 0.025, 0.03]
@@ -65,21 +65,20 @@ logK, logK_sigma, beta, t_index = load_covid_index()
 
 fraction, fraction_sigma, t_fraction = load_b117_fraction()
 
-
-for subset in [{"Intervention_contact_matrices_name" : ["2021_fase1", "2021_fase2"]}] :
-    if __name__ == "__main__":
+for subset in [{'Intervention_contact_matrices_name' : params['Intervention_contact_matrices_name'][0]}] :
+    if __name__ == '__main__':
         # Load the ABM simulations
-        abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=subset, verbose=True)
+        abm_files = file_loaders.ABM_simulations(base_dir='Output/ABM', subset=subset, verbose=True)
 
         if len(abm_files.cfgs) == 0 :
-            raise ValueError("No files found")
+            raise ValueError('No files found')
 
         lls_f     = []
         lls_s     = []
 
         for cfg in tqdm(
             abm_files.iter_cfgs(),
-            desc="Calculating log-likelihoods",
+            desc='Calculating log-likelihoods',
             total=len(abm_files.cfgs)) :
 
             ll_f = []

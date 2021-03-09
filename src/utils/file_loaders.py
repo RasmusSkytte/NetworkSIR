@@ -544,10 +544,6 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
 
     else :
 
-        # TODO: Get a better way to load age distribution
-        #age_distribution_infected  = np.load('Data/age_cases/age_infected.npy')
-        #age_distribution_immunized = np.load('Data/age_cases/age_immunized.npy')
-
         if initial_distribution_file.lower() == 'newest' :
             date_current = newest_SSI_filename()
         else :
@@ -577,6 +573,7 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
             raise ValueError(f'Age distribution is corrupted for {date_current}')
 
     return age_distribution_infected, age_distribution_immunized
+
 
 def load_kommune_infection_distribution(initial_distribution_file, kommune_dict) :
 

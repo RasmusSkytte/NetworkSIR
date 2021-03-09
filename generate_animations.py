@@ -1,16 +1,10 @@
 import numpy as np
 from numba import njit
-from scipy import interpolate
 import pandas as pd
 from pathlib import Path
-from scipy.stats import uniform as sp_uniform
-import joblib
 from tqdm import tqdm
-import multiprocessing as mp
 from p_tqdm import p_umap
-import os
 from functools import partial
-import awkward
 from importlib import reload
 import h5py
 from src import rc_params
@@ -23,18 +17,14 @@ num_cores_max = 40
 
 #%%
 
-# pip install mpl-scatter-density
-import mpl_scatter_density
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
-# conda install astropy
-# Make the norm object to define the image stretch
 from astropy.visualization import LogStretch
 from astropy.visualization.mpl_normalize import ImageNormalize
 import matplotlib.patches as mpatches
 from matplotlib.lines import Line2D
-from matplotlib.ticker import EngFormatter, PercentFormatter, MaxNLocator
+from matplotlib.ticker import PercentFormatter, MaxNLocator
 from scipy.interpolate import interp1d
 import matplotlib as mpl
 

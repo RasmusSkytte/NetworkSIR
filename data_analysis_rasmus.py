@@ -1,20 +1,15 @@
-from os import stat
 import numpy as np
 import pandas as pd
 from datetime import datetime
 
-
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from matplotlib.backends.backend_pdf import PdfPages
 
 from tqdm import tqdm
 from pathlib import Path
 
-from importlib import reload
 from src.utils import utils
-from src import plot
-from src import file_loaders
+from src.utils import file_loaders
 from src import rc_params
 
 from src.analysis.helpers import *
@@ -22,148 +17,159 @@ from src.analysis.helpers import *
 
 # Define the subset to plot on
 #subset = None
-subset = {"contact_matrices_name" : "2021_fase1_sce2"}
-fig_name = Path(f"Figures/2021_fase1_sce2.png")
+#fig_name = Path("Figures/all.png")
 
-# Number of plots to keep
-N = 625
+subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]}]
 
-start_date = datetime(2020, 12, 21)
-
-
-def plot_simulation(I_tot_scaled, f, start_date, axes) :
-
-    # Create the plots
-    tmp_handles_0 = axes[0].plot(pd.date_range(start=start_date, periods = len(I_tot_scaled), freq="D"),     I_tot_scaled, lw = 4, c = "k")[0]
-    tmp_handles_2 = axes[1].plot(pd.date_range(start=start_date, periods = len(f),            freq="W-SUN"), f,            lw = 4, c = "k")[0]
-
-    return [tmp_handles_0, tmp_handles_2]
-
-rc_params.set_rc_params()
-
-reload(plot)
-reload(file_loaders)
-
-# Prepare output file
-utils.make_sure_folder_exist(fig_name)
+# subsets = [{"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce2"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce3"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce4"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce5"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce6"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce7_marts", "2021_fase2_sce7_april", "2021_fase2_sce7_maj"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce8_marts", "2021_fase2_sce8_april", "2021_fase2_sce8_maj"]},
+#            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce9"]}]
 
 
-# Load the covid index data
-df_index = pd.read_feather("Data/covid_index.feather")
+for subset in subsets :
+    fig_name = Path("Figures/" + subset["Intervention_contact_matrices_name"][-1] + ".png")
 
-# Get the beta value (Here, scaling parameter for the index cases)
-beta       = df_index["beta"][0]
-beta_simga = df_index["beta_sd"][0]
+    # Number of plots to keep
+    N = 25
 
-# Find the index for the starting date
-ind = np.where(df_index["date"] == datetime(2021, 1, 1).date())[0][0]
-
-# Only fit to data after this date
-logK       = df_index["logI"][ind:]     # Renaming the index I to index K to avoid confusion with I state in SIR model
-logK_sigma = df_index["logI_sd"][ind:]
-
-# Determine the covid_index_offset
-covid_index_offset = (datetime(2021, 1, 1) - start_date).days
+    start_date = datetime.datetime(2020, 12, 21)
 
 
-s = np.array([148,   227,  457,  509,  604])
-n = np.array([3946, 3843, 3545, 2560, 1954])
-p = s / n
-p_var = p * (1 - p) / n
+    def plot_simulation(I_tot_scaled, f, start_date, axes) :
 
-fraction = p
-fraction_sigma = np.sqrt(p_var)
-fraction_offset = 2
+        # Create the plots
+        tmp_handles_0 = axes[0].plot(pd.date_range(start=start_date, periods = len(I_tot_scaled), freq="D"),     I_tot_scaled, lw = 4, c = "k")[0]
+        tmp_handles_1 = axes[1].plot(pd.date_range(start=start_date, periods = len(f),            freq="W-SUN"), f,            lw = 4, c = "k")[0]
 
+        return [tmp_handles_0, tmp_handles_1]
 
-# Load the ABM simulations
-abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=subset, verbose=True)
+    rc_params.set_rc_params()
 
 
-plot_handles = []
-lls     = []
-
-# Prepare figure
-fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(8, 12))
-axes = axes.flatten()
-
-print("Plotting the individual ABM simulations. Please wait", flush=True)
-for filename in tqdm(
-    abm_files.iter_all_files(),
-    total=len(abm_files.all_filenames)) :
-
-    # Load
-    I_tot_scaled, f = load_from_file(filename)
-
-    # Plot
-    h = plot_simulation(I_tot_scaled, f, start_date, axes)
-
-    # Evaluate
-    ll =  0.5 * compute_loglikelihood(I_tot_scaled, (logK, logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
-    ll += 0.5 * compute_loglikelihood(f, (fraction, fraction_sigma, fraction_offset))
-
-    # Store the plot handles and loglikelihoods
-    plot_handles.append(h)
-    lls.append(ll)
-
-# Filter out "bad" runs
-lls = np.array(lls)
-ulls = lls[~np.isnan(lls)] # Only non-nans
-ulls = np.unique(ulls)     # Only unique values
-ulls = sorted(ulls)[-N:]   # Keep N best
-lls_best = np.array(ulls)
-
-for i in reversed(range(len(lls))) :
-    if lls[i] in ulls :
-        ulls.remove(lls[i])
-    else :
-        for handle in plot_handles[i] :
-            handle.remove()
-        plot_handles.pop(i)
-
-# Rescale lls for plotting
-lls_best -= np.min(lls_best)
-lls_best /= np.max(lls_best) / 0.8
-
-# Color according to lls
-for ll, handles in zip(lls_best, plot_handles) :
-    for line in handles :
-        line.set_alpha(1-ll)
+    # Prepare output file
+    file_loaders.make_sure_folder_exist(fig_name)
 
 
-# Plot the covid index
-t = pd.date_range(start = datetime(2021, 1, 1), periods = len(logK), freq = "D")
-
-m  = np.exp(logK) * (80_000 ** beta)
-ub = np.exp(logK + logK_sigma) * (80_000 ** beta) - m
-lb = m - np.exp(logK - logK_sigma) * (80_000 ** beta)
-s  = np.stack((lb.to_numpy(), ub.to_numpy()))
-
-axes[0].errorbar(t, m, yerr=s, fmt='o', lw=2)
+    logK, logK_sigma, beta, covid_index_offset, t_index   = load_covid_index(start_date.date())
+    fraction, fraction_sigma, fraction_offset, t_fraction = load_b117_fraction()
 
 
-# Plot the WGS B.1.1.7 fraction
-t = pd.date_range(start = datetime(2021, 1, 4), periods = len(fraction), freq = "W-SUN")
-axes[1].errorbar(t, fraction, yerr=fraction_sigma, fmt='s', lw=2)
+    # Load the ABM simulations
+    abm_files = file_loaders.ABM_simulations(base_dir="Output/ABM", subset=subset, verbose=True)
+
+    if len(abm_files.all_filenames) == 0 :
+        raise ValueError(f"No files loaded with subset: {subset}")
+
+    plot_handles = []
+    lls     = []
+
+    # Prepare figure
+    fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(12, 12))
+    axes = axes.flatten()
+
+    print("Plotting the individual ABM simulations. Please wait", flush=True)
+    for filename in tqdm(
+        abm_files.iter_all_files(),
+        total=len(abm_files.all_filenames)) :
+
+        # Load
+        I_tot_scaled, f, _ = load_from_file(filename)
+
+        # Plot
+        h  = plot_simulation(I_tot_scaled, f, start_date, axes)
+
+        # Evaluate
+        ll =  compute_loglikelihood(I_tot_scaled, (logK,         logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
+        ll += compute_loglikelihood(f,            (fraction, fraction_sigma, fraction_offset))
+
+        # Store the plot handles and loglikelihoods
+        plot_handles.append(h)
+        lls.append(ll)
+
+    lls = np.array(lls)
+
+    # Filter out "bad" runs
+    ulls = lls[~np.isnan(lls)] # Only non-nans
+    ulls = np.unique(ulls)     # Only unique values
+    ulls = sorted(ulls)[-N:]   # Keep N best
+    lls = lls.tolist()
+
+    if len(ulls) > 1 :
+
+        for i in reversed(range(len(lls))) :
+            if lls[i] in ulls :
+                ulls.remove(lls[i])
+            else :
+                for handle in plot_handles[i] :
+                    handle.remove()
+                plot_handles.pop(i)
+                lls.pop(i)
+
+        lls_best = np.array(lls)
+        # Rescale lls for plotting
+        lls_best -= np.min(lls_best)
+        lls_best /= np.max(lls_best)
+
+        # Color according to lls
+        for ll, handles in zip(lls_best, plot_handles) :
+            for line in handles :
+                line.set_alpha(0.05 + 0.95*ll)
+
+    # Plot the covid index
+    m  = np.exp(logK) * (80_000 ** beta)
+    ub = np.exp(logK + logK_sigma) * (80_000 ** beta) - m
+    lb = m - np.exp(logK - logK_sigma) * (80_000 ** beta)
+    s  = np.stack((lb.to_numpy(), ub.to_numpy()))
+
+    axes[0].errorbar(t_index, m, yerr=s, fmt='o', lw=2)
+
+
+    # Plot the WGS B.1.1.7 fraction
+    axes[1].errorbar(t_fraction, fraction, yerr=fraction_sigma, fmt='s', lw=2)
+
+
+    # Get restriction_thresholds from a cfg
+    restriction_thresholds = abm_files.cfgs[0].restriction_thresholds
+
+    axes[0].set_ylim(0, 10000)
+    axes[0].set_ylabel('Daglige positive')
+
+
+    axes[1].set_ylim(0, 1)
+    axes[1].set_ylabel('frac. B.1.1.7')
+
+
+    fig.canvas.draw()
+
+    ylims = [ax.get_ylim() for ax in axes]
+
+    # Get the transition dates
+    restiction_days = restriction_thresholds[1::2]
+
+    for day in restiction_days :
+        restiction_date = start_date + datetime.timedelta(days=day)
+        for ax, lim in zip(axes, ylims) :
+            ax.plot([restiction_date, restiction_date], lim, '--', color="k", linewidth=2)
 
 
 
+    months     = mdates.MonthLocator()
+    months_fmt = mdates.DateFormatter('%b')
+
+    axes[1].xaxis.set_major_locator(months)
+    axes[1].xaxis.set_major_formatter(months_fmt)
+    axes[1].set_xlim([datetime.datetime(2021, 1, 1), datetime.datetime(2021, 5, 15)])
 
 
-axes[0].set_ylim(0, 2000)
-axes[0].set_ylabel('Daglige positive')
+    for ax, lim in zip(axes, ylims) :
+        ax.set_ylim(lim[0], lim[1])
 
 
-axes[1].set_ylim(0, 1)
-axes[1].set_ylabel('frac. B.1.1.7')
-
-
-
-months     = mdates.MonthLocator()
-months_fmt = mdates.DateFormatter('%b')
-
-axes[1].xaxis.set_major_locator(months)
-axes[1].xaxis.set_major_formatter(months_fmt)
-axes[1].set_xlim([datetime(2021, 1, 1), datetime(2021, 3, 1)])
-
-plt.savefig(fig_name)
+    fig.savefig(fig_name)

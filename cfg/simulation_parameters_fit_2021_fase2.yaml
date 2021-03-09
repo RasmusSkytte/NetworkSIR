@@ -1,0 +1,44 @@
+N_tot: 5_800_000
+rho: 0.1
+
+N_init: 4500
+beta: 0.03
+
+R_guess: 0.75
+
+# english type corona
+N_init_UK_frac: 0.1
+beta_UK_multiplier: 1.55
+
+R_init : 5_800_000 * 0.065
+
+initialize_at_kommune_level: True
+initial_infection_distribution : 2021-01-15
+weighted_random_initial_infections: False
+
+lambda_E: 4 / 2.5
+lambda_I: 4 / 4.5 # Higher due to isolation
+
+start_date : 2021-01-15
+end_date : 2021-03-01
+
+
+
+contact_matrices_name: basis  # Target activity
+
+Intervention_contact_matrices_name : [[ned2021jan, 2021_fase1]]
+restriction_thresholds: [[2021-02-08, 2021-03-01]]  # Opening date for fase 1
+threshold_interventions_to_apply: [[3, 3]]
+
+#labels: custom
+#label_map: [[[Aalborg, Brønderslev, Frederikshavn, Hjørring, Jammerbugt, Læsø, Mariagerfjord, Morsø, Rebild, Thisted, Vesthimmerlands], # Nordjylland
+#             [Herning, Holstebro, Ikast-Brande, Lemvig, Ringkøbing-Skjern, Silkeborg, Skive, Struer, Viborg], # Vestjylland
+#             [Bornholm]]]
+
+
+Intervention_vaccination_schedule_name : reference_2021_feb_17
+start_date_offset: 2020-12-28 # Start date for vaccinations
+Intervention_vaccination_effect_delays : [[10, 21]]
+Intervention_vaccination_efficacies : [[0.95, 0.65]]
+
+intervention_removal_delay_in_clicks: 0

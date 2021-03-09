@@ -9,39 +9,40 @@ dependencies:
   - scipy
   - pandas
   - matplotlib
-  - seaborn
-  - iminuit
-  - statsmodels
-  - jupyter
-  - jupyterlab
+  # - seaborn
+  # - iminuit
+  # - statsmodels
+  # - jupyter
+  # - jupyterlab
   - tqdm
   - pyyaml
-  - black
-  - pysftp
+  # - black
+  # - pysftp
   - numba/label/dev::numba
-  - icc_rt
-  - joblib
-  - scikit-learn # uses ParameterSampler to fit multiple times
-  - psutil
-  - awkward
+  # - icc_rt
+  # - joblib
+  - scikit-learn
+  # - psutil
+  # - awkward
   - pyarrow
-  - pytables
-  - astropy
-  - imageio-ffmpeg
+  # - pytables
+  # - astropy
+  # - imageio-ffmpeg
   - h5py
-  - pathos
+  # - pathos
   - geopandas
-  - descartes
+  # - descartes
   - tinydb
-  - flake8
-  - pylint
+  # - flake8
+  # - pylint
   - attrdict
   # - sigfig
   # - datashader
+  - sympy
   - pip:
     #- fast-histogram
     #- mpl-scatter-density
-    - pygifsicle
+    # - pygifsicle
     - contexttimer
     - awkward1>=0.2.32
     - range-key-dict

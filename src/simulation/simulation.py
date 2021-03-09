@@ -1,26 +1,7 @@
-# from re import X TODO : Delete line
-from sys import version
 import numpy as np
-# import pandas as pd TODO : Delete line
-# import matplotlib.pyplot as plt TODO : Delete line
-from pathlib import Path
-# import multiprocessing as mp TODO : Delete line
-import h5py
-# from resource import getrusage, RUSAGE_SELF TODO : Delete line
-import warnings
-# from importlib import reload TODO : Delete line
-import os
-from IPython.display import display
-from contexttimer import Timer
+import pandas as pd
 
-# import yaml TODO : Delete line
-
-# conda install -c numba/label/dev numba
-# import numba as nb TODO : Delete line
-# from numba import njit, prange, objmode, typeof TODO : Delete line
-from numba.typed import List, Dict # TODO : Delete "Dict"
-# import uuid TODO : Delete line
-import datetime
+from numba.typed import List
 from numba.core.errors import (
     NumbaTypeSafetyWarning,
     NumbaExperimentalFeatureWarning,
@@ -28,13 +9,24 @@ from numba.core.errors import (
 )
 
 
-from tinydb import TinyDB, Query
-from tqdm import tqdm
+
+from pathlib import Path
+import os
+
+import h5py
+import warnings
+import datetime
+from contexttimer import Timer
+
+from tinydb import Query
+
 from functools import partial
+
+from tqdm import tqdm
 from p_tqdm import p_umap, p_uimap
 
-# import awkward as awkward0  # conda install awkward0, conda install -c conda-forge pyarrow    TODO : Delete line
-# import awkward1 as ak  # pip install awkward1 TODO : Delete line
+
+check_distributions = False
 
 debugging = False
 while True :
@@ -47,10 +39,11 @@ while True :
 
 # print(Path("").cwd())
 from src.utils import utils
-from src.simulation import nb_simulation
-from src.simulation import nb_load_jitclass
-from src import file_loaders
+from src.utils import file_loaders
 
+from src.simulation import nb_simulation
+from src.simulation import nb_jitclass
+from src.simulation import nb_network
 
 hdf5_kwargs = dict(track_order=True)
 np.set_printoptions(linewidth=200)
@@ -68,8 +61,8 @@ class Simulation :
         self.N_tot = cfg.network.N_tot
 
         self.hash = cfg.hash
+        self.my = nb_jitclass.initialize_My(self.cfg.deepcopy())
 
-        self.my = nb_simulation.initialize_My(self.cfg)
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
         if self.cfg.version == 1 :
@@ -85,101 +78,86 @@ class Simulation :
 
         # generate coordinates based on population density
         self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.network.ID)
-        coordinates_raw = utils.df_coordinates_to_coordinates(self.df_coordinates)
+
+        coordinates_raw   = utils.df_coordinates_to_coordinates(self.df_coordinates)
+        self.kommune_dict = utils.df_coordinates_to_kommune_dict(self.df_coordinates)
 
         if self.verbose :
             print(f"\nINITIALIZE VERSION {self.cfg.version} NETWORK")
 
-        #Version 1 do not have [house, work, other], from version 2 this is implemented.
-        if self.cfg.version >= 2 :
-            (
-                people_in_household,
-                age_distribution_per_people_in_household,
-            ) = utils.load_household_data()
-            household_size_dist_per_kommune, age_distribution_per_person_in_house_per_kommune, kommune_id = utils.load_household_data_kommune_specific()
-            N_ages = len(age_distribution_per_person_in_house_per_kommune[0,0])
-            kommune_ids = []
-            for val in self.df_coordinates["kommune"].values :
-                kommune_ids.append(kommune_id.get_loc(val))
-            kommune_ids = np.array(kommune_ids)
 
-            self.N_ages = N_ages
-            if self.verbose :
-                print("Connect Household") #was household and families are used interchangebly. Most places it is changed to house(hold) since it just is people living at the same adress.
+        household_size_distribution, age_distribution_in_households = file_loaders.load_household_data(self.kommune_dict)
 
-            (
-                mu_counter,
-                counter_ages,
-                agents_in_age_group,
-            ) = nb_simulation.place_and_connect_families_kommune_specific(
-                self.my,
-                household_size_dist_per_kommune,
-                age_distribution_per_person_in_house_per_kommune,
-                coordinates_raw,
-                kommune_ids,
-                self.N_ages,
-                verbose=self.verbose
-            )
+        self.N_ages = len(age_distribution_in_households[0, 0])
+        kommune_ids = np.array(self.df_coordinates.idx)
 
-            if self.verbose :
-                print("Connecting work and others, currently slow, please wait")
 
-            nb_simulation.connect_work_and_others(
-                self.my,
-                N_ages,
-                mu_counter,
-                np.array(self.cfg.network.work_matrix),
-                np.array(self.cfg.network.other_matrix),
-                agents_in_age_group,
-                verbose=self.verbose,
-            )
+        if self.verbose :
+            print("Connect Household") #was household and families are used interchangebly. Most places it is changed to house(hold) since it just is people living at the same adress.
 
-        else :
+        (
+            mu_counter,
+            counter_ages,
+            agents_in_age_group,
+        ) = nb_network.place_and_connect_families_kommune_specific(
+            self.my,
+            household_size_distribution,
+            age_distribution_in_households,
+            coordinates_raw,
+            kommune_ids,
+            self.N_ages,
+            verbose=self.verbose)
 
-            if self.verbose :
-                print("SETUP WEIGHTS AND COORDINATES")
-            nb_simulation.v1_initialize_my(self.my, coordinates_raw)
 
-            if self.verbose :
-                print("CONNECT NODES")
-            nb_simulation.v1_connect_nodes(self.my)
+        if self.verbose :
+            print("Connecting work and others, currently slow, please wait")
 
-            agents_in_age_group = List()
-            agents_in_age_group.append(np.arange(self.cfg.network.N_tot, dtype=np.uint32))
+        nb_network.connect_work_and_others(
+            self.my,
+            self.N_ages,
+            mu_counter,
+            np.array(self.cfg.network.work_matrix),
+            np.array(self.cfg.network.other_matrix),
+            agents_in_age_group,
+            verbose=self.verbose)
+
 
         self.agents_in_age_group = agents_in_age_group
-
-        return None
 
     def _save_initialized_network(self, filename) :
         if self.verbose :
             print(f"Saving initialized network to {filename}", flush=True)
-        utils.make_sure_folder_exist(filename)
-        my_hdf5ready = nb_load_jitclass.jitclass_to_hdf5_ready_dict(self.my)
+        file_loaders.make_sure_folder_exist(filename)
+        my_hdf5ready = file_loaders.jitclass_to_hdf5_ready_dict(self.my)
 
         with h5py.File(filename, "w", **hdf5_kwargs) as f :
             group_my = f.create_group("my")
-            nb_load_jitclass.save_jitclass_hdf5ready(group_my, my_hdf5ready)
+            file_loaders.save_jitclass_hdf5ready(group_my, my_hdf5ready)
             utils.NestedArray(self.agents_in_age_group).add_to_hdf5_file(f, "agents_in_age_group")
             f.create_dataset("N_ages", data=self.N_ages)
             self._add_cfg_to_hdf5_file(f)
 
     def _load_initialized_network(self, filename) :
+
         if self.verbose :
             print(f"Loading previously initialized network, please wait", flush=True)
+
         with h5py.File(filename, "r") as f :
             self.agents_in_age_group = utils.NestedArray.from_hdf5(
                 f, "agents_in_age_group"
             ).to_nested_numba_lists()
             self.N_ages = f["N_ages"][()]
 
-            my_hdf5ready = nb_load_jitclass.load_jitclass_to_dict(f["my"])
-            self.my = nb_load_jitclass.load_My_from_dict(my_hdf5ready, self.cfg)
+            my_hdf5ready = file_loaders.load_jitclass_to_dict(f["my"])
+            self.my = file_loaders.load_My_from_dict(my_hdf5ready, self.cfg.deepcopy())
         self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.network.ID)
+        self.kommune_dict   = utils.df_coordinates_to_kommune_dict(self.df_coordinates)
+
 
         # Update connection weights
         for agent in range(self.cfg.network.N_tot) :
-            nb_simulation.set_infection_weight(self.my, agent)
+            nb_network.set_infection_weight(self.my, agent)
+
 
     def initialize_network(self, force_rerun=False, save_initial_network=False, only_initialize_network=False, force_load_initial_network=False) :
         filename = "Initialized_networks/"
@@ -195,7 +173,7 @@ class Simulation :
             if self.verbose :
                 print("Initializing network since it was forced to")
 
-        elif not utils.file_exists(filename) :
+        elif not file_loaders.file_exists(filename) :
             initialize_network = True
             if self.verbose :
                 print("Initializing network since the hdf5-file does not exist")
@@ -215,6 +193,65 @@ class Simulation :
         elif not only_initialize_network :
             self._load_initialized_network(filename)
 
+
+    def intialize_interventions(self, verbose_interventions=None) :
+
+        if self.verbose :
+            print("\nINITIALING INTERVENTIONS")
+
+        if self.cfg.labels.lower() == "kommune" :
+            labels = self.df_coordinates["idx"].values
+
+        elif self.cfg.labels.lower() == "custom" :
+            labels_raw = self.df_coordinates["idx"].values
+            labels = np.zeros(np.shape(labels_raw))
+
+            for new_label, label_group in enumerate(self.cfg['label_map']) :
+                labels[np.isin(labels_raw, self.kommune_dict['name_to_id'][label_group])] = new_label + 1
+
+        elif self.cfg.labels.lower() == "none" :
+            labels = self.df_coordinates["idx"].values * 0
+
+        else :
+            raise ValueError(f'Label name: {self.cfg.labels.lower()} not known')
+
+
+        if verbose_interventions is None :
+            verbose_interventions = self.verbose
+
+        # Load the projected vaccination schedule
+        # TODO: This should properably be done at cfg generation for consistent hashes
+        vaccinations_per_age_group, vaccination_schedule = file_loaders.load_vaccination_schedule(self.cfg)
+
+        # Load the restriction contact matrices
+        # TODO: This should properably be done at cfg generation for consistent hashes
+        work_matrix_restrict = []
+        other_matrix_restrict = []
+
+        for scenario in self.cfg.Intervention_contact_matrices_name :
+            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=len(np.unique(labels)))
+
+            # Check the loaded contact matrices have the right size
+            if not len(tmp_other_matrix_restrict) == len(np.unique(labels)) :
+                raise ValueError(f'Number of labels ({len(np.unique(labels))}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for scenario: {scenario} and label: {self.cfg.labels}')
+
+            work_matrix_restrict.append(tmp_work_matrix_restrict)
+            other_matrix_restrict.append(tmp_other_matrix_restrict)
+
+        # Store the labels in my
+        self.my.initialize_labels(labels)
+
+        self.intervention = nb_jitclass.Intervention(
+            self.my.cfg,
+            self.my.cfg_network,
+            labels = labels,
+            vaccinations_per_age_group = np.array(vaccinations_per_age_group),
+            vaccination_schedule = np.array(vaccination_schedule),
+            work_matrix_restrict = np.array(work_matrix_restrict),
+            other_matrix_restrict = np.array(other_matrix_restrict),
+            verbose=verbose_interventions)
+
+
     def initialize_states(self) :
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
@@ -228,92 +265,168 @@ class Simulation :
         self.N_infectious_states = 4  # This means the 5'th state
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
-        self.state_total_counts     = np.zeros(self.N_states, dtype=np.uint32)
-        self.variant_counts         = np.zeros(2, dtype=np.uint32)  # TODO: Generalize this sta
-        self.infected_per_age_group = np.zeros(self.N_ages, dtype=np.uint32)
+        self.state_total_counts          = np.zeros(self.N_states, dtype=np.uint32)
+        self.stratified_infection_counts = np.zeros((self.intervention.N_labels, 2, self.N_ages), dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
-        self.g = nb_simulation.Gillespie(self.my, self.N_states)
+        self.g = nb_jitclass.Gillespie(self.my, self.N_states)
 
-        self.SIR_transition_rates = utils.initialize_SIR_transition_rates(
-            self.N_states, self.N_infectious_states, self.cfg
-        )
-        if self.cfg.make_initial_infections_at_kommune :
-            infected_per_kommune_ints, kommune_names, my_kommune = file_loaders.load_kommune_data(self.df_coordinates)
+        self.SIR_transition_rates = utils.initialize_SIR_transition_rates(self.N_states, self.N_infectious_states, self.cfg)
 
-            if self.cfg.R_init > 0 :
-                raise ValueError("R_init not implemented when using kommune configuration")
 
-            nb_simulation.make_initial_infections_from_kommune_data(
-                self.my,
-                self.g,
-                self.state_total_counts,
-                self.agents_in_state,
-                self.SIR_transition_rates,
-                self.agents_in_age_group,
-                self.initial_ages_exposed,
-                # self.N_infectious_states,
-                self.N_states,
-                infected_per_kommune_ints,
-                kommune_names,
-                my_kommune,
-                verbose=self.verbose)
+        # Find the possible agents
+        possible_agents = nb_simulation.find_possible_agents(self.my, self.initial_ages_exposed, self.agents_in_age_group)
+
+        # Load the age distribution for infected
+        age_distribution_infected, age_distribution_immunized = file_loaders.load_infection_age_distributions(self.cfg.initial_infection_distribution, self.N_ages)
+
+        # Adjust for the untested fraction
+        age_distribution_infected  /= self.cfg.testing_penetration
+        age_distribution_immunized /= self.cfg.testing_penetration
+
+        # Convert to probability
+        age_distribution_infected  /= age_distribution_infected.sum()
+        age_distribution_immunized /= age_distribution_immunized.sum()
+
+        # Set the probability to choose agents
+        if self.cfg.initialize_at_kommune_level :
+
+            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.kommune_dict)
+
+            infected_per_kommune  /= infected_per_kommune.sum()
+            immunized_per_kommune /= immunized_per_kommune.sum()
+
+            # Choose the a number of initially infected and immunized per kommune
+            kommune_ids = np.arange(len(infected_per_kommune))
+            N_kommune   = np.zeros(np.shape(kommune_ids), dtype=int)
+            R_kommune   = np.zeros(np.shape(kommune_ids), dtype=int)
+
+            N_inds, N_counts = np.unique(np.random.choice(kommune_ids, size=self.my.cfg.N_init, p=infected_per_kommune),  return_counts=True)
+            R_inds, R_counts = np.unique(np.random.choice(kommune_ids, size=self.my.cfg.R_init, p=immunized_per_kommune), return_counts=True)
+
+            N_kommune[N_inds] += N_counts
+            R_kommune[R_inds] += R_counts
+
+            initialization_subgroups = []
+
+            # Loop over kommuner
+            for kommune_id, N, R in zip(kommune_ids, N_kommune, R_kommune) :
+
+                agents_in_kommune = np.array([agent for agent in possible_agents if self.my.kommune[agent] == kommune_id])
+
+                # Check if kommune is valid
+                if len(agents_in_kommune) == 0:
+                    continue
+
+                # Check if any are to be infectd
+                if N == 0 and R == 0 :
+                    continue
+
+                # Check if too many have been selected
+                if len(agents_in_kommune) < (N + R) :
+                    warnings.warn(f"{N+R} agents selected for initialization in a kommune {kommune_id} : {self.kommune_dict['id_to_name'][kommune_id]} but only {len(agents_in_kommune)} agents exists")
+                    N = int(len(agents_in_kommune) * N / (N + R))
+                    R = int(len(agents_in_kommune) * R / (N + R))
+
+                # Determine the age distribution in the simulation
+                ages_in_kommune = self.my.age[agents_in_kommune]
+                agent_age_distribution = np.zeros(self.N_ages)
+                age_inds, age_counts = np.unique(ages_in_kommune, return_counts=True)
+                agent_age_distribution[age_inds] += age_counts
+
+                # Adjust for age distribution of the populaiton
+                prior_infected  = age_distribution_infected[ages_in_kommune]  / agent_age_distribution[ages_in_kommune]
+                prior_immunized = age_distribution_immunized[ages_in_kommune] / agent_age_distribution[ages_in_kommune]
+
+                # Convert to probability
+                prior_infected  /= prior_infected.sum()
+                prior_immunized /= prior_immunized.sum()
+
+                initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized))
 
         else :
+
+            # Determine the age distribution in the simulation
+            ages = self.my.age[possible_agents]
+            _, agent_age_distribution = np.unique(ages, return_counts=True)
+
+            # Compute prior and adjust for age distribution of the populaiton
+            prior_infected  = age_distribution_infected[ages]  / agent_age_distribution[ages]
+            prior_immunized = age_distribution_immunized[ages] / agent_age_distribution[ages]
+
+            # Convert to probability
+            prior_infected  /= prior_infected.sum()
+            prior_immunized /= prior_immunized.sum()
+
+            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized)]
+
+
+        # Loop over subgroups and initialize
+        for subgroup in tqdm(initialization_subgroups, total=len(initialization_subgroups), disable=(not self.verbose), position=0, leave=True) :
+
+            agents_in_subgroup, N, R, prior_infected, prior_immunized = subgroup
+
             nb_simulation.initialize_states(
                 self.my,
                 self.g,
+                self.intervention,
                 self.SIR_transition_rates,
                 self.state_total_counts,
-                self.variant_counts,
-                self.infected_per_age_group,
+                self.stratified_infection_counts,
                 self.agents_in_state,
-                self.agents_in_age_group,
-                self.initial_ages_exposed,
-                #self.N_infectious_states,
-                self.N_states,
+                agents_in_subgroup,
+                N,
+                R,
+                prior_infected,
+                prior_immunized,
                 verbose=self.verbose)
 
-    def run_simulation(self, verbose_interventions=None) :
+        if check_distributions:
+            ages = [self.my.age[agent] for agent in possible_agents if self.my.agent_is_infectious(agent)]
+            _, dist = np.unique(ages, return_counts=True)
+            dist = dist / dist.sum()
+
+            print("Deviation of distribution for infected per age group (percentage points)")
+            print(np.round(100 * (dist - age_distribution_infected), 1))
+
+
+            ages = [self.my.age[agent] for agent in possible_agents if self.my.state[agent] == self.N_states - 1]
+            _, dist = np.unique(ages, return_counts=True)
+            dist = dist / dist.sum()
+
+            print("Deviation of distribution for immunized per age group (percentage points)")
+            print(np.round(100 * (dist - age_distribution_immunized), 1))
+
+
+            if self.my.cfg.initialize_at_kommune_level :
+
+                kommune = [self.my.kommune[agent] for agent in possible_agents if self.my.agent_is_infectious(agent)]
+                dist = np.zeros(np.shape(infected_per_kommune))
+                for k in kommune :
+                    dist[k] += 1
+                dist /= dist.sum()
+
+                print("Deviation of distribution for infected per kommune (percentage points)")
+                print(np.round(100 * (dist - infected_per_kommune), 1))
+
+                if self.my.cfg.R_init > 0 :
+
+                    kommune = [self.my.kommune[agent] for agent in possible_agents if self.my.state[agent] == self.g.N_states]
+                    dist = np.zeros(np.shape(infected_per_kommune))
+                    for k in kommune :
+                        dist[k] += 1
+                    dist /= dist.sum()
+
+                    print("Deviation of distribution for immunized per kommune (percentage points)")
+                    print(np.round(100 * (dist - immunized_per_kommune), 1))
+
+
+    def run_simulation(self) :
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
         if self.verbose :
             print("\nRUN SIMULATION")
-
-        if self.cfg.make_restrictions_at_kommune_level :
-            labels = self.df_coordinates["idx"].values
-        else :
-            labels = self.df_coordinates["idx"].values * 0
-
-        if verbose_interventions is None :
-            verbose_interventions = self.verbose
-
-        # Load the projected vaccination schedule
-        # TODO: This should properably be done at cfg generation for consistent hashes
-        vaccinations_per_age_group, vaccination_schedule = utils.load_vaccination_schedule(self.cfg)
-
-        # Load the restriction contact matrices
-        # TODO: This should properably be done at cfg generation for consistent hashes
-        work_matrix_restrict = []
-        other_matrix_restrict = []
-
-        for scenario in self.cfg.Intervention_contact_matrices_name :
-            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = utils.load_contact_matrices(scenario=scenario)
-
-            work_matrix_restrict.append(tmp_work_matrix_restrict)
-            other_matrix_restrict.append(tmp_other_matrix_restrict)
-
-
-        self.intervention = nb_simulation.Intervention(
-            self.my.cfg,
-            self.my.cfg_network,
-            labels = labels,
-            vaccinations_per_age_group = np.array(vaccinations_per_age_group),
-            vaccination_schedule = np.array(vaccination_schedule),
-            work_matrix_restrict = np.array(work_matrix_restrict),
-            other_matrix_restrict = np.array(other_matrix_restrict),
-            verbose=verbose_interventions)
 
         res = nb_simulation.run_simulation(
             self.my,
@@ -321,20 +434,18 @@ class Simulation :
             self.intervention,
             self.SIR_transition_rates,
             self.state_total_counts,
-            self.variant_counts,
-            self.infected_per_age_group,
+            self.stratified_infection_counts,
             self.agents_in_state,
-            self.N_states,
             self.N_infectious_states,
             self.nts,
             self.verbose)
 
 
-        out_time, out_state_counts, out_variant_counts, out_infected_per_age_group, out_my_state, intervention = res
+        out_time, out_state_counts, out_stratified_infection_counts, out_my_state, intervention = res
 
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
-        self.df = utils.counts_to_df(out_time, out_state_counts, out_variant_counts, out_infected_per_age_group)
+        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_infection_counts, self.cfg)
         self.intervention = intervention
 
         return self.df
@@ -348,7 +459,6 @@ class Simulation :
         date = datetime.datetime.now().strftime("%Y-%m-%d")
         filename_cfg = f"Output/cfgs/cfg_{date}_{self.hash}.yaml"
         self.cfg.dump_to_file(filename_cfg, exclude="network.ID")
-        return None
 
     def _add_cfg_to_hdf5_file(self, f, cfg=None) :
         if cfg is None :
@@ -360,26 +470,25 @@ class Simulation :
 
         # Save CSV
         if save_csv :
-            filename_csv = self._get_filename(name="ABM", filetype="csv")
-            utils.make_sure_folder_exist(filename_csv)
+            filename_csv = self._get_filename(name='ABM', filetype='csv')
+            file_loaders.make_sure_folder_exist(filename_csv)
             self.df.to_csv(filename_csv, index=False)
 
         if save_hdf5 :
-            filename_hdf5 = self._get_filename(name="ABM", filetype="hdf5")
-            utils.make_sure_folder_exist(filename_hdf5)
-            with h5py.File(filename_hdf5, "w", **hdf5_kwargs) as f :  #
-                f.create_dataset("df", data=utils.dataframe_to_hdf5_format(self.df))
+            filename_hdf5 = self._get_filename(name='ABM', filetype='hdf5')
+            file_loaders.make_sure_folder_exist(filename_hdf5)
+            with h5py.File(filename_hdf5, 'w', **hdf5_kwargs) as f :  #
+                f.create_dataset('df', data=utils.dataframe_to_hdf5_format(self.df))
                 self._add_cfg_to_hdf5_file(f)
 
-        return None
 
     def _save_simulation_results(self, save_only_ID_0=False, time_elapsed=None) :
 
         if save_only_ID_0 and self.cfg.network.ID != 0 :
-            return None
+            return
 
         filename_hdf5 = self._get_filename(name="network", filetype="hdf5")
-        utils.make_sure_folder_exist(filename_hdf5)
+        file_loaders.make_sure_folder_exist(filename_hdf5)
 
         with h5py.File(filename_hdf5, "w", **hdf5_kwargs) as f :  #
             f.create_dataset("my_state", data=self.my_state)
@@ -403,15 +512,12 @@ class Simulation :
 
             self._add_cfg_to_hdf5_file(f)
 
-        return None
-
     def save(self, save_csv=False, save_hdf5=True, save_only_ID_0=False, time_elapsed=None) :
         self._save_cfg()
         self._save_dataframe(save_csv=save_csv, save_hdf5=save_hdf5)
         self._save_simulation_results(save_only_ID_0=save_only_ID_0, time_elapsed=time_elapsed)
 
 
-#%%
 
 
 def run_single_simulation(
@@ -420,8 +526,8 @@ def run_single_simulation(
     force_rerun=False,
     only_initialize_network=False,
     save_initial_network=False,
-    save_csv=False,
-) :
+    save_csv=False) :
+
     with Timer() as t, warnings.catch_warnings() :
         if not verbose :
             # ignore warning about run_algo
@@ -438,6 +544,8 @@ def run_single_simulation(
         if only_initialize_network :
             return None
 
+        simulation.intialize_interventions()
+
         simulation.initialize_states()
 
         simulation.run_simulation()
@@ -448,13 +556,13 @@ def run_single_simulation(
 
 
 def update_database(db_cfg, q, cfg) :
-    cfg.network.pop("ID")
-    if not db_cfg.contains(q.hash == cfg.hash) :
+
+    if not db_cfg.contains((q.hash == cfg.hash) & (q.network.ID == cfg.network.ID)) :
         db_cfg.insert(cfg)
 
 
 def run_simulations(
-        d_simulation_parameters,
+        simulation_parameters,
         N_runs=2,
         num_cores_max=None,
         N_tot_max=False,
@@ -463,10 +571,18 @@ def run_simulations(
         dry_run=False,
         **kwargs) :
 
+    if isinstance(simulation_parameters, dict) :
+        cfgs_all = utils.generate_cfgs(simulation_parameters, N_runs, N_tot_max, verbose=verbose)
 
-    d_simulation_parameters = utils.format_simulation_paramters(d_simulation_parameters)
+        N_tot_max = utils.d_num_cores_N_tot[utils.extract_N_tot_max(simulation_parameters)]
 
-    cfgs_all = utils.generate_cfgs(d_simulation_parameters, N_runs, N_tot_max, verbose=verbose)
+    elif isinstance(simulation_parameters[0], utils.DotDict) :
+        cfgs_all = simulation_parameters
+
+        N_tot_max = np.max([cfg.network.N_tot for cfg in cfgs_all])
+
+    else :
+        raise ValueError(f"simulation_parameters not of the correct type")
 
     if len(cfgs_all) == 0 :
         N_files = 0
@@ -475,7 +591,8 @@ def run_simulations(
     db_cfg = utils.get_db_cfg()
     q = Query()
 
-    db_counts = np.array([db_cfg.count(q.hash == cfg.hash) for cfg in cfgs_all])
+    db_counts = np.array([db_cfg.count((q.hash == cfg.hash) & (q.network.ID == cfg.network.ID)) for cfg in cfgs_all])
+
     assert np.max(db_counts) <= 1
 
     # keep only cfgs that are not in the database already
@@ -486,14 +603,16 @@ def run_simulations(
 
     N_files = len(cfgs)
 
-    num_cores = utils.get_num_cores_N_tot(d_simulation_parameters, num_cores_max)
+    num_cores = utils.get_num_cores_N_tot(N_tot_max, num_cores_max)
 
-    if isinstance(d_simulation_parameters, dict) :
-        s_simulation_parameters = str(d_simulation_parameters)
-    elif isinstance(d_simulation_parameters, list) :
-        s_simulation_parameters = f"{len(d_simulation_parameters)} MCMC runs, see cfg/simulation_parameters.yaml for more info"
+    if isinstance(simulation_parameters, dict) :
+        s_simulation_parameters = str(simulation_parameters)
+
+    elif isinstance(simulation_parameters, list) :
+        s_simulation_parameters = f"{len(simulation_parameters)} runs"
+
     else :
-        raise AssertionError("d_simulation_parameters neither list nor dict")
+        raise AssertionError("simulation_parameters neither list nor dict")
 
     print( f"\n\n" f"Generating {N_files :3d} network-based simulations",
            f"with {num_cores} cores",

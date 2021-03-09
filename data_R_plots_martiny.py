@@ -1,36 +1,24 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 import scipy as sp
 
-# from iminuit import Minuit
-from collections import defaultdict
-import joblib
 from importlib import reload
 from src.utils import utils
 from src import plot
 from src import file_loaders
 from src import rc_params
-from src import fits
 
 from matplotlib.backends.backend_pdf import PdfPages
-try:
-    from src.utils import utils
 
-    # from src import simulation_utils
-    from src import file_loaders
-    from src import SIR
-except ImportError:
-    import utils
+from src.utils import utils
+from src.utils import file_loaders
+from src import SIR
 
-    # import simulation_utils
-    import file_loaders
-    import SIR
 
-def fit_exponential(x, y):	
-	y = np.array(y)	
+def fit_exponential(x, y):
+	y = np.array(y)
 	popt, pcov = sp.optimize.curve_fit(exponential, x, y, p0=(y[0], 1, 1), bounds=([y[0]*0.5,0,0], [y[0]*1.5,2,100]))
 	return popt, pcov
 
@@ -90,8 +78,8 @@ def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_lis
         if i in range(9,15):
                 name = str(cfg.threshold_info[1]) + str(cfg.threshold_info[2])
         else:
-            name = str(cfg.tracking_delay)# + " " + str(cfg.tracking_rates) 
-        name_list.append(name)      
+            name = str(cfg.tracking_delay)# + " " + str(cfg.tracking_rates)
+        name_list.append(name)
         # popt, _ = fit_exponential(t, df["I1"]/2)
         # axes[0].plot(t, exponential(t, *popt), label="Fitted Curve") #same as line above \/
         # RS = [popt[1]]
@@ -113,7 +101,7 @@ def analyse_single_ABM_simulation(cfg, abm_files, network_files, fi_list, pc_lis
         # axes[1].plot([1,100],[RS[1],RS[1]])
         i += 1
         #axes[1].legend()
-    
+
 
     return fig, axes, fi_list, pc_list,name_list
 

@@ -1,16 +1,33 @@
-from numba.core.types.scalars import Float
 import numpy as np
-import pandas as pd
-import multiprocessing as mp
-from pathlib import Path
-import yaml
-
 import numba as nb
-from numba import njit, prange, objmode, typeof #TODO delete prange, objmode
-from numba.typed import List, Dict
-# import platform #TODO delete line
+import pandas as pd
+
+import matplotlib.pyplot as plt
+import multiprocessing as mp
+
+import re
 import datetime
 import os
+from pathlib import Path
+
+
+from numba import njit, typeof, generated_jit
+from numba.core import types
+from numba.typed import List, Dict
+from numba.experimental import jitclass
+
+import copy
+
+import yaml
+import h5py
+import csv
+
+
+from scipy.stats import uniform as sp_uniform
+from scipy.stats import randint
+from scipy.special import erf
+
+from sklearn.model_selection import ParameterSampler
 
 import awkward1 as ak
 import dict_hash
@@ -19,6 +36,19 @@ from attrdict import AttrDict
 
 from tinydb import TinyDB, Query
 
+from src.utils import file_loaders
+from src.simulation import nb_jitclass
+
+
+from decimal import Decimal
+
+
+from range_key_dict import RangeKeyDict  # pip install range-key-dict
+from itertools import product
+from functools import reduce
+from operator import iand
+
+from sympy.parsing.sympy_parser import parse_expr
 
 
 def sha256(d) :
@@ -57,37 +87,6 @@ def get_num_cores(num_cores_max=None, subtract_cores=1) :
     return num_cores
 
 
-def delete_file(filename) :
-    try :
-        Path(filename).unlink()
-    except FileNotFoundError :
-        pass
-
-
-def file_exists(filename) :
-    if isinstance(filename, str) :
-        filename = Path(filename)
-    return filename.exists()
-
-
-def make_sure_folder_exist(filename, delete_file_if_exists=False) :
-    if isinstance(filename, str) :
-        filename = Path(filename)
-    filename.parent.mkdir(parents=True, exist_ok=True)
-    if delete_file_if_exists and filename.exists() :
-        filename.unlink()
-
-
-def load_yaml(filename) :
-    with open(filename) as file :
-        tmp = yaml.safe_load(file)
-
-        for key, val in tmp.items() :
-            if isinstance(val, dict) :
-                tmp[key] = DotDict(val)
-
-        return DotDict(tmp)
-
 def format_time(t) :
     return str(datetime.timedelta(seconds=t))
 
@@ -96,7 +95,7 @@ def test_length(arr1, arr2, error_message) :
     if not len(arr1) == len(arr2) :
         raise ValueError(error_message)
 
-#%%
+
 
 
 @njit
@@ -160,9 +159,6 @@ def get_size(x, unit="gb") :
 
     return x.size * x.itemsize / d_prefix_conversion[unit.lower()]
 
-
-import re
-from numba import typeof
 
 
 def get_numba_list_dtype(x, as_string=False) :
@@ -281,10 +277,9 @@ def list_of_arrays_to_list_of_lists(list_of_arrays) :
 #         res.append(dtype(len(nested_list[i])))
 #     return np.asarray(res)
 
-#%%
+
 # Counters in Numba
-from numba import types
-from numba.experimental import jitclass
+
 
 
 @jitclass({"_counter" : types.DictType(types.int32, types.uint16)})
@@ -385,7 +380,7 @@ def array_to_counter2(arr) :
     return counter.d
 
 
-#%%
+
 # Cumulative Sums in numba
 
 
@@ -422,7 +417,6 @@ def numba_cumsum_3D(x, axis) :
     return y
 
 
-from numba import generated_jit, types
 
 # overload
 # https ://jcristharif.com/numba-overload.html
@@ -446,13 +440,10 @@ def numba_cumsum(x, axis=None) :
     return numba_cumsum_shape(x, axis)
 
 
-#%%
+
 
 
 # Counters in Numba
-from numba import types
-from numba.experimental import jitclass
-
 
 def NumbaMutableArray(offsets, content, dtype) :
 
@@ -557,8 +548,6 @@ class MutableArray :
         self._initialize_numba_array()
 
 
-#%%
-
 
 def is_nested_numba_list(nested_lists) :
     if isinstance(nested_lists, List) and isinstance(nested_lists[0], (List, np.ndarray)) :
@@ -635,12 +624,6 @@ def to_nested_numba_lists(content, offsets) :
     return out
 
 
-#%%
-
-
-#%%
-# from collections import UserDict
-
 
 class DotDict(AttrDict) :
     """
@@ -652,17 +635,17 @@ class DotDict(AttrDict) :
     """
 
     def deepcopy(self) :
-        copy = DotDict()
+        out = DotDict()
 
         for key, val in self.items() :
 
             if isinstance(val, type(self)) :
-                copy[key] = val.deepcopy()
+                out[key] = val.deepcopy()
 
             else :
-                copy[key] = val
+                out[key] =  copy.deepcopy(val)
 
-        return copy
+        return out
 
     def to_dict(self, exclude='') :
         out = {}
@@ -683,6 +666,7 @@ class DotDict(AttrDict) :
 
             elif isinstance(val, np.ndarray) :
                 out[key] = val.tolist()
+
             else :
                 out[key] = val
 
@@ -690,10 +674,11 @@ class DotDict(AttrDict) :
 
     def dump_to_file(self, filename, exclude=None) :
         if any(substring in filename for substring in ["yaml", "yml"]) :
-            make_sure_folder_exist(filename)
+            file_loaders.make_sure_folder_exist(filename)
 
             with open(filename, "w") as yaml_file :
                 yaml.dump(self.to_dict(exclude="ID"), yaml_file, default_flow_style=False, sort_keys=False)
+
         else :
             raise AssertionError("This filetype is not yet implemented. Currently only yamls")
 
@@ -704,14 +689,9 @@ class DotDict(AttrDict) :
         return s
 
 
-# dotdict = DotDict({"first_name" : "Christian", "last_name" : "Michelsen"})
-# dotdict.middle = 'XXX'
-
-#%%
-
 
 def get_parameter_to_latex() :
-    return load_yaml("cfg/parameter_to_latex.yaml")
+    return file_loaders.load_yaml("cfg/parameter_to_latex.yaml")
 
 
 def human_format(num, digits=3) :
@@ -754,7 +734,7 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
 
     if not cfg.do_interventions :
         exclude.append("interventions_to_apply")
-        exclude.append("f_daily_tests")
+        exclude.append("daily_tests")
         exclude.append("test_delay_in_clicks")
         exclude.append("results_delay_in_clicks")
         exclude.append("chance_of_finding_infected")
@@ -793,7 +773,7 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
         cfg.N_init_UK = human_format(cfg.N_init_UK)
 
     # parameter_to_latex = get_parameter_to_latex()
-    parameter_to_latex = load_yaml("cfg/parameter_to_latex.yaml")
+    parameter_to_latex = file_loaders.load_yaml("cfg/parameter_to_latex.yaml")
 
     exclude.append("version")
     exclude.append("hash")
@@ -858,8 +838,6 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
 #     return dict_to_title(d, N, exclude, in_two_line)
 
 
-from decimal import Decimal
-
 
 def round_to_uncertainty(value, uncertainty) :
     # round the uncertainty to 1-2 significant digits
@@ -870,8 +848,6 @@ def round_to_uncertainty(value, uncertainty) :
     # round the value to remove excess digits
     return round(Decimal(value).scaleb(-exponent).quantize(u)), u, exponent
 
-
-# import sigfig
 
 
 def format_asymmetric_uncertanties(value, errors, name="I") :
@@ -965,7 +941,7 @@ def format_relative_uncertainties(x, name) :
     return s
 
 
-#%%
+
 
 
 def df_encode_asci_to_utf8(series) :
@@ -991,7 +967,7 @@ def dataframe_to_hdf5_format(df_in, include_index=False, cols_to_str=None) :
     return np.array(df.to_records(index=include_index, **kwargs))
 
 
-#%%
+
 
 
 @njit
@@ -999,10 +975,9 @@ def numba_random_choice_list(l) :
     return l[np.random.randint(len(l))]
 
 
-#%%
 
 
-from scipy.special import erf
+
 
 
 def get_central_confidence_intervals(x, agg_func=np.median, N_sigma=1) :
@@ -1021,7 +996,7 @@ def SDOM(x) :
     return np.std(x) / np.sqrt(len(x))
 
 
-#%%
+
 
 
 # def load_df_coordinates() :
@@ -1034,39 +1009,25 @@ def SDOM(x) :
 #     return load_df_coordinates().iloc[coordinate_indices].reset_index(drop=True)
 
 
-#%%
 
-
-import numpy as np
-from range_key_dict import RangeKeyDict  # pip install range-key-dict
-from itertools import product
-from numba import njit
-from numba.typed import List, Dict
-import pandas as pd
-from pathlib import Path
-import matplotlib.pyplot as plt
-import csv
-import numba as nb
-
-from src.simulation import nb_simulation
 
 
 def get_cfg_default() :
     """ Default Simulation Parameters """
-    cfg              = load_yaml("cfg/simulation_parameters_default.yaml")
-    cfg.network      = load_yaml("cfg/simulation_parameters_network.yaml")
-    #cfg.intervention = load_yaml("cfg/simulation_parameters_intervention.yaml")
+    cfg              = file_loaders.load_yaml("cfg/simulation_parameters_default.yaml")
+    cfg.network      = file_loaders.load_yaml("cfg/simulation_parameters_network.yaml")
+    #cfg.intervention = file_loaders.load_yaml("cfg/simulation_parameters_intervention.yaml")
     return cfg
 
 
 # def get_cfg_settings() :
 #     """ CFG Settings """
 #     yaml_filename = "cfg/settings.yaml"
-#     return load_yaml(yaml_filename)
+#     return file_loaders.load_yaml(yaml_filename)
 
 # Load numba specifications
-spec_cfg            = nb_simulation.spec_cfg
-spec_network        = nb_simulation.spec_network
+spec_cfg            = nb_jitclass.spec_cfg
+spec_network        = nb_jitclass.spec_network
 #spec_intervention   = nb_simulation.spec_intervention
 spec = {**spec_cfg, **spec_network}
 
@@ -1093,7 +1054,11 @@ def format_simulation_paramters(d_simulation_parameters) :
         elif isinstance(val, float) and isinstance(spec[key], nb.types.Integer) :
             d_simulation_parameters[key] = int(val)
 
+        elif key == 'label_map' :
+            d_simulation_parameters[key] = sort_nested_list(val)
+
     return d_simulation_parameters
+
 
 def format_cfg(cfg, spec) :
 
@@ -1162,6 +1127,9 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
         )
 
     else :
+
+        d_simulation_parameters = format_simulation_paramters(d_simulation_parameters)
+
         cfg_default = get_cfg_default()
 
         d_list = []
@@ -1172,6 +1140,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                 lst = [lst]
 
             d_list.append([{name : val} for val in lst])
+
         d_list.append([{"ID" : ID} for ID in range(N_runs)])
         all_combinations = list(product(*d_list))
 
@@ -1186,16 +1155,20 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                 key = list(d.keys())[0]
 
                 if key in spec_cfg.keys() :
+
+                    if key == "initial_infection_distribution" and not d["initial_infection_distribution"] == "random" :
+                        d["initial_infection_distribution"] = file_loaders.get_SSI_data(date=d["initial_infection_distribution"], return_name=True, verbose=verbose)
+
                     cfg.update(d)
+
 
                 elif key in spec_network.keys() :
                     cfg["network"].update(d)
 
                     if key == "contact_matrices_name" :
                         # TODO : fix the DotDict indexing
-                        work_matix, other_matrix, work_other_ratio, _ = load_contact_matrices(scenario = d[key])
-                        cfg["network"].update({"work_matrix" : work_matix, "other_matrix" : other_matrix, "work_other_ratio" : work_other_ratio})
-
+                        work_matix, other_matrix, work_other_ratio, _ = file_loaders.load_contact_matrices(scenario = d[key])
+                        cfg["network"].update({"work_matrix" : work_matix[0], "other_matrix" : other_matrix[0], "work_other_ratio" : work_other_ratio[0]})
 
                 #elif key in spec_intervention.keys() :
                 #    cfg["intervention"].update(d)
@@ -1276,8 +1249,7 @@ def extract_N_tot_max(d_simulation_parameters) :
         return get_cfg_default()["N_tot"]
 
 
-def get_num_cores_N_tot(d_simulation_parameters, num_cores_max=None) :
-    N_tot_max = d_num_cores_N_tot[extract_N_tot_max(d_simulation_parameters)]
+def get_num_cores_N_tot(N_tot_max, num_cores_max=None) :
     num_cores = get_num_cores(N_tot_max)
     if num_cores_max :
         return min([num_cores, num_cores_max])
@@ -1286,9 +1258,7 @@ def get_num_cores_N_tot(d_simulation_parameters, num_cores_max=None) :
 
 
 def load_df_coordinates(N_tot, ID) :
-    # np.random.seed(ID)
-    # coordinates = np.load(coordinates_filename)
-    coordinates_filename = "Data/GPS_coordinates.feather"
+    coordinates_filename = "Data/population_information/GPS_coordinates.feather"
     df_coordinates = (
         pd.read_feather(coordinates_filename)
         .sample(N_tot, replace=False, random_state=ID)
@@ -1296,27 +1266,19 @@ def load_df_coordinates(N_tot, ID) :
     )
     return df_coordinates
 
-    # coordinates = df_coordinates_to_coordinates(df_coordinates)
-
-    # if N_tot > len(df_coordinates) :
-    #     raise AssertionError(
-    #         "N_tot cannot be larger than coordinates (number of generated houses in DK)"
-    #     )
-
-    # index = np.arange(len(df_coordinates), dtype=np.uint32)
-    # index_subset = np.random.choice(index, N_tot, replace=False)
-    # return coordinates[index_subset], index_subset
-
-
-# def load_coordinates_indices(coordinates_filename, N_tot, ID) :
-#     return load_coordinates(coordinates_filename, N_tot, ID)[1]
-
 
 def df_coordinates_to_coordinates(df_coordinates) :
     return df_coordinates[["Longitude", "Lattitude"]].values
 
 
-#%%
+
+def df_coordinates_to_kommune_dict(df_coordinates) :
+
+    # Construct the kommune dict
+    IDs, inds = np.unique(df_coordinates.idx, return_index=True)
+    names = df_coordinates.kommune[inds].values
+
+    return {'id_to_name' : pd.Series(names, index=IDs), 'name_to_id' : pd.Series(IDs, index=names)}
 
 
 @njit
@@ -1438,50 +1400,47 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
     )
 
 
-#%%
 
 
-def counts_to_df(time, state_counts, variant_counts, infected_per_age_group) :  #
+
+def counts_to_df(time, state_counts, stratified_infected, cfg) :  #
 
     time = np.array(time)
     state_counts = np.array(state_counts)
-    variant_counts = np.array(variant_counts)
-    infected_per_age_group = np.array(infected_per_age_group)
+    stratified_infected = np.array(stratified_infected)
 
     N_states     = np.size(state_counts, 1)
-    N_variants   = np.size(variant_counts, 1)
-    N_age_groups = np.size(infected_per_age_group, 1)
+    N_labels     = np.size(stratified_infected, 1)
+    N_variants   = np.size(stratified_infected, 2)
+    N_age_groups = np.size(stratified_infected, 3)
+
 
     header = [
-        "Time",
-        "E1", "E2", "E3", "E4",
-        "I1", "I2", "I3", "I4",
-        "R"]
-
-    header.extend(["I^V_" + str(i) for i in range(N_variants)])
-    header.extend(["I^A_" + str(i) for i in range(N_age_groups)])
+        'Time',
+        'E1', 'E2', 'E3', 'E4',
+        'I1', 'I2', 'I3', 'I4',
+        'R']
 
     k_start = 0
     k_stop  = 1
-    df_time     = pd.DataFrame(time, columns=header[k_start:k_stop])
+    df_time = pd.DataFrame(time, columns=header[k_start:k_stop])
 
     k_start = k_stop
     k_stop  += N_states
-    df_states   = pd.DataFrame(state_counts, columns=header[k_start:k_stop])
+    df_states = pd.DataFrame(state_counts, columns=header[k_start:k_stop])
 
-    k_start = k_stop
-    k_stop  += N_variants
-    df_variants = pd.DataFrame(variant_counts, columns=header[k_start:k_stop])
+    df = pd.concat([df_time, df_states], axis=1)
 
-    k_start = k_stop
-    k_stop  += N_age_groups
-    df_age_groups = pd.DataFrame(infected_per_age_group, columns=header[k_start:k_stop])
+    for l in range(N_labels) :
+        for v in range(N_variants) :
 
-    df = pd.concat([df_time, df_states, df_variants, df_age_groups], axis=1)  # .convert_dtypes()
+            headers = ['T_l_' + str(l) + '_v_' + str(v) + '_A_' + str(i) for i in range(N_age_groups)]
+
+            df_age_group = pd.DataFrame(stratified_infected[:, l, v, :] * cfg.testing_penetration, columns=headers)
+
+            df = pd.concat([df, df_age_group], axis=1)  # .convert_dtypes()
+
     return df
-
-
-#%%
 
 
 def parse_memory_file(filename) :
@@ -1492,8 +1451,6 @@ def parse_memory_file(filename) :
 
     next_is_change_point = 0
     # zero_time = None
-
-    import csv
 
     with open(filename, "r") as f :
         reader = csv.reader(f, delimiter="\t")
@@ -1629,7 +1586,7 @@ def plot_memory_comsumption(
     return fig, ax
 
 
-#%%
+
 
 
 def does_file_contains_string(filename, string) :
@@ -1657,7 +1614,7 @@ def get_search_string_time(filename, search_string) :
     return 0
 
 
-#%%
+
 
 
 def path(file) :
@@ -1692,7 +1649,7 @@ def get_1D_scan_cfgs_all_filenames(scan_parameter, non_default_parameters) :
     return cfgs, all_filenames
 
 
-#%%
+
 
 
 @njit
@@ -1750,10 +1707,6 @@ def PyDict2NumbaDict(d_python) :
         d_numba[key] = values[i]
     return d_numba
 
-
-from numba.core import types
-from numba.typed import Dict
-from numba import generated_jit
 
 
 @njit
@@ -1820,214 +1773,6 @@ def draw_random_nb(x) :
         return lambda x : draw_random_index_based_on_array(x)
 
 
-#%%
-
-from collections import defaultdict
-
-
-def parse_household_data(filename, age_dist_as_dict=True) :
-
-    data = defaultdict(list)
-    ages_groups = [20, 30, 40, 50, 60, 70, 80]
-
-    with open(filename, "r") as file :
-        N_persons = -1
-        for line in file :
-            line = line.strip()
-            if line[0] == "#" :
-                N_persons = int(line[1 :].split()[0])
-            else :
-                try :
-                    x = int(line)
-                except ValueError :
-                    x = float(line)
-                data[N_persons].append(x)
-
-    # make sure all entries are normalized numpy arrays
-    data = dict(data)
-    for key, val in data.items() :
-        if len(val) == 1 :
-            data[key] = val[0]
-        else :
-            vals = np.array(val)
-            vals = vals / np.sum(vals)
-            if age_dist_as_dict :
-                data[key] = {age : val for age, val in zip(ages_groups, vals)}
-            else :
-                data[key] = vals
-
-    return PyDict2NumbaDict(data)
-
-
-def parse_household_data_list(filename, convert_to_numpy=False) :
-
-    data = defaultdict(list)
-
-    with open(filename, "r") as file :
-        N_persons = -1
-        for line in file :
-            line = line.strip()
-            if line[0] == "#" :
-                N_persons = int(line[1 :].split()[0])
-            else :
-                try :
-                    x = int(line)
-                except ValueError :
-                    x = float(line)
-                data[N_persons].append(x)
-
-    # make sure all entries are normalized numpy arrays
-    data = dict(data)
-
-    out = []
-    for key, val in data.items() :
-        if len(val) == 1 :
-            out.append(val[0])
-        else :
-            vals = np.array(val)
-            vals = vals / np.sum(vals)
-            out.append(vals)
-    if convert_to_numpy :
-        out = np.array(out)
-    return out
-
-
-def load_household_data() :
-
-    filename_PeopleInHousehold = load_yaml("cfg/files.yaml")["PeopleInHousehold"]
-    filename_AgeDistribution = load_yaml("cfg/files.yaml")["AgeDistribution"]
-
-    people_in_household = parse_household_data_list(
-        filename_PeopleInHousehold, convert_to_numpy=True
-    )
-    age_distribution_per_people_in_household = parse_household_data_list(
-        filename_AgeDistribution, convert_to_numpy=True
-    )
-    return people_in_household, age_distribution_per_people_in_household
-
-def load_household_data_kommune_specific() :
-    household_dist_raw = pd.read_csv("Data/household_dist.csv")
-    household_dist_raw = household_dist_raw.set_index('0')
-    kommune_id = household_dist_raw.index
-    age_dist_raw = pd.read_csv("Data/age_dist.csv")
-    age_dist_raw = age_dist_raw.set_index('0')
-    age_dist_raw = np.array(age_dist_raw)
-    age_dist = np.ones((age_dist_raw.shape[0],age_dist_raw.shape[1],len(eval(age_dist_raw[0,0]))),dtype=float)
-    for i in range(age_dist_raw.shape[0]) :
-        for j in range(age_dist_raw.shape[1]) :
-            nrs = eval(age_dist_raw[i,j])
-            age_dist[i,j, :] = np.array(nrs)
-
-    household_dist_raw = np.array(household_dist_raw)
-    household_dist = np.ones((household_dist_raw.shape[0],household_dist_raw.shape[1]), dtype=float)
-    for i in range(household_dist_raw.shape[0]) :
-        for j in range(household_dist_raw.shape[1]) :
-            household_dist[i,j] = eval(household_dist_raw[i,j])[0]/(j+1)
-    return household_dist, age_dist, kommune_id
-
-def load_age_stratified_file(file) :
-    """ Loads and parses the contact matrix from the .csv file specifed
-        Parameters :
-            file (string) : path the the .csv file
-    """
-
-    # Load using pandas
-    data = pd.read_csv(file, index_col=0)
-
-    # Get the age groups from the dataframe
-    age_groups = list(data)
-
-    # Extract the lowest age from the age group intervals
-    lower_breaks = [int(age_group.split('-')[0]) for age_group in age_groups]
-
-    # Get the row_names
-    row_names = data.index.values
-
-    return (data.to_numpy(), row_names, lower_breaks)
-
-def load_contact_matrices(scenario = 'reference') :
-    """ Loads and parses the contact matrices corresponding to the chosen scenario.
-        The function first determines what the relationship between work activites and other activites are
-        After the work_other_ratio has been calculated, the function returns the normalized contact matrices
-        Parameters :
-            scenario (string) : Name for the scenario to load
-    """
-    # Load the contact matrices
-    matrix_work,   _, age_groups_work   = load_age_stratified_file('Data/contact_matrices/' + scenario + '_work.csv')
-    matrix_school, _, age_groups_school = load_age_stratified_file('Data/contact_matrices/' + scenario + '_school.csv')
-    matrix_other,  _, age_groups_other  = load_age_stratified_file('Data/contact_matrices/' + scenario + '_other.csv')
-    # TODO : Load the school contact matrix
-
-    # Assert the age_groups are the same
-    if not age_groups_work == age_groups_other :
-        raise ValueError('Age groups for work contact matrix and other contact matrix not equal')
-    matrix_work = matrix_work + matrix_school
-
-    # Determine the work-to-other ratio
-    work_other_ratio = matrix_work.sum() / (matrix_other.sum() + matrix_work.sum())
-
-    # Normalize the contact matrices after this ratio has been determined
-    # TODO : Find out if lists or numpy arrays are better --- I am leaning towards using only numpy arrays
-    return (matrix_work.tolist(), matrix_other.tolist(), work_other_ratio, age_groups_work)
-
-
-
-
-
-def load_vaccination_schedule(cfg) :
-    """ Loads and parses the vaccination schedule corresponding to the chosen scenario.
-        This includes scaling the number of infections and adjusting the effective start dates
-        Parameters :
-            cfg (dict) : the configuration file
-    """
-    vaccinations_per_age_group, vaccination_schedule, _ = load_vaccination_schedule_file(scenario = cfg.Intervention_vaccination_schedule_name)
-
-    # Check that lengths match
-    test_length(vaccinations_per_age_group, cfg.Intervention_vaccination_effect_delays, "Loaded vaccination schedules does not match with the length of vaccination_effect_delays")
-
-    # Scale and adjust the vaccination schedules
-    for i in range(len(vaccinations_per_age_group)) :
-
-        # Scale the number of vaccines
-        np.multiply(vaccinations_per_age_group[i], cfg.network.N_tot / 5_800_000, out=vaccinations_per_age_group[i], casting='unsafe')
-
-        # Determine the timing of effective vaccines
-        vaccination_schedule[i] = cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + cfg.Intervention_vaccination_effect_delays[i]
-
-    return (vaccinations_per_age_group, vaccination_schedule)
-
-
-def load_vaccination_schedule_file(scenario = "reference") :
-    """ Loads and parses the vaccination schedule file corresponding to the chosen scenario.
-        Parameters :
-            scenario (string) : Name for the scenario to load
-    """
-    # Prepare output files
-    vaccine_counts  = []
-    schedule        = []
-    age_groups      = []
-
-    # Determine the number of files that matches the requested scenario
-    i = 1
-    filename = lambda i : f'Data/vaccination_schedule/{scenario}_{i}.csv'
-
-    while file_exists(filename(i)) :
-
-        # Load the contact matrices
-        tmp_vaccine_counts, tmp_schedule, _ = load_age_stratified_file(filename(i))
-
-        # Convert schedule to datetimes
-        tmp_schedule = [datetime.datetime.strptime(date, '%Y-%m-%d').date() for date in tmp_schedule]
-
-        # Store the loaded schedule
-        vaccine_counts.append(tmp_vaccine_counts)
-        schedule.append(tmp_schedule)
-
-        # Increment
-        i += 1
-
-    # Normalize the contact matrices after this ratio has been determined
-    return (vaccine_counts, schedule, age_groups)
 
 @njit
 def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=False) :
@@ -2048,7 +1793,7 @@ def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=Fals
 #     return np.array(coordinates)
 
 
-#%%
+
 
 #import geopandas as gpd  # conda install -c conda-forge geopandas
 
@@ -2074,11 +1819,7 @@ def load_kommune_shapefiles(shapefile_size, verbose=False) :
     return kommuner, name_to_idx, idx_to_name
 
 
-#%%
 
-from tinydb import Query
-from functools import reduce
-from operator import iand
 
 
 def multiple_queries(*lst) :
@@ -2126,10 +1867,6 @@ def hash_to_seed(hash_) :
         seed = int(seed / 2)
     return seed
 
-# ls -R | grep 7274ac6030 | xargs rm -f
-
-#%%
-
 
 def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True) :
 
@@ -2159,12 +1896,10 @@ def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True) :
             folder_to_delete.rmdir()
 
 
-#%%
 
-import h5py
+
 
 def add_cfg_to_hdf5_file(f, cfg) :
-
     add_cfg_to_hdf5_file_recursively(f, cfg)
 
 def add_cfg_to_hdf5_file_recursively(f, cfg, path = 'cfg') :
@@ -2175,7 +1910,13 @@ def add_cfg_to_hdf5_file_recursively(f, cfg, path = 'cfg') :
     for key, val in cfg.items() :
 
         if isinstance(val, (int, float, str, np.ndarray, list)) :
-            d.attrs[key] = val
+
+            # Check if list is nested
+            if key == 'label_map' :
+                d.attrs[key] = repr(val)    # TODO: Find a better way to store nested list
+
+            else :
+                d.attrs[key] = val
 
         elif isinstance(val, dict) :
             add_cfg_to_hdf5_file_recursively(f, val, path = path + '/' + key)
@@ -2188,8 +1929,8 @@ def read_cfg_from_hdf5_file(filename) :
     with h5py.File(filename, "r") as f :
         cfg = read_cfg_from_hdf5_file_recursively(f)
 
-    cfg              = format_cfg(cfg,         nb_simulation.spec_cfg)
-    cfg.network      = format_cfg(cfg.network, nb_simulation.spec_network)
+    cfg              = format_cfg(cfg,         nb_jitclass.spec_cfg)
+    cfg.network      = format_cfg(cfg.network, nb_jitclass.spec_network)
 
     return cfg
 
@@ -2203,20 +1944,20 @@ def read_cfg_from_hdf5_file_recursively(f, path='cfg') :
 
     return tmp
 
-#%%
+
 
 def get_cfg_network_initialized(cfg) :
-    include = load_yaml("cfg/settings.yaml")["network_initialization_include_parameters"]
+    include = file_loaders.load_yaml("cfg/settings.yaml")["network_initialization_include_parameters"]
     cfg_network_initialized = {key : cfg[key] for key in include}
     return cfg_network_initialized
 
 
-#%%
+
 
 
 def get_simulation_parameters() :
     yaml_filename = "cfg/simulation_parameters.yaml"
-    all_simulation_parameters_input = load_yaml(yaml_filename)["all_simulation_parameters"]
+    all_simulation_parameters_input = file_loaders.load_yaml(yaml_filename)["all_simulation_parameters"]
     all_simulation_parameters = []
     for simulation_parameter in all_simulation_parameters_input :
         if "N_RS" in simulation_parameter.keys() and "MCMC" in simulation_parameter.keys() :
@@ -2229,11 +1970,7 @@ def get_simulation_parameters() :
     return all_simulation_parameters
 
 
-#%%
 
-from scipy.stats import uniform as sp_uniform
-from scipy.stats import randint
-from sklearn.model_selection import ParameterSampler
 
 
 def uniform(a=0, b=1) :
@@ -2285,15 +2022,27 @@ def get_random_samples(simulation_parameter, random_state=0) :
     return cfgs
 
 
-from sympy.parsing.sympy_parser import parse_expr
+def parse_parameter(param, rounding=None) :
+
+    if isinstance(param, list) :
+        param = [parse_parameter(par) for par in param]
+
+    else :
+        param = float(parse_expr(param))
+
+    if rounding is not None :
+        param = np.round(param, rounding)
+
+    return param
+
 def load_params(filename) :
-    params = load_yaml(filename)
+    params = file_loaders.load_yaml(filename)
     params = params.to_dict()
 
     # Parse inputs
-    params["R_init"]   = float(parse_expr(params["R_init"]))
-    params["lambda_E"] = float(parse_expr(params["lambda_E"]))
-    params["lambda_I"] = np.round(float(parse_expr(params["lambda_I"])), 5)
+    params["R_init"]   = parse_parameter(params["R_init"])
+    params["lambda_E"] = parse_parameter(params["lambda_E"])
+    params["lambda_I"] = parse_parameter(params["lambda_I"], rounding=5)
 
     start_date = params["start_date"]
     params.pop("start_date")
@@ -2303,6 +2052,45 @@ def load_params(filename) :
 
     params["day_max"] = (end_date - start_date).days
     params["start_date_offset"] = (start_date - params["start_date_offset"]).days
-    params["restriction_thresholds"] =  [[ 0, (params["restriction_thresholds"] - start_date).days]]
 
-    return (params, start_date)
+    if isinstance(params["restriction_thresholds"], list) :
+
+        restriction_dates = [date for date in params["restriction_thresholds"][0]]
+
+        date_1 = start_date + datetime.timedelta(days=1)
+        date_2 = restriction_dates[0]
+
+        intervals = []
+        for i in range(len(restriction_dates)) :
+            intervals.extend([ (date_1 - start_date).days, (date_2 - start_date).days])
+
+            if i < len(restriction_dates) - 1 :
+                date_1 = restriction_dates[i]
+                date_2 = restriction_dates[i+1]
+
+    else :
+        intervals = [1, (params["restriction_thresholds"] - start_date).days]
+
+    params["restriction_thresholds"] =  [intervals]
+
+    if "initial_infection_distribution" in params.keys() and isinstance(params["initial_infection_distribution"], datetime.date) :
+        params["initial_infection_distribution"] = params["initial_infection_distribution"].strftime('%Y_%m_%d')
+
+    return params, start_date
+
+
+
+def sort_nested_list(arr) :
+    ''' This function takes a nested list, and sorsts the innermost lists'''
+
+    # is arr a NOT nested list?
+    if not any(isinstance(i, list) for i in arr) :
+        arr.sort()
+
+    # Loop deeper
+    else :
+        for ind, val in enumerate(arr):
+            if isinstance(val, list) :
+                arr[ind] = sort_nested_list(val)
+
+    return arr

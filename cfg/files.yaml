@@ -1,2 +1,9 @@
-PeopleInHousehold: "Data/household_dist.csv"
-AgeDistribution: "Data/age_dist.csv"
+PeopleInHousehold: Data/population_information/household_dist.csv
+AgeDistribution: Data/population_information/age_dist.csv
+
+ageCasesFolder: Data/age_cases
+municipalityCasesFolder: Data/municipality_cases
+contactMatrixFolder: Data/contact_matrices
+
+RegionData: Data/region_data/allCases_hosp_2021-02-16.txt
+CovidIndex: Data/covid_index_2021.feather

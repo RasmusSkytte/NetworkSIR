@@ -13,22 +13,14 @@ from collections import defaultdict
 import warnings
 from importlib import reload
 
-try:
-    from src.utils import utils
+from src.utils import utils
 
-    # from src import simulation_utils
-    from src import file_loaders
-    from src import SIR
-    from src import database
-    from src import fits
-except ImportError:
-    import utils
+# from src import simulation_utils
+from src.utils import file_loaders
+from src import SIR
+from src import database
+from src import fits
 
-    # import simulation_utils
-    import file_loaders
-    import SIR
-    import database
-    import fits
 # import generate_R_eff_fits
 
 

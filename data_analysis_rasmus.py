@@ -1,20 +1,15 @@
-from os import stat
 import numpy as np
 import pandas as pd
 from datetime import datetime
 
-
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from matplotlib.backends.backend_pdf import PdfPages
 
 from tqdm import tqdm
 from pathlib import Path
 
-from importlib import reload
 from src.utils import utils
-from src import plot
-from src import file_loaders
+from src.utils import file_loaders
 from src import rc_params
 
 from src.analysis.helpers import *
@@ -24,9 +19,9 @@ from src.analysis.helpers import *
 #subset = None
 #fig_name = Path("Figures/all.png")
 
-subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]}]
+subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]}]
 
-#subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]},
+# subsets = [{"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]},
 #            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce1"]},
 #            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce2"]},
 #            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce3"]},
@@ -50,22 +45,19 @@ for subset in subsets :
 
         # Create the plots
         tmp_handles_0 = axes[0].plot(pd.date_range(start=start_date, periods = len(I_tot_scaled), freq="D"),     I_tot_scaled, lw = 4, c = "k")[0]
-        tmp_handles_2 = axes[1].plot(pd.date_range(start=start_date, periods = len(f),            freq="W-SUN"), f,            lw = 4, c = "k")[0]
+        tmp_handles_1 = axes[1].plot(pd.date_range(start=start_date, periods = len(f),            freq="W-SUN"), f,            lw = 4, c = "k")[0]
 
-        return [tmp_handles_0, tmp_handles_2]
+        return [tmp_handles_0, tmp_handles_1]
 
     rc_params.set_rc_params()
 
-    reload(plot)
-    reload(file_loaders)
 
     # Prepare output file
-    utils.make_sure_folder_exist(fig_name)
+    file_loaders.make_sure_folder_exist(fig_name)
 
 
-    logK, logK_sigma, beta, covid_index_offset, t_index = load_covid_index(start_date.date())
+    logK, logK_sigma, beta, covid_index_offset, t_index   = load_covid_index(start_date.date())
     fraction, fraction_sigma, fraction_offset, t_fraction = load_b117_fraction()
-
 
 
     # Load the ABM simulations
@@ -87,10 +79,10 @@ for subset in subsets :
         total=len(abm_files.all_filenames)) :
 
         # Load
-        I_tot_scaled, f = load_from_file(filename)
+        I_tot_scaled, f, _ = load_from_file(filename)
 
         # Plot
-        h = plot_simulation(I_tot_scaled, f, start_date, axes)
+        h  = plot_simulation(I_tot_scaled, f, start_date, axes)
 
         # Evaluate
         ll =  compute_loglikelihood(I_tot_scaled, (logK,         logK_sigma, covid_index_offset), transformation_function = lambda x : np.log(x) - beta * np.log(80_000))
@@ -179,4 +171,4 @@ for subset in subsets :
         ax.set_ylim(lim[0], lim[1])
 
 
-    plt.savefig(fig_name)
+    fig.savefig(fig_name)

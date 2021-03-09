@@ -14,7 +14,7 @@ from contexttimer import Timer
 
 if utils.is_local_computer():
     f = 0.1
-    N = 1
+    N = 3
     n_steps = 0 # 2 per sigma
     num_cores_max = 1
 else :
@@ -26,10 +26,8 @@ else :
 
 cfgs_all = []
 
-filenames = ["cfg/simulation_parameters_2021_fase1.yaml",
-             "cfg/simulation_parameters_2021_fase2.yaml",
-             "cfg/simulation_parameters_2021_fase2_sce7.yaml",
-             "cfg/simulation_parameters_2021_fase2_sce8.yaml"]
+filenames = ["cfg/simulation_parameters_lambda_I.yaml",
+             "cfg/simulation_parameters_lambda_I_restrictions.yaml"]
 
 for filename in filenames :
     params, start_date = utils.load_params(filename)

@@ -1,13 +1,7 @@
 from datetime import datetime
 import numpy as np
-# from tqdm import tqdm
-# import multiprocessing as mp
-# from pathlib import Path
-# from importlib import reload
 from src.utils import utils
 from src.simulation import simulation
-# from functools import partial
-# import yaml
 from contexttimer import Timer
 
 
@@ -80,7 +74,7 @@ all_simulation_parameters = [
         "continuous_interventions_to_apply":  [[1, 2, 3, 4, 5]],
         "intervention_removal_delay_in_clicks": [0],
         "make_restrictions_at_kommune_level": [False],
-       
+
     },
 ]
 

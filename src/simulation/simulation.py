@@ -200,17 +200,17 @@ class Simulation :
             print("\nINITIALING INTERVENTIONS")
 
         if self.cfg.labels.lower() == "kommune" :
-            labels = self.df_coordinates["idx"].values
+            labels = self.my.kommune
 
         elif self.cfg.labels.lower() == "custom" :
-            labels_raw = self.df_coordinates["idx"].values
+            labels_raw = self.my.kommune
             labels = np.zeros(np.shape(labels_raw))
 
             for new_label, label_group in enumerate(self.cfg['label_map']) :
                 labels[np.isin(labels_raw, self.kommune_dict['name_to_id'][label_group])] = new_label + 1
 
         elif self.cfg.labels.lower() == "none" :
-            labels = self.df_coordinates["idx"].values * 0
+            labels = np.zeros(np.shape(self.my.kommune))
 
         else :
             raise ValueError(f'Label name: {self.cfg.labels.lower()} not known')
@@ -308,6 +308,7 @@ class Simulation :
             N_kommune[N_inds] += N_counts
             R_kommune[R_inds] += R_counts
 
+
             initialization_subgroups = []
 
             # Loop over kommuner
@@ -315,12 +316,13 @@ class Simulation :
 
                 agents_in_kommune = np.array([agent for agent in possible_agents if self.my.kommune[agent] == kommune_id])
 
-                # Check if kommune is valid
-                if len(agents_in_kommune) == 0:
-                    continue
-
                 # Check if any are to be infectd
                 if N == 0 and R == 0 :
+                    continue
+
+                # Check if kommune is valid
+                if len(agents_in_kommune) == 0:
+                    warnings.warn(f"Agents selected for initialization in a kommune {kommune_id} : {self.kommune_dict['id_to_name'][kommune_id]} but no agents exists")
                     continue
 
                 # Check if too many have been selected
@@ -381,6 +383,7 @@ class Simulation :
                 prior_infected,
                 prior_immunized,
                 verbose=self.verbose)
+
 
         if check_distributions:
             ages = [self.my.age[agent] for agent in possible_agents if self.my.agent_is_infectious(agent)]

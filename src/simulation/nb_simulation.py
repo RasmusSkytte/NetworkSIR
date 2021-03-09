@@ -239,42 +239,12 @@ def initialize_states(
     verbose=False) :
 
 
-    R_state = g.N_states - 1
-
-    if R_init > 0 :
-
-        agents = choose_initial_agents(my, possible_agents, R_init, prior_immunized)
-
-        #  Make initial immunizations
-        for agent in agents :
-
-            # Update the state
-            my.state[agent] = R_state
-
-            if np.random.rand() < my.cfg.N_init_UK_frac :
-                my.corona_type[agent] = 1
-
-            agents_in_state[R_state].append(np.uint32(agent))
-
-            state_total_counts[R_state] += 1
-
-            g.total_sum_of_state_changes += SIR_transition_rates[R_state]
-            g.cumulative_sum_of_state_changes[R_state :] += SIR_transition_rates[R_state]
-
-            # Disable incomming rates
-            update_infection_list_for_newly_infected_agent(my, g, agent)
-
-
     if N_init > 0 :
 
         agents = choose_initial_agents(my, possible_agents, N_init, prior_infected)
 
         #  Make initial infections
         for agent in agents :
-
-            # If infected, do not immunize # TODO: Discuss if this is the best way to immunize agents
-            if my.state[agent] == R_state :
-                continue
 
             # Choose corona type
             if np.random.rand() < my.cfg.N_init_UK_frac :
@@ -314,6 +284,36 @@ def initialize_states(
                 stratified_infection_counts[my.label[agent]][my.corona_type[agent]][my.age[agent]] += 1
 
             # Make sure agent can not be re-infected
+            update_infection_list_for_newly_infected_agent(my, g, agent)
+
+
+    R_state = g.N_states - 1
+
+    if R_init > 0 :
+
+        agents = choose_initial_agents(my, possible_agents, R_init, prior_immunized)
+
+        #  Make initial immunizations
+        for agent in agents :
+
+            # If infected, do not immunize # TODO: Discuss if this is the best way to immunize agents
+            if my.state[agent] >= 0 :
+                continue
+
+            # Update the state
+            my.state[agent] = R_state
+
+            if np.random.rand() < my.cfg.N_init_UK_frac :
+                my.corona_type[agent] = 1
+
+            agents_in_state[R_state].append(np.uint32(agent))
+
+            state_total_counts[R_state] += 1
+
+            g.total_sum_of_state_changes += SIR_transition_rates[R_state]
+            g.cumulative_sum_of_state_changes[R_state :] += SIR_transition_rates[R_state]
+
+            # Disable incomming rates
             update_infection_list_for_newly_infected_agent(my, g, agent)
 
 

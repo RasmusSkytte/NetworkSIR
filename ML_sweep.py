@@ -139,8 +139,8 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
         print(f"N_init : {cfg_best.N_init:.0f}")
         print(f"N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}")
 
-        betas     = np.array([cfg.beta               for cfg in cfgs])
-        rel_betas = np.array([cfg.beta_UK_multiplier for cfg in cfgs])
+        betas     = np.array([cfg.beta                for cfg in cfgs])
+        rel_betas = np.array([cfg.beta_UK_multiplier  for cfg in cfgs])
 
         N_init         = np.array([cfg.N_init         for cfg in cfgs])
         N_init_UK_frac = np.array([cfg.N_init_UK_frac for cfg in cfgs])

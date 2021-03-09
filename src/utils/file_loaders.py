@@ -447,11 +447,10 @@ def load_municipality_data(zfile) :
     return pd.read_csv(zfile.open('Municipality_cases_time_series.csv'), sep=';', index_col=0)
 
 def load_age_data(zfile) :
-    df = pd.read_csv(zfile.open('Cases_by_age.csv'), usecols=['Aldersgruppe', 'Antal_bekræftede_COVID-19'], sep=';', index_col=0)
+    df = pd.read_csv(zfile.open('Cases_by_age.csv'), usecols=['Aldersgruppe', 'Antal_bekræftede_COVID-19'], dtype={'Aldersgruppe' : str, 'Antal_bekræftede_COVID-19' : str}, sep=';', index_col=0)
 
     # Remove thousands seperator
     col = 'Antal_bekræftede_COVID-19'
-    df[col] = df[col].astype(str)
     df[col] = df[col].str.replace('.', '', regex=False)
     df[col] = df[col].astype(float)
 
@@ -545,46 +544,37 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
 
     else :
 
-        _, positive_per_age_group = load_infected_per_category(0.55, category='AgeGr')
+        # TODO: Get a better way to load age distribution
+        #age_distribution_infected  = np.load('Data/age_cases/age_infected.npy')
+        #age_distribution_immunized = np.load('Data/age_cases/age_immunized.npy')
 
-        age_distribution_immunized = np.sum(positive_per_age_group[:-7, :], axis = 0)
-        age_distribution_infected =  np.sum(positive_per_age_group[-7:, :], axis = 0)
+        if initial_distribution_file.lower() == 'newest' :
+            date_current = newest_SSI_filename()
+        else :
+            date_current = initial_distribution_file
 
-        tmp = age_distribution_immunized[-1]
-        age_distribution_immunized = age_distribution_immunized[:-1]
-        age_distribution_immunized[-1] += tmp
+        date_delayed = datetime.datetime.strptime(date_current, '%Y_%m_%d') - datetime.timedelta(days=7)
+        date_delayed = date_delayed.strftime('%Y_%m_%d')
 
-        tmp = age_distribution_infected[-1]
-        age_distribution_infected = age_distribution_infected[:-1]
-        age_distribution_infected[-1] += tmp
+        _, df_current = get_SSI_data(date=date_current, return_data=True)
+        _, df_delayed = get_SSI_data(date=date_delayed, return_data=True)
 
-        # if initial_distribution_file.lower() == 'newest' :
-        #     date_current = newest_SSI_filename()
-        # else :
-        #     date_current = initial_distribution_file
+        age_distribution_current_raw = df_current.to_numpy().flatten()
+        age_distribution_delayed_raw = df_delayed.to_numpy().flatten()
 
-        # date_delayed = datetime.datetime.strptime(date_current, '%Y_%m_%d') - datetime.timedelta(days=7)
-        # date_delayed = date_delayed.strftime('%Y_%m_%d')
+        # Filter out ages of 70 and below
+        age_distribution_current = age_distribution_current_raw[:N_ages]
+        age_distribution_delayed = age_distribution_delayed_raw[:N_ages]
 
-        # _, df_current = get_SSI_data(date=date_current, return_data=True)
-        # _, df_delayed = get_SSI_data(date=date_delayed, return_data=True)
+        # Add the data for the ages above 70
+        age_distribution_current[-1] += np.sum(age_distribution_current[N_ages:])
+        age_distribution_delayed[-1] += np.sum(age_distribution_delayed[N_ages:])
 
-        # age_distribution_current_raw = df_current.to_numpy().flatten()
-        # age_distribution_delayed_raw = df_delayed.to_numpy().flatten()
+        age_distribution_infected  = age_distribution_current - age_distribution_delayed
+        age_distribution_immunized = age_distribution_delayed
 
-        # # Filter out ages of 70 and below
-        # age_distribution_current = age_distribution_current_raw[:N_ages]
-        # age_distribution_delayed = age_distribution_delayed_raw[:N_ages]
-
-        # # Add the data for the ages above 70
-        # age_distribution_current[-1] += np.sum(age_distribution_current[N_ages:])
-        # age_distribution_delayed[-1] += np.sum(age_distribution_delayed[N_ages:])
-
-        # age_distribution_infected  = age_distribution_current - age_distribution_delayed
-        # age_distribution_immunized = age_distribution_delayed
-
-        # if np.any(age_distribution_infected < 0) :
-        #     raise ValueError(f'Age distribution is corrupted for {date_current}')
+        if np.any(age_distribution_infected < 0) :
+            raise ValueError(f'Age distribution is corrupted for {date_current}')
 
     return age_distribution_infected, age_distribution_immunized
 

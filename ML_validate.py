@@ -16,7 +16,7 @@ from src import rc_params
 from src.analysis.helpers import *
 
 # Define the subset to plot on
-subsets = [ {'Intervention_contact_matrices_name' : ['2021_fase1', '2021_fase1']}]
+subsets = [ {'Intervention_contact_matrices_name' : ['2021_fase1', '2021_fase2']}]
 
 for subset in subsets :
     fig_name = Path('Figures/' + subset['Intervention_contact_matrices_name'][-1] + '.png')

@@ -334,7 +334,6 @@ def load_contact_matrices(scenario = 'reference', N_labels = 1) :
         else :
             filenames.append(os.path.join(base_path, scenario))
 
-
     for filename_set in filenames:
         tmp_matrix_work, tmp_matrix_other, tmp_work_other_ratio, tmp_age_groups_work = load_contact_matrix_set(filename_set)
 

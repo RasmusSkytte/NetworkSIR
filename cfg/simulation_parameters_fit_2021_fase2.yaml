@@ -26,7 +26,7 @@ end_date : 2021-03-10
 
 contact_matrices_name: basis  # Target activity
 
-Intervention_contact_matrices_name : [[2021_fase1, 2021_fase1]]
+Intervention_contact_matrices_name : [[2021_fase1, 2021_fase2]]
 restriction_thresholds: [[2021-03-01, 2022-01-01]]  # Opening date for fase 1
 threshold_interventions_to_apply: [[3, 3]]
 

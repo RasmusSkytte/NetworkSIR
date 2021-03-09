@@ -101,8 +101,8 @@ def compute_loglikelihood(input_data, validation_data, transformation_function =
 
     arr_model = [val for val, t in zip(input_values, t_input) if t in intersection]
 
-    arr_data  = [val for val, t in zip(data_values, t_data) if t in intersection]
-    arr_sigma = [val for val, t in zip(data_sigma, t_data) if t in intersection]
+    arr_data  = [val for val, t in zip(data_values,  t_data)  if t in intersection]
+    arr_sigma = [val for val, t in zip(data_sigma,   t_data)  if t in intersection]
 
     # Calculate (log) proability for every point
     log_prop = norm.logpdf(transformation_function(arr_model), loc=arr_data, scale=arr_sigma)

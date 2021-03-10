@@ -434,9 +434,9 @@ def update_infection_list_for_newly_infected_agent(my, g, agent) :
                     g.update_rates(my, -rate, contact)
 
                 break
-
-
-
+@njit
+def seasonal_total_sum_infection(total_sum_infection, day, seasonal_effect):
+    return total_sum_infection*seasonal_effect[day]
 
 @njit
 def do_bug_check(
@@ -555,7 +555,7 @@ def run_simulation(
         s = 0
 
         step_number += 1
-        g.total_sum = g.total_sum_of_state_changes + g.total_sum_infections
+        g.total_sum = g.total_sum_of_state_changes + seasonal_total_sum_infection(g.total_sum_infection, day, intervention.seasonal_effect)
 
         dt = -np.log(np.random.rand()) / g.total_sum
         real_time += dt

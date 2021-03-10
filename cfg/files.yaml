@@ -5,6 +5,8 @@ PeopleInHouseholdSogn: Data/population_information/sogne_hustande.xlsx
 ageCasesFolder: Data/age_cases
 municipalityCasesFolder: Data/municipality_cases
 contactMatrixFolder: Data/contact_matrices
+seasonalFolder: Data/seasonal_effects
 
 RegionData: Data/region_data/allCases_hosp_2021-02-16.txt
 CovidIndex: Data/covid_index_2021.feather
+

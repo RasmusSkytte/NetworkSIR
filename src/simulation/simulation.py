@@ -302,6 +302,10 @@ class Simulation :
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
 
+        
+        seasonal_list = file_loaders.load_seasonal_list(scenario = self.cfg.seasonal_list_name, cfg.start_date_offset))
+                
+
         # Store the labels in my
         self.my.initialize_labels(labels)
 
@@ -313,6 +317,7 @@ class Simulation :
             vaccination_schedule = np.array(vaccination_schedule),
             work_matrix_restrict = np.array(work_matrix_restrict),
             other_matrix_restrict = np.array(other_matrix_restrict),
+            seasonal_lists = seasonal_list,
             verbose=verbose_interventions)
 
 

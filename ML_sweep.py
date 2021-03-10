@@ -10,10 +10,10 @@ from contexttimer import Timer
 params, start_date = utils.load_params("cfg/simulation_parameters_fit_2021_fase2.yaml")
 
 if utils.is_local_computer():
-    f = 0.01
+    f = 0.2
     n_steps = 1
-    num_cores_max = 1
-    N_runs = 1
+    num_cores_max = 3
+    N_runs = 3
 else :
     f = 0.2
     n_steps = 2
@@ -42,7 +42,7 @@ params["N_init"]             = noise(params["N_init"] * f, 500 * f)
 #params["N_init"] = int(params["N_init"] * f)
 
 #params["N_init_UK_frac"]     = [0.02, 0.025, 0.03]
-#params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.005)
+params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.05)
 
 # Scale the population
 params["N_tot"]  = int(params["N_tot"]  * f)

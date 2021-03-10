@@ -263,7 +263,7 @@ class Simulation :
             labels = np.zeros(np.shape(labels_raw))
 
             for new_label, label_group in enumerate(self.cfg['label_map']) :
-                labels[np.isin(labels_raw, self.my.kommune[label_group])] = new_label + 1
+                labels[np.isin(labels_raw, self.kommune_dict['name_to_id'][label_group])] = new_label + 1
 
         elif self.cfg.labels.lower() == "none" :
             labels = np.zeros(np.shape(self.my.kommune))

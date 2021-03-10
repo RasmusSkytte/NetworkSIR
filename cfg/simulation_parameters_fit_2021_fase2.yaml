@@ -34,7 +34,7 @@ threshold_interventions_to_apply: [[3, 3]]
 #label_map: [[[Aalborg, Brønderslev, Frederikshavn, Hjørring, Jammerbugt, Læsø, Mariagerfjord, Morsø, Rebild, Thisted, Vesthimmerlands], # Nordjylland
 #             [Herning, Holstebro, Ikast-Brande, Lemvig, Ringkøbing-Skjern, Silkeborg, Skive, Struer, Viborg], # Vestjylland
 #             [Bornholm]]]
-#label_betas: [1, 0.9, 1, 1.05, 1.1]
+label_betas: [[0.9, 0.6, 1.4, 1.4, 1.6]]
 
 Intervention_vaccination_schedule_name : reference_2021_feb_17
 start_date_offset: 2020-12-28 # Start date for vaccinations

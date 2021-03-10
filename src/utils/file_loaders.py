@@ -339,9 +339,9 @@ def load_sogne_shapefiles(verbose=False) :
     shp_file["large"]  = "Data/population_information/SOGN.shp"
 
     if verbose :
-        print(f"Loading {shapefile_size} kommune shape files")
+        print(f"Loading {shapefile_size} sogne shape files")
     sogne = gpd.read_file(shp_file[shapefile_size]).to_crs({"proj" : "latlong"})  # convert to lat lon, compared to UTM32_EUREF89
-    
+
 
     sogne_navn, sogne_idx = np.unique(sogne["SOGNEKODE"], return_inverse=True)
     name_to_idx = dict(zip(sogne_navn, range(len(sogne_navn))))

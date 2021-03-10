@@ -38,6 +38,7 @@ spec_cfg = {
     "labels" : nb.types.unicode_type,
     "label_map" : ListType(ListType(nb.types.unicode_type)),
     "label_names" : ListType(nb.types.unicode_type),
+    "label_betas" : nb.float32[:],
     "clustering_connection_retries" : nb.uint32,
     "beta_UK_multiplier" : nb.float32,
     "outbreak_position_UK" : nb.types.unicode_type,
@@ -96,6 +97,7 @@ class Config(object) :
         self.initialize_at_kommune_level = False
         self.labels = 'none'
         self.label_names = List('Danmark')
+        self.label_betas = np.array([1.0], dtype=np.float32)
         self.day_max = 0
         self.clustering_connection_retries = 0
         self.beta_UK_multiplier = 1.0

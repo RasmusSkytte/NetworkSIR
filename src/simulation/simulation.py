@@ -225,7 +225,7 @@ class Simulation :
 
         # Load the restriction contact matrices
         # TODO: This should properably be done at cfg generation for consistent hashes
-        work_matrix_restrict = []
+        work_matrix_restrict  = []
         other_matrix_restrict = []
 
         for scenario in self.cfg.Intervention_contact_matrices_name :
@@ -345,7 +345,9 @@ class Simulation :
                 prior_infected  /= prior_infected.sum()
                 prior_immunized /= prior_immunized.sum()
 
-                initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized))
+                kommune_beta = self.my.cfg.label_betas[self.my.label[agents_in_kommune[0]]]
+
+                initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized, kommune_beta))
 
         else :
 
@@ -361,13 +363,13 @@ class Simulation :
             prior_infected  /= prior_infected.sum()
             prior_immunized /= prior_immunized.sum()
 
-            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized)]
+            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, self.my.cfg.label_betas[0])]
 
 
         # Loop over subgroups and initialize
         for subgroup in tqdm(initialization_subgroups, total=len(initialization_subgroups), disable=(not self.verbose), position=0, leave=True) :
 
-            agents_in_subgroup, N, R, prior_infected, prior_immunized = subgroup
+            agents_in_subgroup, N_subgroup, R_subgroup, prior_infected_subgroup, prior_immunized_subgroup, subgroup_beta_multiplier = subgroup
 
             nb_simulation.initialize_states(
                 self.my,
@@ -377,11 +379,12 @@ class Simulation :
                 self.state_total_counts,
                 self.stratified_infection_counts,
                 self.agents_in_state,
+                subgroup_beta_multiplier,
                 agents_in_subgroup,
-                N,
-                R,
-                prior_infected,
-                prior_immunized,
+                N_subgroup,
+                R_subgroup,
+                prior_infected_subgroup,
+                prior_immunized_subgroup,
                 verbose=self.verbose)
 
 

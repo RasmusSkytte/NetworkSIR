@@ -32,6 +32,7 @@ label_map: [[Albertslund, Allerød, Ballerup, Bornholm, Brøndby, København, Dr
             [Favrskov, Hedensted, Herning, Holstebro, Horsens, Ikast-Brande, Lemvig, Norddjurs, Odder, Randers, Ringkøbing-Skjern, Samsø, Silkeborg, Skanderborg, Skive, Struer, Viborg, Aarhus], # Midtjylland
             [Assens, Billund, Esbjerg, Fanø, Fredericia, Faaborg-Midtfyn, Haderslev, Kerteminde, Kolding, Langeland, Middelfart, Nordfyns, Nyborg, Odense, Svendborg, Sønderborg, Tønder, Varde, Vejen, Vejle, Ærø, Aabenraa]]  #  Syddanmark
 label_names: [Sjælland, Hovedstaden, Nordjylland, Midtjylland, Syddanmark]
+label_betas: [1, 1, 1, 1, 1]
 
 day_max: 0 # 5 weeks. Sets the maximum number of days the algorithm runs
 

@@ -232,6 +232,7 @@ def initialize_states(
     stratified_infection_counts,
     agents_in_state,
     subgroup_beta_multiplier,
+    subgroup_UK_frac,
     possible_agents,
     N_init,
     R_init,
@@ -248,7 +249,7 @@ def initialize_states(
         for agent in agents :
 
             # Choose corona type
-            if np.random.rand() < my.cfg.N_init_UK_frac :
+            if np.random.rand() < subgroup_UK_frac * my.cfg.N_init_UK_frac :
                 my.corona_type[agent] = 1
                 rel_beta = subgroup_beta_multiplier * my.cfg.beta_UK_multiplier
             else :
@@ -311,7 +312,7 @@ def initialize_states(
             # Update the state
             my.state[agent] = R_state
 
-            if np.random.rand() < my.cfg.N_init_UK_frac :
+            if np.random.rand() < subgroup_UK_frac * my.cfg.N_init_UK_frac :
                 my.corona_type[agent] = 1
 
             agents_in_state[R_state].append(np.uint32(agent))

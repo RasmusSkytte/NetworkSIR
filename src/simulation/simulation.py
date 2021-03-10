@@ -345,9 +345,10 @@ class Simulation :
                 prior_infected  /= prior_infected.sum()
                 prior_immunized /= prior_immunized.sum()
 
-                kommune_beta = self.my.cfg.label_betas[self.my.label[agents_in_kommune[0]]]
+                kommune_beta    = self.my.cfg.label_betas[self.my.label[agents_in_kommune[0]]]
+                kommune_UK_frac = self.my.cfg.label_frac[self.my.label[agents_in_kommune[0]]]
 
-                initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized, kommune_beta))
+                initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized, kommune_beta, kommune_UK_frac))
 
         else :
 
@@ -363,13 +364,13 @@ class Simulation :
             prior_infected  /= prior_infected.sum()
             prior_immunized /= prior_immunized.sum()
 
-            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, self.my.cfg.label_betas[0])]
+            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, self.my.cfg.label_betas[0], self.my.cfg.label_frac[0])]
 
 
         # Loop over subgroups and initialize
         for subgroup in tqdm(initialization_subgroups, total=len(initialization_subgroups), disable=(not self.verbose), position=0, leave=True) :
 
-            agents_in_subgroup, N_subgroup, R_subgroup, prior_infected_subgroup, prior_immunized_subgroup, subgroup_beta_multiplier = subgroup
+            agents_in_subgroup, N_subgroup, R_subgroup, prior_infected_subgroup, prior_immunized_subgroup, subgroup_beta_multiplier, subgroup_UK_frac = subgroup
 
             nb_simulation.initialize_states(
                 self.my,
@@ -380,6 +381,7 @@ class Simulation :
                 self.stratified_infection_counts,
                 self.agents_in_state,
                 subgroup_beta_multiplier,
+                subgroup_UK_frac,
                 agents_in_subgroup,
                 N_subgroup,
                 R_subgroup,

@@ -7,7 +7,7 @@ beta: 0.0325
 R_guess: 0.75
 
 # english type corona
-N_init_UK_frac: 1.0
+N_init_UK_frac: 2.0
 beta_UK_multiplier: 1.55
 
 R_init : 5_800_000 * 0.065
@@ -36,7 +36,7 @@ threshold_interventions_to_apply: [[3, 3]]
 #             [Bornholm]]]
 #label_names: [Sjælland, Hovedstaden, Nordjylland, Midtjylland, Syddanmark]
 #label_betas: [[0.8, 0.3, 1.5, 1.5, 1.6]]
-label_betas: [[0.9, 0.6, 1.2, 1.0, 1.2]]
+label_betas: [[0.95, 0.65, 1.15, 1.0, 1.2]]
 label_frac: [[0.11, 0.061, 0.014, 0.051, 0.11]]
 
 Intervention_vaccination_schedule_name : reference_2021_feb_17

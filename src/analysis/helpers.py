@@ -101,8 +101,6 @@ def parse_time_ranges(start_date, end_date) :
     # Ensure only full weeks are included
     if c[0] < 7 :
         t_f = t_f[1:]
-    if c[-1] < 7 :
-        t_f = t_f[:-1]
 
     return t_tests, t_f
 

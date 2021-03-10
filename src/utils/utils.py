@@ -2081,7 +2081,7 @@ def load_params(filename) :
 
 
 def sort_nested_list(arr) :
-    ''' This function takes a nested list, and sorsts the innermost lists'''
+    ''' This function takes a nested list, and sorts the innermost lists'''
 
     # is arr a NOT nested list?
     if not any(isinstance(i, list) for i in arr) :

@@ -610,6 +610,23 @@ def load_kommune_infection_distribution(initial_distribution_file, kommune_dict)
     return infected_per_kommune, immunized_per_kommune
 
 
+def load_UK_fraction(start_date) :
+
+    raw_data = pd.read_csv(load_yaml("cfg/files.yaml")["wgsDistribution"], sep=";")
+
+    raw_data['percent'] = raw_data['yes'] / raw_data['total']
+
+    data = pd.pivot_table(raw_data.drop(columns=['yes', 'total']), index='Week', columns='Region', values='percent')
+
+    data.index = data.index.str.replace('[0-9]{4}-W', '', regex=True).astype(int)
+
+    week = start_date.isocalendar().week
+    if start_date.isoweekday() <= 3 :
+        week -= 1
+
+    return data.loc[week]
+
+
 
 
  ######   ######## ##    ## ######## ########  ####  ######

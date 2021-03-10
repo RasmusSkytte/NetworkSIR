@@ -94,6 +94,7 @@ def load_from_file(filename) :
 def parse_time_ranges(start_date, end_date) :
 
     t_tests = pd.date_range(start=start_date, end=end_date, freq="D")
+    t_tests = t_tests[:-1]
 
     _, c    = np.unique(t_tests.isocalendar().week, return_counts=True)
     t_f     = pd.date_range(start=start_date, end=end_date, freq="W-SUN")
@@ -101,8 +102,6 @@ def parse_time_ranges(start_date, end_date) :
     # Ensure only full weeks are included
     if c[0] < 7 :
         t_f = t_f[1:]
-    if c[-1] < 7 :
-        t_f = t_f[:-1]
 
     return t_tests, t_f
 

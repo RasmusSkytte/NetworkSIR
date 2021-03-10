@@ -200,17 +200,17 @@ class Simulation :
             print("\nINITIALING INTERVENTIONS")
 
         if self.cfg.labels.lower() == "kommune" :
-            labels = self.df_coordinates["idx"].values
+            labels = self.my.kommune
 
         elif self.cfg.labels.lower() == "custom" :
-            labels_raw = self.df_coordinates["idx"].values
+            labels_raw = self.my.kommune
             labels = np.zeros(np.shape(labels_raw))
 
             for new_label, label_group in enumerate(self.cfg['label_map']) :
                 labels[np.isin(labels_raw, self.kommune_dict['name_to_id'][label_group])] = new_label + 1
 
         elif self.cfg.labels.lower() == "none" :
-            labels = self.df_coordinates["idx"].values * 0
+            labels = np.zeros(np.shape(self.my.kommune))
 
         else :
             raise ValueError(f'Label name: {self.cfg.labels.lower()} not known')
@@ -225,7 +225,7 @@ class Simulation :
 
         # Load the restriction contact matrices
         # TODO: This should properably be done at cfg generation for consistent hashes
-        work_matrix_restrict = []
+        work_matrix_restrict  = []
         other_matrix_restrict = []
 
         for scenario in self.cfg.Intervention_contact_matrices_name :
@@ -308,6 +308,7 @@ class Simulation :
             N_kommune[N_inds] += N_counts
             R_kommune[R_inds] += R_counts
 
+
             initialization_subgroups = []
 
             # Loop over kommuner
@@ -315,12 +316,13 @@ class Simulation :
 
                 agents_in_kommune = np.array([agent for agent in possible_agents if self.my.kommune[agent] == kommune_id])
 
-                # Check if kommune is valid
-                if len(agents_in_kommune) == 0:
-                    continue
-
                 # Check if any are to be infectd
                 if N == 0 and R == 0 :
+                    continue
+
+                # Check if kommune is valid
+                if len(agents_in_kommune) == 0:
+                    warnings.warn(f"Agents selected for initialization in a kommune {kommune_id} : {self.kommune_dict['id_to_name'][kommune_id]} but no agents exists")
                     continue
 
                 # Check if too many have been selected
@@ -343,7 +345,9 @@ class Simulation :
                 prior_infected  /= prior_infected.sum()
                 prior_immunized /= prior_immunized.sum()
 
-                initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized))
+                kommune_beta = self.my.cfg.label_betas[self.my.label[agents_in_kommune[0]]]
+
+                initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized, kommune_beta))
 
         else :
 
@@ -359,13 +363,13 @@ class Simulation :
             prior_infected  /= prior_infected.sum()
             prior_immunized /= prior_immunized.sum()
 
-            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized)]
+            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, self.my.cfg.label_betas[0])]
 
 
         # Loop over subgroups and initialize
         for subgroup in tqdm(initialization_subgroups, total=len(initialization_subgroups), disable=(not self.verbose), position=0, leave=True) :
 
-            agents_in_subgroup, N, R, prior_infected, prior_immunized = subgroup
+            agents_in_subgroup, N_subgroup, R_subgroup, prior_infected_subgroup, prior_immunized_subgroup, subgroup_beta_multiplier = subgroup
 
             nb_simulation.initialize_states(
                 self.my,
@@ -375,12 +379,14 @@ class Simulation :
                 self.state_total_counts,
                 self.stratified_infection_counts,
                 self.agents_in_state,
+                subgroup_beta_multiplier,
                 agents_in_subgroup,
-                N,
-                R,
-                prior_infected,
-                prior_immunized,
+                N_subgroup,
+                R_subgroup,
+                prior_infected_subgroup,
+                prior_immunized_subgroup,
                 verbose=self.verbose)
+
 
         if check_distributions:
             ages = [self.my.age[agent] for agent in possible_agents if self.my.agent_is_infectious(agent)]

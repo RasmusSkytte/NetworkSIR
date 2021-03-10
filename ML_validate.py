@@ -18,6 +18,7 @@ from src.analysis.helpers import *
 # Define the subset to plot on
 subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan', '2021_fase1']}]
 
+
 for subset in subsets :
     fig_name = Path('Figures/' + subset['Intervention_contact_matrices_name'][-1] + '.png')
 
@@ -90,13 +91,11 @@ for subset in subsets :
     start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
     end_date   = start_date + datetime.timedelta(days=cfg.day_max)
 
-    t_tests = pd.date_range(start=start_date, end=end_date, freq="D")
-    t_f     = pd.date_range(start=start_date, end=end_date, freq="W-SUN")
+    t_tests, t_f = parse_time_ranges(start_date, end_date)
 
-    logK, logK_sigma, beta, t_index   = load_covid_index()
+
+    logK, logK_sigma, beta, t_index      = load_covid_index()
     fraction, fraction_sigma, t_fraction = load_b117_fraction()
-
-
 
     # Prepare output file
     file_loaders.make_sure_folder_exist(fig_name)
@@ -295,7 +294,7 @@ for subset in subsets :
     for i in range(len(axes3)) :
 
         # Delete empty axes
-        if i == np.size(positive_per_age_group, 1) :
+        if i == 8 :
             for ax in axes3[i:] :
                 ax.remove()
             break
@@ -314,7 +313,7 @@ for subset in subsets :
         axes3[i].tick_params(axis='y', labelsize=24)
 
     # Adjust the last title
-    axes3[-1].set_title(f'{10*i}+', fontsize=24, pad=5)
+    #axes3[-1].set_title(f'{10*i}+', fontsize=24, pad=5)
 
 
     fig3.savefig(os.path.splitext(fig_name)[0] + '_age_groups.png')

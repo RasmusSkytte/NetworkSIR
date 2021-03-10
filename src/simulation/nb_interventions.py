@@ -236,7 +236,12 @@ def reset_rates_of_connection(my, g, agent, ith_contact, intervention, two_way=T
     contact = my.connections[agent][ith_contact]
 
     # Compute the infection rate
-    infection_rate = my.infection_weight[agent] * my.beta_connection_type[my.connection_type[agent][ith_contact]]
+    infection_rate = my.infection_weight[agent]
+    infection_rate *= my.beta_connection_type[my.connection_type[agent][ith_contact]]
+    infection_rate *= my.cfg.label_betas[my.label[agent]]
+
+    if my.corona_type[agent] == 1 :
+        infection_rate *= my.cfg.beta_UK_multiplier
 
     # TODO: Here we should implement transmission risk for vaccinted persons
 
@@ -661,11 +666,13 @@ def apply_symptom_testing(my, intervention, agent, state, click) :
 def apply_random_testing(my, intervention, click) :
     # choose N_daily_test people at random to test
     N_daily_test = int(my.cfg.daily_tests * my.cfg_network.N_tot / 5_800_000)
+
     agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
+
     random_agents_to_be_tested = np.random.choice(agents, N_daily_test)
-    intervention.clicks_when_tested[random_agents_to_be_tested] = (
-        click + intervention.cfg.test_delay_in_clicks[1]
-    )
+
+    intervention.clicks_when_tested[random_agents_to_be_tested] = click + intervention.cfg.test_delay_in_clicks[1]
+
     # specify that random test is the reason for test
     intervention.reason_for_test[random_agents_to_be_tested] = 1
 
@@ -758,6 +765,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                                     label=ith_label,
                                     rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[int(i/2)]
                                 )
+
                             # if masking
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 2 :
                                 if verbose :
@@ -770,6 +778,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                                     label=ith_label,
                                     rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[int(i/2)]
                                 )
+
                             # if matrix restriction
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3 :
 
@@ -787,6 +796,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                                     int(i/2),
                                     verbose=verbose
                                 )
+
                     else :
                         for ith_label, intervention_type in enumerate(intervention.types) :
 
@@ -802,8 +812,10 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
 
 @njit
 def test_tagged_agents(my, g, intervention, day, click) :
+
     # test everybody whose counter say we should test
     for agent in range(my.cfg_network.N_tot) :
+
         # testing everybody who should be tested
         if intervention.clicks_when_tested[agent] == click:
             test_agent(my, g, intervention, agent, click)
@@ -814,18 +826,18 @@ def test_tagged_agents(my, g, intervention, day, click) :
                 g,
                 intervention,
                 agent,
-                rate_reduction=intervention.cfg.isolation_rate_reduction,
-            )
+                rate_reduction=intervention.cfg.isolation_rate_reduction)
 
         # getting results for people
         if intervention.clicks_when_tested_result[agent] == click :
+
             intervention.clicks_when_tested_result[agent] = -1
             intervention.day_found_infected[agent] = day
+
             if intervention.apply_isolation :
                 cut_rates_of_agent(
                     my,
                     g,
                     intervention,
                     agent,
-                    rate_reduction=intervention.cfg.isolation_rate_reduction,
-                )
+                    rate_reduction=intervention.cfg.isolation_rate_reduction)

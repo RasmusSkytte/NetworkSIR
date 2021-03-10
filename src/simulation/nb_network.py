@@ -370,7 +370,7 @@ def place_and_connect_families_kommune_specific(
             agents_in_age_group[age_index].append(np.uint32(agent))
 
             #set coordinate for agent
-            my.coordinates[agent] = coordinates_raw[house_index]
+            my.coordinates[agent] = coordinates
 
             # set weights determining extro/introvert and supersheader
             set_connection_weight(my, agent)

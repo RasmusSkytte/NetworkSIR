@@ -10,7 +10,7 @@ from contexttimer import Timer
 params, start_date = utils.load_params("cfg/simulation_parameters_fit_2021_fase2.yaml")
 
 if utils.is_local_computer():
-    f = 0.05
+    f = 0.01
     n_steps = 1
     num_cores_max = 1
     N_runs = 1
@@ -93,8 +93,7 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
                 start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
                 end_date   = start_date + datetime.timedelta(days=cfg.day_max)
 
-                t_tests = pd.date_range(start = start_date, end = end_date, freq = "D")
-                t_f     = pd.date_range(start = start_date, end = end_date, freq = "W-SUN")
+                t_tests, t_f = parse_time_ranges(start_date, end_date)
 
 
                 # Evaluate
@@ -139,8 +138,8 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
         print(f"N_init : {cfg_best.N_init:.0f}")
         print(f"N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}")
 
-        betas     = np.array([cfg.beta               for cfg in cfgs])
-        rel_betas = np.array([cfg.beta_UK_multiplier for cfg in cfgs])
+        betas     = np.array([cfg.beta                for cfg in cfgs])
+        rel_betas = np.array([cfg.beta_UK_multiplier  for cfg in cfgs])
 
         N_init         = np.array([cfg.N_init         for cfg in cfgs])
         N_init_UK_frac = np.array([cfg.N_init_UK_frac for cfg in cfgs])

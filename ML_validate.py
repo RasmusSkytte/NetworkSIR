@@ -25,30 +25,30 @@ for subset in subsets :
     # Number of plots to keep
     N = 25
 
-    def plot_simulation(total_tests, f, start_date, axes) :
+    def plot_simulation(total_tests, f, t_tests, t_f, axes) :
 
         # Create the plots
-        tmp_handles_0 = axes[0].plot(pd.date_range(start=start_date, periods=len(total_tests), freq='D'),     total_tests,  lw=4, c='k')[0]
-        tmp_handles_1 = axes[1].plot(pd.date_range(start=start_date, periods=len(f),           freq='W-SUN'), f,            lw=4, c='k')[0]
+        tmp_handles_0 = axes[0].plot(t_tests, total_tests,  lw=4, c='k')[0]
+        tmp_handles_1 = axes[1].plot(t_f,     f,            lw=4, c='k')[0]
 
         return [tmp_handles_0, tmp_handles_1]
 
-    def plot_simulation_category(tests_by_category, start_date, axes) :
+    def plot_simulation_category(tests_by_category, t, axes) :
 
         tmp_handles = []
         # Create the plots
         for i in range(np.size(tests_by_category, 1)) :
-            tmp_handle = axes[i].plot(pd.date_range(start=start_date, periods = np.size(tests_by_category, 0), freq='D'), tests_by_category[:, i], lw=4, c=plt.cm.tab10(i))[0]
+            tmp_handle = axes[i].plot(t, tests_by_category[:, i], lw=4, c=plt.cm.tab10(i))[0]
             tmp_handles.append(tmp_handle)
 
         return tmp_handles
 
-    def plot_simulation_growth_rates(tests_by_variant, start_date, axes) :
+    def plot_simulation_growth_rates(tests_by_variant, t, axes) :
 
         # Add the total tests also
         tests_by_variant = np.concatenate((np.sum(tests_by_variant, axis=1).reshape(-1, 1), tests_by_variant), axis=1)
 
-        t = pd.date_range(start=start_date, periods=tests_by_variant.shape[0], freq='D') + datetime.timedelta(days=0.5)
+        t += datetime.timedelta(days=0.5)
         tmp_handles = []
 
         for i in range(tests_by_variant.shape[1]) :
@@ -93,7 +93,6 @@ for subset in subsets :
 
     t_tests, t_f = parse_time_ranges(start_date, end_date)
 
-
     logK, logK_sigma, beta, t_index      = load_covid_index()
     fraction, fraction_sigma, t_fraction = load_b117_fraction()
 
@@ -126,10 +125,10 @@ for subset in subsets :
         total_tests, f, tests_per_age_group, tests_by_variant, tests_by_region = load_from_file(filename)
 
         # Plot
-        h  = plot_simulation(total_tests, f, start_date, axes1)
-        h2 = plot_simulation_growth_rates(tests_by_variant, start_date, axes2)
-        h3 = plot_simulation_category(tests_per_age_group, start_date, axes3)
-        h4 = plot_simulation_category(tests_by_region, start_date, axes4)
+        h  = plot_simulation(total_tests, f, t_tests, t_f, axes1)
+        h2 = plot_simulation_growth_rates(tests_by_variant, t_tests, axes2)
+        h3 = plot_simulation_category(tests_per_age_group, t_tests, axes3)
+        h4 = plot_simulation_category(tests_by_region, t_tests, axes4)
 
         h.extend(h2)
         h.extend(h3)
@@ -202,7 +201,7 @@ for subset in subsets :
     # Get restriction_thresholds from a cfg
     restriction_thresholds = abm_files.cfgs[0].restriction_thresholds
 
-    axes1[0].set_ylim(0, 4000)
+    axes1[0].set_ylim(0, 2000)
     axes1[0].set_ylabel('Daglige positive')
 
 

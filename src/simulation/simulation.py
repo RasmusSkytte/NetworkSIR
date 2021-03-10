@@ -24,7 +24,9 @@ from functools import partial
 
 from tqdm import tqdm
 from p_tqdm import p_umap, p_uimap
-
+import geopandas as gpd
+from shapely.geometry import Point, Polygon
+from shapely.geometry import mapping as _polygon_to_array
 
 check_distributions = False
 
@@ -44,6 +46,7 @@ from src.utils import file_loaders
 from src.simulation import nb_simulation
 from src.simulation import nb_jitclass
 from src.simulation import nb_network
+from src.simulation import nb_helpers
 
 hdf5_kwargs = dict(track_order=True)
 np.set_printoptions(linewidth=200)
@@ -72,25 +75,79 @@ class Simulation :
         if self.verbose :
             print("Importing work and other matrices")
 
+    def _place_and_connect_families_sogne_specific(self):
+
+        sogne, name_to_idx_sogn, idx_to_name_sogn = file_loaders.load_sogne_shapefiles(self.verbose)
+
+        kommuner, name_to_idx, idx_to_name = file_loaders.load_kommune_shapefiles(self.verbose)
+        household_size_distribution_sogn, age_distribution_in_households = file_loaders.load_household_data_sogn(name_to_idx)
+        people_in_sogn = np.array(utils.people_per_sogn(household_size_distribution_sogn))
+        sogn_to_kommune_idx = file_loaders.load_sogn_to_kommune_idx()
+
+        N_tot = self.my.cfg_network.N_tot
+
+        all_indices = np.arange(N_tot, dtype=np.uint32)
+        np.random.shuffle(all_indices)
+
+        people_index_to_value = np.arange(1, 7)
+
+        #initialize lists to keep track of number of agents in each age group
+        counter_ages = np.zeros(self.N_ages, dtype=np.uint32)
+        agents_in_age_group = utils.initialize_nested_lists(self.N_ages, dtype=np.uint32)
+        house_sizes = np.zeros(len(people_index_to_value), dtype=np.int64)
+
+
+        mu_counter = 0
+        agent = 0
+        do_continue = True
+        while do_continue :
+
+            agent0 = agent
+            house_index = all_indices[agent]
+            rand_choice = nb_helpers.rand_choice_nb(people_in_sogn)
+
+            sogn = household_size_distribution_sogn.iloc[rand_choice].name
+            coordinates = utils.generate_coordinate(sogn, sogne)
+            coordinates = (coordinates.x, coordinates.y)
+            kommune_id = int(sogn_to_kommune_idx[rand_choice])
+
+            #Draw size of household form distribution
+            people_in_household_sogn = np.array(household_size_distribution_sogn.loc[sogn].iloc[:6])
+
+
+            agent, do_continue, mu_counter = nb_network.generate_one_household(people_in_household_sogn,
+                                                                    agent,
+                                                                    agent0,
+                                                                    do_continue,
+                                                                    N_tot,
+                                                                    self.my,
+                                                                    age_distribution_in_households,
+                                                                    counter_ages,
+                                                                    agents_in_age_group,
+                                                                    coordinates,
+                                                                    mu_counter,
+                                                                    people_index_to_value,
+                                                                    house_sizes,
+                                                                    kommune_id
+                                                                    )
+
+        agents_in_age_group = utils.nested_lists_to_list_of_array(agents_in_age_group)
+
+        if self.verbose:
+            print("House sizes :")
+            print(house_sizes)
+
+        return mu_counter, counter_ages, agents_in_age_group, name_to_idx
+
     def _initialize_network(self) :
         """ Initializing the network for the simulation
         """
-
-        # generate coordinates based on population density
-        self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.network.ID)
-
-        coordinates_raw   = utils.df_coordinates_to_coordinates(self.df_coordinates)
-        self.kommune_dict = utils.df_coordinates_to_kommune_dict(self.df_coordinates)
 
         if self.verbose :
             print(f"\nINITIALIZE VERSION {self.cfg.version} NETWORK")
 
 
-        household_size_distribution, age_distribution_in_households = file_loaders.load_household_data(self.kommune_dict)
-
-        self.N_ages = len(age_distribution_in_households[0, 0])
-        kommune_ids = np.array(self.df_coordinates.idx)
-
+        self.N_ages = 8 #TODO remove hardcode
 
         if self.verbose :
             print("Connect Household") #was household and families are used interchangebly. Most places it is changed to house(hold) since it just is people living at the same adress.
@@ -99,15 +156,12 @@ class Simulation :
             mu_counter,
             counter_ages,
             agents_in_age_group,
-        ) = nb_network.place_and_connect_families_kommune_specific(
-            self.my,
-            household_size_distribution,
-            age_distribution_in_households,
-            coordinates_raw,
-            kommune_ids,
-            self.N_ages,
-            verbose=self.verbose)
+            kommune_name_to_idx,
 
+        ) = self._place_and_connect_families_sogne_specific()
+        names = kommune_name_to_idx.keys()
+        IDs   = kommune_name_to_idx.values()
+        self.kommune_dict = {'id_to_name' : pd.Series(names, index=IDs), 'name_to_id' : pd.Series(IDs, index=names)}
 
         if self.verbose :
             print("Connecting work and others, currently slow, please wait")
@@ -150,9 +204,11 @@ class Simulation :
 
             my_hdf5ready = file_loaders.load_jitclass_to_dict(f["my"])
             self.my = file_loaders.load_My_from_dict(my_hdf5ready, self.cfg.deepcopy())
-        self.df_coordinates = utils.load_df_coordinates(self.N_tot, self.cfg.network.ID)
-        self.kommune_dict   = utils.df_coordinates_to_kommune_dict(self.df_coordinates)
 
+        _, kommune_name_to_idx, _ = file_loaders.load_kommune_shapefiles(self.verbose)
+        names = kommune_name_to_idx.keys()
+        IDs   = kommune_name_to_idx.values()
+        self.kommune_dict = {'id_to_name' : pd.Series(names, index=IDs), 'name_to_id' : pd.Series(IDs, index=names)}
 
         # Update connection weights
         for agent in range(self.cfg.network.N_tot) :
@@ -207,7 +263,7 @@ class Simulation :
             labels = np.zeros(np.shape(labels_raw))
 
             for new_label, label_group in enumerate(self.cfg['label_map']) :
-                labels[np.isin(labels_raw, self.kommune_dict['name_to_id'][label_group])] = new_label + 1
+                labels[np.isin(labels_raw, self.my.kommune[label_group])] = new_label + 1
 
         elif self.cfg.labels.lower() == "none" :
             labels = np.zeros(np.shape(self.my.kommune))

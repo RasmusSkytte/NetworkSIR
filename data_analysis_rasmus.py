@@ -32,7 +32,6 @@ subsets = [ {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1"]
 #            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce8_marts", "2021_fase2_sce8_april", "2021_fase2_sce8_maj"]},
 #            {"Intervention_contact_matrices_name" : ["ned2021jan", "2021_fase1", "2021_fase2_sce9"]}]
 
-
 for subset in subsets :
     fig_name = Path("Figures/" + subset["Intervention_contact_matrices_name"][-1] + ".png")
 

@@ -93,8 +93,7 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
                 start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
                 end_date   = start_date + datetime.timedelta(days=cfg.day_max)
 
-                t_tests = pd.date_range(start = start_date, end = end_date, freq = "D")
-                t_f     = pd.date_range(start = start_date, end = end_date, freq = "W-SUN")[1:]
+                t_tests, t_f = parse_time_ranges(start_date, end_date)
 
 
                 # Evaluate

@@ -91,6 +91,21 @@ def load_from_file(filename) :
     return T_total, f, T_age_groups, T_variants, T_regions
 
 
+def parse_time_ranges(start_date, end_date) :
+
+    t_tests = pd.date_range(start=start_date, end=end_date, freq="D")
+
+    _, c    = np.unique(t_tests.isocalendar().week, return_counts=True)
+    t_f     = pd.date_range(start=start_date, end=end_date, freq="W-SUN")
+
+    # Ensure only full weeks are included
+    if c[0] < 7 :
+        t_f = t_f[1:]
+    if c[-1] < 7 :
+        t_f = t_f[:-1]
+
+    return t_tests, t_f
+
 def compute_loglikelihood(input_data, validation_data, transformation_function = lambda x : x) :
 
     # Unpack values

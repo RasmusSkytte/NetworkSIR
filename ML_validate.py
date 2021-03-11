@@ -136,7 +136,7 @@ for subset in subsets :
 
         # Evaluate
         ll =  compute_loglikelihood((total_tests, t_tests), (logK,         logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
-        ll += compute_loglikelihood((f, t_f),               (fraction, fraction_sigma, t_fraction))
+        #ll += compute_loglikelihood((f, t_f),               (fraction, fraction_sigma, t_fraction))
 
         # Store the plot handles and loglikelihoods
         plot_handles.append(h)

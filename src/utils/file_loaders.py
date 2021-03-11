@@ -483,6 +483,9 @@ def download_SSI_data(date=None, download_municipality=True, path_municipality=N
     date_SSI = datetime.datetime.strptime(date, '%Y_%m_%d').strftime('%d%m%Y')
 
     s = re.search(date_SSI, html, re.IGNORECASE)
+    if s is None :
+        raise ValueError(f'No data found for date: {date}')
+
     data_url = html[s.start()-80:s.end()+5]
     data_url = data_url.split('="')[1] + ".zip"
 

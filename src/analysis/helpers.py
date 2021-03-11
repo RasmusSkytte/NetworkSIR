@@ -100,8 +100,7 @@ def parse_time_ranges(start_date, end_date) :
     t_f     = pd.date_range(start=start_date, end=end_date, freq="W-SUN")
 
     # Ensure only full weeks are included
-    if c[0] < 7 :
-        t_f = t_f[1:]
+    t_f = t_f[1:]
 
     return t_tests, t_f
 

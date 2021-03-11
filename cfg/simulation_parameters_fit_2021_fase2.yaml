@@ -1,8 +1,8 @@
 N_tot: 5_800_000
 rho: 0.1
 
-N_init: 4000
-beta: 0.0325
+N_init: 8000
+beta: 0.035
 
 R_guess: 0.75
 
@@ -13,13 +13,13 @@ beta_UK_multiplier: 1.55
 R_init : 5_800_000 * 0.065
 
 initialize_at_kommune_level: True
-initial_infection_distribution : 2021-01-15
+initial_infection_distribution : 2020-12-31
 weighted_random_initial_infections: False
 
 lambda_E: 4 / 2.5
 lambda_I: 4 / 4.5 # Higher due to isolation
 
-start_date : 2021-01-15
+start_date : 2021-01-01
 end_date : 2021-03-01
 
 
@@ -36,8 +36,9 @@ threshold_interventions_to_apply: [[3, 3]]
 #             [Bornholm]]]
 #label_names: [Sjælland, Hovedstaden, Nordjylland, Midtjylland, Syddanmark]
 #label_betas: [[0.8, 0.3, 1.5, 1.5, 1.6]]
-label_betas: [[0.95, 0.65, 1.15, 1.0, 1.2]]
-label_frac: [[0.11, 0.061, 0.014, 0.051, 0.11]]
+label_betas: [[0.9, 0.6, 1.15, 0.9, 1.1]]
+label_frac: [[0.014, 0.01, 0.026, 0.029, 0.047]]
+#label_frac: [[0.11, 0.061, 0.014, 0.051, 0.11]]
 
 Intervention_vaccination_schedule_name : reference_2021_feb_17
 start_date_offset: 2020-12-28 # Start date for vaccinations

@@ -254,8 +254,8 @@ class Simulation :
             self.my.cfg,
             self.my.cfg_network,
             labels = labels,
-            vaccinations_per_age_group = np.array(vaccinations_per_age_group),
-            vaccination_schedule = np.array(vaccination_schedule),
+            vaccinations_per_age_group = vaccinations_per_age_group,
+            vaccination_schedule = vaccination_schedule,
             work_matrix_restrict = wm,
             other_matrix_restrict = om,
             verbose=verbose_interventions)

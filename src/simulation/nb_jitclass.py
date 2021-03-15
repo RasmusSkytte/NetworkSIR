@@ -377,8 +377,8 @@ spec_intervention = {
     "clicks_when_restriction_stops" : nb.int32[:],
     "types" : nb.uint8[:],
     "started_as" : nb.uint8[:],
-    "vaccinations_per_age_group" : nb.int64[:, :, :],
-    "vaccination_schedule" : nb.int64[:, :],
+    "vaccinations_per_age_group" : nb.int32[:, :, :],
+    "vaccination_schedule" : nb.int32[:, :],
     "work_matrix_restrict" : nb.float64[:, :, :, :],
     "other_matrix_restrict" : nb.float64[:, :, :, :],
     "verbose" : nb.boolean,
@@ -443,23 +443,24 @@ class Intervention(object) :
 
         self._initialize_labels(labels)
 
-        self.day_found_infected = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.freedom_impact = np.full(self.cfg_network.N_tot, fill_value=0.0, dtype=np.float64)
-        self.freedom_impact_list = List([0.0])
-        self.R_true_list = List([0.0])
-        self.R_true_list_brit = List([0.0])
-        self.reason_for_test = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
-        self.positive_test_counter = np.zeros(3, dtype=np.uint32)
-        self.clicks_when_tested = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.clicks_when_tested_result = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.clicks_when_isolated = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.day_found_infected            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.freedom_impact                = np.full(self.cfg_network.N_tot, fill_value=0.0, dtype=np.float64)
+        self.freedom_impact_list           = List([0.0])
+        self.R_true_list                   = List([0.0])
+        self.R_true_list_brit              = List([0.0])
+        self.reason_for_test               = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
+        self.positive_test_counter         = np.zeros(3, dtype=np.uint32)
+        self.clicks_when_tested            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.clicks_when_tested_result     = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.clicks_when_isolated          = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_restriction_stops = np.full(self.N_labels, fill_value=-1, dtype=np.int32)
         self.types = np.zeros(self.N_labels, dtype=np.uint8)
         self.started_as = np.zeros(self.N_labels, dtype=np.uint8)
+
         self.vaccinations_per_age_group = vaccinations_per_age_group
-        self.vaccination_schedule = vaccination_schedule
-        self.work_matrix_restrict  = work_matrix_restrict
-        self.other_matrix_restrict = other_matrix_restrict
+        self.vaccination_schedule       = vaccination_schedule
+        self.work_matrix_restrict       = work_matrix_restrict
+        self.other_matrix_restrict      = other_matrix_restrict
 
         self.verbose = verbose
 

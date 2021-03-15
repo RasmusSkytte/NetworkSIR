@@ -44,6 +44,7 @@ def calculate_contact_distribution_label(my, intervention):
 @njit
 def vaccinate(my, g, intervention, day, verbose=False) :
 
+    # Loop over vaccine types
     for i in range(len(intervention.vaccination_schedule)) :
 
         # Check if all vaccines have been given

@@ -21,7 +21,6 @@ def add_daily_events(
     day,
     agents_in_state,
     state_total_counts,
-    SIR_transition_rates,
     where_infections_happened_counter) :
 
     N_tot = my.cfg_network.N_tot
@@ -77,7 +76,7 @@ def add_daily_events(
         where_infections_happened_counter[3] += 1
         agents_in_state[0].append(np.uint32(agent_getting_infected_at_event))
         state_total_counts[0] += 1
-        g.total_sum_of_state_changes += SIR_transition_rates[0]
-        g.cumulative_sum_of_state_changes += SIR_transition_rates[0]
+        g.total_sum_of_state_changes += g.SIR_transition_rates[0]
+        g.cumulative_sum_of_state_changes += g.SIR_transition_rates[0]
 
         nb_simulation.update_infection_list_for_newly_infected_agent(my, g, agent_getting_infected_at_event)

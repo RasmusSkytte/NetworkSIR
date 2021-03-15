@@ -80,7 +80,7 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
             for filename in abm_files.cfg_to_filenames(cfg) :
 
                 # Load
-                I_tot_scaled, f, _, _, _= load_from_file(filename)
+                I_tot_scaled, f, _, _, _, _= load_from_file(filename)
 
 
                 start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)

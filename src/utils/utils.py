@@ -1408,6 +1408,8 @@ def counts_to_df(time, state_counts, stratified_infected, stratified_vaccination
     time = np.array(time)
     state_counts = np.array(state_counts)
     stratified_infected = np.array(stratified_infected)
+    stratified_vaccination = np.array(stratified_vaccination)
+
 
     N_states     = np.size(state_counts, 1)
     N_labels     = np.size(stratified_infected, 1)
@@ -1445,7 +1447,6 @@ def counts_to_df(time, state_counts, stratified_infected, stratified_vaccination
     headers = ['V_A_' + str(i) for i in range(N_age_groups)]
     df_age_group = pd.DataFrame(stratified_vaccination, columns=headers)
     df = pd.concat([df, df_age_group], axis=1)  # .convert_dtypes()
-
 
     return df
 

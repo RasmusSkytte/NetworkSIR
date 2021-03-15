@@ -459,7 +459,6 @@ class Simulation :
             self.nts,
             self.verbose)
 
-
         out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_my_state, intervention = res
 
         self.out_time = out_time
@@ -469,21 +468,25 @@ class Simulation :
 
         return self.df
 
+
     def _get_filename(self, name="ABM", filetype="hdf5") :
         date = datetime.datetime.now().strftime("%Y-%m-%d")
         filename = f"Output/{name}/{self.hash}/{name}_{date}_{self.hash}_ID__{self.cfg.network.ID}.{filetype}"
         return filename
+
 
     def _save_cfg(self) :
         date = datetime.datetime.now().strftime("%Y-%m-%d")
         filename_cfg = f"Output/cfgs/cfg_{date}_{self.hash}.yaml"
         self.cfg.dump_to_file(filename_cfg, exclude="network.ID")
 
+
     def _add_cfg_to_hdf5_file(self, f, cfg=None) :
         if cfg is None :
             cfg = self.cfg
 
         utils.add_cfg_to_hdf5_file(f, cfg)
+
 
     def _save_dataframe(self, save_csv=False, save_hdf5=True) :
 
@@ -530,6 +533,7 @@ class Simulation :
                 f.create_dataset("time_elapsed", data=time_elapsed)
 
             self._add_cfg_to_hdf5_file(f)
+
 
     def save(self, save_csv=False, save_hdf5=True, save_only_ID_0=False, time_elapsed=None) :
         self._save_cfg()

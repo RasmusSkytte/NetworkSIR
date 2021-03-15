@@ -6,5 +6,5 @@ ageCasesFolder: Data/age_cases
 municipalityCasesFolder: Data/municipality_cases
 contactMatrixFolder: Data/contact_matrices
 
-RegionData: Data/region_data/allCases_hosp_2021-02-16.txt
+RegionData: Data/region_data/allCases_hosp_2021-03-10.txt
 CovidIndex: Data/covid_index_2021.feather

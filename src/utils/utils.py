@@ -1403,11 +1403,13 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
 
 
 
-def counts_to_df(time, state_counts, stratified_infected, cfg) :  #
+def counts_to_df(time, state_counts, stratified_infected, stratified_vaccination, cfg) :  #
 
     time = np.array(time)
     state_counts = np.array(state_counts)
     stratified_infected = np.array(stratified_infected)
+    stratified_vaccination = np.array(stratified_vaccination)
+
 
     N_states     = np.size(state_counts, 1)
     N_labels     = np.size(stratified_infected, 1)
@@ -1431,6 +1433,7 @@ def counts_to_df(time, state_counts, stratified_infected, cfg) :  #
 
     df = pd.concat([df_time, df_states], axis=1)
 
+    # Add the test data
     for l in range(N_labels) :
         for v in range(N_variants) :
 
@@ -1439,6 +1442,11 @@ def counts_to_df(time, state_counts, stratified_infected, cfg) :  #
             df_age_group = pd.DataFrame(stratified_infected[:, l, v, :] * cfg.testing_penetration, columns=headers)
 
             df = pd.concat([df, df_age_group], axis=1)  # .convert_dtypes()
+
+    # Add the vaccination data
+    headers = ['V_A_' + str(i) for i in range(N_age_groups)]
+    df_age_group = pd.DataFrame(stratified_vaccination, columns=headers)
+    df = pd.concat([df, df_age_group], axis=1)  # .convert_dtypes()
 
     return df
 

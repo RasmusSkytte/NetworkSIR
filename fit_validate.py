@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import scipy
 from datetime import datetime
 
@@ -16,7 +15,7 @@ from src import rc_params
 from src.analysis.helpers import *
 
 # Define the subset to plot on
-subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan', '2021_fase1']}]
+subsets = [ {'Intervention_contact_matrices_name' : ['basis']}]
 
 
 for subset in subsets :
@@ -25,11 +24,11 @@ for subset in subsets :
     # Number of plots to keep
     N = 25
 
-    def plot_simulation(total_tests, f, t_tests, t_f, axes) :
+    def plot_simulation(total_tests, f, t_day, t_week, axes) :
 
         # Create the plots
-        tmp_handles_0 = axes[0].plot(t_tests, total_tests,  lw=4, c='k')[0]
-        tmp_handles_1 = axes[1].plot(t_f,     f,            lw=4, c='k')[0]
+        tmp_handles_0 = axes[0].plot(t_day,  total_tests, lw=4, c='k')[0]
+        tmp_handles_1 = axes[1].plot(t_week, f,           lw=4, c='k')[0]
 
         return [tmp_handles_0, tmp_handles_1]
 
@@ -76,7 +75,6 @@ for subset in subsets :
 
         return tmp_handles
 
-
     rc_params.set_rc_params()
 
     # Load the ABM simulations
@@ -91,7 +89,7 @@ for subset in subsets :
     start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
     end_date   = start_date + datetime.timedelta(days=cfg.day_max)
 
-    t_tests, t_f = parse_time_ranges(start_date, end_date)
+    t_day, t_week = parse_time_ranges(start_date, end_date)
 
     logK, logK_sigma, beta, t_index      = load_covid_index()
     fraction, fraction_sigma, t_fraction = load_b117_fraction()
@@ -115,6 +113,9 @@ for subset in subsets :
     fig4, axes4 = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True, figsize=(12, 12))
     axes4 = axes4.flatten()
 
+    fig5, axes5 = plt.subplots(nrows=3, ncols=3, sharex=True, sharey=True, figsize=(12, 12))
+    axes5 = axes5.flatten()
+
 
     print('Plotting the individual ABM simulations. Please wait', flush=True)
     for filename in tqdm(
@@ -122,21 +123,31 @@ for subset in subsets :
         total=len(abm_files.all_filenames)) :
 
         # Load
-        total_tests, f, tests_per_age_group, tests_by_variant, tests_by_region = load_from_file(filename)
+        (   total_tests,
+            f,
+            tests_per_age_group,
+            tests_by_variant,
+            tests_by_region,
+            vaccinations_by_age_group) = load_from_file(filename)
+
+        # Add vaccine summery graph
+        vaccinations_by_age_group = np.concatenate((vaccinations_by_age_group, np.sum(vaccinations_by_age_group, axis=1).reshape(-1, 1)), axis=1)
 
         # Plot
-        h  = plot_simulation(total_tests, f, t_tests, t_f, axes1)
-        h2 = plot_simulation_growth_rates(tests_by_variant, t_tests, axes2)
-        h3 = plot_simulation_category(tests_per_age_group, t_tests, axes3)
-        h4 = plot_simulation_category(tests_by_region, t_tests, axes4)
+        h  = plot_simulation(total_tests, f, t_day, t_week, axes1)
+        h2 = plot_simulation_growth_rates(tests_by_variant, t_day, axes2)
+        h3 = plot_simulation_category(tests_per_age_group, t_day, axes3)
+        h4 = plot_simulation_category(tests_by_region, t_day, axes4)
+        h5 = plot_simulation_category(vaccinations_by_age_group, t_day, axes5)
 
         h.extend(h2)
         h.extend(h3)
         h.extend(h4)
+        h.extend(h5)
 
         # Evaluate
-        ll =  compute_loglikelihood((total_tests, t_tests), (logK,         logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
-        #ll += compute_loglikelihood((f, t_f),               (fraction, fraction_sigma, t_fraction))
+        ll =  compute_loglikelihood((total_tests, t_day), (logK,         logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
+        #ll += compute_loglikelihood((f, t_week),               (fraction, fraction_sigma, t_fraction))
 
         # Store the plot handles and loglikelihoods
         plot_handles.append(h)
@@ -201,7 +212,7 @@ for subset in subsets :
     # Get restriction_thresholds from a cfg
     restriction_thresholds = abm_files.cfgs[0].restriction_thresholds
 
-    axes1[0].set_ylim(0, 2000)
+    axes1[0].set_ylim(0, 50000)
     axes1[0].set_ylabel('Daglige positive')
 
 
@@ -296,6 +307,9 @@ for subset in subsets :
         if i == 8 :
             for ax in axes3[i:] :
                 ax.remove()
+
+            # Adjust the last title
+            axes3[i-1].set_title(f'{10*(i-1)}+', fontsize=24, pad=5)
             break
 
         axes3[i].scatter(t, positive_per_age_group[:, i], color='k', s=10, zorder=100)
@@ -311,8 +325,7 @@ for subset in subsets :
         axes3[i].tick_params(axis='x', labelsize=24)
         axes3[i].tick_params(axis='y', labelsize=24)
 
-    # Adjust the last title
-    #axes3[-1].set_title(f'{10*i}+', fontsize=24, pad=5)
+
 
 
     fig3.savefig(os.path.splitext(fig_name)[0] + '_age_groups.png')
@@ -357,8 +370,37 @@ for subset in subsets :
         axes4[i].tick_params(axis='y', labelsize=24)
 
 
-
     fig4.savefig(os.path.splitext(fig_name)[0] + '_regions.png')
 
 
 
+
+
+
+    ##     ##    ###     ######   ######  #### ##    ##    ###    ######## ####  #######  ##    ##  ######
+    ##     ##   ## ##   ##    ## ##    ##  ##  ###   ##   ## ##      ##     ##  ##     ## ###   ## ##    ##
+    ##     ##  ##   ##  ##       ##        ##  ####  ##  ##   ##     ##     ##  ##     ## ####  ## ##
+    ##     ## ##     ## ##       ##        ##  ## ## ## ##     ##    ##     ##  ##     ## ## ## ##  ######
+     ##   ##  ######### ##       ##        ##  ##  #### #########    ##     ##  ##     ## ##  ####       ##
+      ## ##   ##     ## ##    ## ##    ##  ##  ##   ### ##     ##    ##     ##  ##     ## ##   ### ##    ##
+       ###    ##     ##  ######   ######  #### ##    ## ##     ##    ##    ####  #######  ##    ##  ######
+
+    for i in range(len(axes5)) :
+
+        axes5[i].set_xlim([start_date, end_date])
+        axes5[i].set_ylim(0, 300)
+
+        axes5[i].xaxis.set_major_locator(months)
+        axes5[i].xaxis.set_major_formatter(months_fmt)
+
+        axes5[i].set_title(f'{10*i}-{10*(i+1)-1}', fontsize=24, pad=5)
+
+        axes5[i].tick_params(axis='x', labelsize=24)
+        axes5[i].tick_params(axis='y', labelsize=24)
+
+    # Adjust the last title
+    axes5[-2].set_title(f'{10*(i-1)}+', fontsize=24, pad=5)
+    axes5[-1].set_title('all', fontsize=24, pad=5)
+
+
+    fig5.savefig(os.path.splitext(fig_name)[0] + '_vaccinations.png')

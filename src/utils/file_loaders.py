@@ -300,6 +300,7 @@ def load_age_stratified_file(file) :
 
     # Get the age groups from the dataframe
     age_groups = list(data)
+    age_groups = [age_group.replace('+', '-') for age_group in age_groups]
 
     # Extract the lowest age from the age group intervals
     lower_breaks = [int(age_group.split('-')[0]) for age_group in age_groups]
@@ -372,10 +373,16 @@ def load_vaccination_schedule(cfg) :
         Parameters :
             cfg (dict) : the configuration file
     """
+
+    if cfg.Intervention_vaccination_schedule_name == 'None' :
+        return np.zeros( (1, 1, len(cfg.network.work_matrix)), dtype=np.int32), np.zeros( (1, 2), dtype=np.int32)
+
+
     vaccinations_per_age_group, vaccination_schedule, _ = load_vaccination_schedule_file(scenario = cfg.Intervention_vaccination_schedule_name)
 
     # Check that lengths match
     utils.test_length(vaccinations_per_age_group, cfg.Intervention_vaccination_effect_delays, "Loaded vaccination schedules does not match with the length of vaccination_effect_delays")
+    utils.test_length(vaccinations_per_age_group[0][0], cfg.network.work_matrix, "Number of age groups in vaccination schedule does not match the number of age groups in contact matrices")
 
     # Scale and adjust the vaccination schedules
     for i in range(len(vaccinations_per_age_group)) :
@@ -384,7 +391,7 @@ def load_vaccination_schedule(cfg) :
         np.multiply(vaccinations_per_age_group[i], cfg.network.N_tot / 5_800_000, out=vaccinations_per_age_group[i], casting='unsafe')
 
         # Determine the timing of effective vaccines
-        vaccination_schedule[i] = cfg.start_date_offset + np.arange(len(vaccination_schedule), dtype=np.int64) + cfg.Intervention_vaccination_effect_delays[i]
+        vaccination_schedule[i] = cfg.start_date_offset + np.array([0, (vaccination_schedule[i][-1] - vaccination_schedule[i][0]).days]) + cfg.Intervention_vaccination_effect_delays[i]
 
     return vaccinations_per_age_group, vaccination_schedule
 

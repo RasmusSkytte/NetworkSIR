@@ -529,6 +529,7 @@ def run_simulation(
     SIR_transition_rates,
     state_total_counts,
     stratified_infection_counts,
+    stratified_vaccination_counts,
     agents_in_state,
     N_infectious_states,
     nts,
@@ -538,9 +539,10 @@ def run_simulation(
         print("Apply intervention", intervention.apply_interventions)
 
     # Define outputs
-    out_time = List()                       # Sampled times
-    out_state_counts = List()               # Tne counts of the SEIR states
+    out_time = List()                            # Sampled times
+    out_state_counts = List()                    # Tne counts of the SEIR states
     out_stratified_infection_counts = List()     # The counts of infected per age group
+    out_stratified_vaccination_counts = List()   # The counts of infected per age group
     out_my_state = List()
 
     daily_counter = 0
@@ -615,8 +617,6 @@ def run_simulation(
 
                     # update rates if contact is susceptible
                     if my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact) :
-
-                        g.rates[agent][ith_contact] *= my.cfg.label_betas[my.label[agent]]
 
                         if my.corona_type[agent] == 1 :
                             g.rates[agent][ith_contact] *= my.cfg.beta_UK_multiplier
@@ -708,17 +708,6 @@ def run_simulation(
 
             if daily_counter >= 10 :
 
-                if day >= 0 and day < my.cfg.day_max:
-
-                    # Update the output variables
-                    out_time.append(real_time)
-                    out_state_counts.append(state_total_counts.copy())
-                    out_stratified_infection_counts.append(stratified_infection_counts.copy())
-
-                # Advance day
-                day += 1
-                daily_counter = 0
-
                 # Apply interventions
                 if intervention.apply_interventions :
 
@@ -732,11 +721,11 @@ def run_simulation(
 
                         if start_date_offset > 0 :
                             for d in range(start_date_offset - 1) :
-                                vaccinate(my, g, intervention, d, verbose=verbose)
+                                vaccinate(my, g, intervention, d, stratified_vaccination_counts, verbose=verbose)
 
                             start_date_offset = 0
 
-                        vaccinate(my, g, intervention, day, verbose=verbose)
+                        vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=verbose)
 
 
 
@@ -752,20 +741,30 @@ def run_simulation(
                         where_infections_happened_counter)
 
 
+                # Update the output variables
+                if day >= 0 and day < my.cfg.day_max:
+
+                    out_time.append(real_time)
+                    out_state_counts.append(state_total_counts.copy())
+                    out_stratified_infection_counts.append(stratified_infection_counts.copy())
+                    out_stratified_vaccination_counts.append(stratified_vaccination_counts.copy())
+                    out_my_state.append(my.state.copy())
+
+                    intervention.R_true_list.append(calculate_R_True(my, g))
+                    intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
+                    intervention.R_true_list_brit.append(calculate_R_True_brit(my, g))
+
+                # Advance day
+                day += 1
+                daily_counter = 0
+
+
                 if verbose :
                     print("--- day : ", day, " ---")
                     print("n_infected : ", np.round(np.sum(where_infections_happened_counter)))
                     print("R_true : ", np.round(intervention.R_true_list[-1], 3))
                     print("freedom_impact : ", np.round(intervention.freedom_impact_list[-1], 3))
                     print("R_true_list_brit : ", np.round(intervention.R_true_list_brit[-1], 3))
-
-
-                if day >= 0 :
-                    out_my_state.append(my.state.copy())
-
-                    intervention.R_true_list.append(calculate_R_True(my, g))
-                    intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
-                    intervention.R_true_list_brit.append(calculate_R_True_brit(my, g))
 
             if intervention.apply_interventions:
                 test_tagged_agents(my, g, intervention, day, click)
@@ -808,5 +807,5 @@ def run_simulation(
         # print("N_daily_tests", intervention.N_daily_tests)
         # print("N_positive_tested", N_positive_tested)
 
-    return out_time, out_state_counts, out_stratified_infection_counts, out_my_state, intervention
+    return out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_my_state, intervention
     #return out_time, out_state_counts, out_variant_counts, out_my_state, intervention

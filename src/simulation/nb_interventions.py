@@ -42,8 +42,9 @@ def calculate_contact_distribution_label(my, intervention):
 
 
 @njit
-def vaccinate(my, g, intervention, day, verbose=False) :
+def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=False) :
 
+    # Loop over vaccine types
     for i in range(len(intervention.vaccination_schedule)) :
 
         # Check if all vaccines have been given
@@ -79,6 +80,9 @@ def vaccinate(my, g, intervention, day, verbose=False) :
 
                         else :
                             my.vaccination_type[agent] = -i
+
+                    # Update counter
+                    stratified_vaccination_counts[my.age[agent]] += 1
 
 
 @njit
@@ -238,7 +242,7 @@ def reset_rates_of_connection(my, g, agent, ith_contact, intervention, two_way=T
     # Compute the infection rate
     infection_rate = my.infection_weight[agent]
     infection_rate *= my.beta_connection_type[my.connection_type[agent][ith_contact]]
-    infection_rate *= my.cfg.label_betas[my.label[agent]]
+    #infection_rate *= my.cfg.label_betas[my.label[agent]]
 
     if my.corona_type[agent] == 1 :
         infection_rate *= my.cfg.beta_UK_multiplier

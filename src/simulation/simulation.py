@@ -274,8 +274,9 @@ class Simulation :
         self.N_infectious_states = 4  # This means the 5'th state
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
-        self.state_total_counts          = np.zeros(self.N_states, dtype=np.uint32)
-        self.stratified_infection_counts = np.zeros((self.intervention.N_labels, 2, self.N_ages), dtype=np.uint32)
+        self.state_total_counts            = np.zeros(self.N_states, dtype=np.uint32)
+        self.stratified_infection_counts   = np.zeros((self.intervention.N_labels, 2, self.N_ages), dtype=np.uint32)
+        self.stratified_vaccination_counts = np.zeros((self.intervention.N_labels, self.N_ages),    dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
@@ -452,17 +453,18 @@ class Simulation :
             self.SIR_transition_rates,
             self.state_total_counts,
             self.stratified_infection_counts,
+            self.stratified_vaccination_counts,
             self.agents_in_state,
             self.N_infectious_states,
             self.nts,
             self.verbose)
 
 
-        out_time, out_state_counts, out_stratified_infection_counts, out_my_state, intervention = res
+        out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_my_state, intervention = res
 
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
-        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_infection_counts, self.cfg)
+        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, self.cfg)
         self.intervention = intervention
 
         return self.df
@@ -573,6 +575,8 @@ def run_single_simulation(
 
 
 def update_database(db_cfg, q, cfg) :
+    if cfg is None :
+        return
 
     if not db_cfg.contains((q.hash == cfg.hash) & (q.network.ID == cfg.network.ID)) :
         db_cfg.insert(cfg)
@@ -580,7 +584,7 @@ def update_database(db_cfg, q, cfg) :
 
 def run_simulations(
         simulation_parameters,
-        N_runs=2,
+        N_runs=1,
         num_cores_max=None,
         N_tot_max=False,
         verbose=False,

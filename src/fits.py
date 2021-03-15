@@ -13,14 +13,10 @@ import warnings
 from p_tqdm import p_umap
 from functools import partial
 
-try:
-    from src.utils import utils
-    from src import file_loaders
-    from src import SIR
-except ImportError:
-    import utils
-    import file_loaders
-    import SIR
+
+from src.utils import utils
+from src.utils import file_loaders
+from src import SIR
 
 # reload(SIR)
 

@@ -3,7 +3,7 @@
 # Default parameters:
 version: 2.1 # the version of the algorithm
 
-N_init: 2000  # Initial Infected
+N_init: 1000  # Initial Infected
 beta: 0.012  # Daily infection rate (SIR, init: 0-1, but beta = (2mu/N_tot)* betaSIR)
 sigma_beta: 0.0  # Spread in rates, beta
 
@@ -26,6 +26,7 @@ lambda_I: 1.0  # I->R, Lambda(from I states)
 make_random_initial_infections: True # Infections around a single agent
 weighted_random_initial_infections: False # Infections weighted by the number of contacts
 initialize_at_kommune_level: False # Initiate infections at kommune basis
+
 labels: custom  #none, kommune, custom (needs a label_map)
 label_map: [[Albertslund, Allerød, Ballerup, Bornholm, Brøndby, København, Dragør, Egedal, Fredensborg, Frederiksberg, Frederikssund, Furesø, Gentofte, Gladsaxe, Glostrup, Gribskov, Halsnæs, Helsingør, Herlev, Hillerød, Hvidovre, Høje-Taastrup, Hørsholm, Ishøj, Lyngby-Taarbæk, Rudersdal, Rødovre, Tårnby, Vallensbæk], #  Hovedstaden
             [Aalborg, Brønderslev, Frederikshavn, Hjørring, Jammerbugt, Læsø, Mariagerfjord, Morsø, Rebild, Thisted, Vesthimmerlands], # Nordjylland
@@ -35,7 +36,7 @@ label_names: [Sjælland, Hovedstaden, Nordjylland, Midtjylland, Syddanmark]
 label_betas: [1, 1, 1, 1, 1]
 label_frac: [1, 1, 1, 1, 1]
 
-day_max: 0 # 5 weeks. Sets the maximum number of days the algorithm runs
+day_max: 35 # 5 weeks. Sets the maximum number of days the algorithm runs
 
 
 # vaccinations related variables.
@@ -96,7 +97,7 @@ isolation_rate_reduction: [0.2, 1.0, 1.0] # [family, job, other]
 tracing_rates: [1.0, 0.8, 0.0] # [family, job, other]
 tracing_delay: 10 #
 
-Intervention_contact_matrices_name : [reference]
+Intervention_contact_matrices_name : [basis]
 
 # Vaccination related parameters
 Intervention_vaccination_schedule_name : None

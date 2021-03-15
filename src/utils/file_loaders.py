@@ -310,7 +310,7 @@ def load_age_stratified_file(file) :
 
     return data.to_numpy(), row_names, lower_breaks
 
-def load_contact_matrices(scenario = 'reference', N_labels = 1) :
+def load_contact_matrices(scenario = 'basis', N_labels = 1) :
     """ Loads and parses the contact matrices corresponding to the chosen scenario.
         The function first determines what the relationship between work activites and other activites are
         After the work_other_ratio has been calculated, the function returns the normalized contact matrices

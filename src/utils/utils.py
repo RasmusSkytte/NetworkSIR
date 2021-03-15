@@ -1016,6 +1016,11 @@ def get_cfg_default() :
     """ Default Simulation Parameters """
     cfg              = file_loaders.load_yaml("cfg/simulation_parameters_default.yaml")
     cfg.network      = file_loaders.load_yaml("cfg/simulation_parameters_network.yaml")
+
+    # Load the network contact matrix
+    work_matix, other_matrix, work_other_ratio, _ = file_loaders.load_contact_matrices(scenario = cfg.network.contact_matrices_name)
+    cfg["network"].update({"work_matrix" : work_matix[0], "other_matrix" : other_matrix[0], "work_other_ratio" : work_other_ratio[0]})
+
     #cfg.intervention = file_loaders.load_yaml("cfg/simulation_parameters_intervention.yaml")
     return cfg
 

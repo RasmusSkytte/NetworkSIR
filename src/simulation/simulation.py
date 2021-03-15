@@ -453,6 +453,7 @@ class Simulation :
             self.SIR_transition_rates,
             self.state_total_counts,
             self.stratified_infection_counts,
+            self.stratified_vaccination_counts,
             self.agents_in_state,
             self.N_infectious_states,
             self.nts,
@@ -463,7 +464,7 @@ class Simulation :
 
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
-        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_infection_counts, self.cfg)
+        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, self.cfg)
         self.intervention = intervention
 
         return self.df

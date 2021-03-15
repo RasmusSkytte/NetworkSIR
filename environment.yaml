@@ -30,7 +30,8 @@ dependencies:
   # - imageio-ffmpeg
   - h5py
   # - pathos
-  # - geopandas
+  - geopandas
+  - openpyxl
   # - descartes
   - tinydb
   # - flake8

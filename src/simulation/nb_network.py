@@ -346,10 +346,11 @@ def place_and_connect_families_kommune_specific(
 
         #Draw size of household form distribution
         people_in_household_kommune = people_in_household[kommune, :]
+
         N_people_in_house_index = utils.rand_choice_nb(people_in_household_kommune)
         N_people_in_house = people_index_to_value[N_people_in_house_index]
         house_sizes[N_people_in_house_index] += 1
-        # if N_in_house would increase agent to over N_tot,
+        # if N_in_house would increase agent to over N_tot
         # set N_people_in_house such that it fits and break loop
         if agent + N_people_in_house >= N_tot :
             N_people_in_house = N_tot - agent
@@ -370,7 +371,7 @@ def place_and_connect_families_kommune_specific(
             agents_in_age_group[age_index].append(np.uint32(agent))
 
             #set coordinate for agent
-            my.coordinates[agent] = coordinates_raw[house_index]
+            my.coordinates[agent] = coordinates
 
             # set weights determining extro/introvert and supersheader
             set_connection_weight(my, agent)
@@ -542,3 +543,54 @@ def connect_work_and_others(
             if progress > progress_counter * progress_delta_print :
                 progress_counter += 1
                 print("Connected ", round(progress * 100), r"% of work and others")
+
+
+#@njit
+def generate_one_household(people_in_household_sogn, agent, agent0, do_continue, N_tot, my, age_distribution_per_people_in_household, counter_ages, agents_in_age_group, coordinates, mu_counter, people_index_to_value, house_sizes, kommune):
+    N_people_in_house_index = utils.rand_choice_nb(people_in_household_sogn)
+    N_people_in_house = people_index_to_value[N_people_in_house_index]
+    house_sizes[N_people_in_house_index] += 1
+    # if N_in_house would increase agent to over N_tot,
+    # set N_people_in_house such that it fits and break loop
+    if agent + N_people_in_house >= N_tot :
+        N_people_in_house = N_tot - agent
+        do_continue = False
+
+    # Initilaze the agents and assign them to households
+
+    age_dist = age_distribution_per_people_in_household[kommune, N_people_in_house_index, :]
+    for _ in range(N_people_in_house) :
+        age_index = utils.rand_choice_nb(
+            age_dist
+        )
+
+        #set age for agent
+        age = age_index  # just use age index as substitute for age
+        my.age[agent] = age
+        my.kommune[agent] = kommune
+        counter_ages[age_index] += 1
+        agents_in_age_group[age_index].append(np.uint32(agent))
+
+        #set coordinate for agent
+        my.coordinates[agent] = coordinates
+
+        # set weights determining extro/introvert and supersheader
+        set_connection_weight(my, agent)
+        set_infection_weight(my, agent)
+
+        agent += 1
+
+    # add agents to each others networks (connections). All people in a household know eachother
+    for agent1 in range(agent0, agent0 + N_people_in_house) :
+        for agent2 in range(agent1, agent0 + N_people_in_house) :
+            if agent1 != agent2 :
+                my.connections[agent1].append(np.uint32(agent2))
+                my.connections[agent2].append(np.uint32(agent1))
+                my.connection_status[agent1].append(True)
+                my.connection_status[agent2].append(True)
+                my.connection_type[agent1].append(np.uint8(0))
+                my.connection_type[agent2].append(np.uint8(0))
+                my.number_of_contacts[agent1] += 1
+                my.number_of_contacts[agent2] += 1
+                mu_counter += 1
+    return agent, do_continue, mu_counter

@@ -27,10 +27,10 @@ def aggregate_array(arr, chunk_size=10) :
     for k in range(chunks) :
         out_arr[k, :] = np.mean(tmp[k*chunk_size:(k+1)*chunk_size, :], axis=0)
 
-    if len(shp) == 1 :
-        out_arr.reshape(shp[0],)
-
-    return out_arr
+    if len(np.shape(arr)) == 1 :
+        return np.squeeze(out_arr)
+    else :
+        return out_arr
 
 
 def load_from_file(filename) :
@@ -73,11 +73,11 @@ def load_from_file(filename) :
     T_regions    = np.sum(stratified_infections, axis=(2, 3))
 
     # Get daily values
-    T_total      = aggregate_array(T_total)
-    T_variants   = aggregate_array(T_variants)
-    T_uk         = aggregate_array(T_uk)
-    T_age_groups = aggregate_array(T_age_groups)
-    T_regions    = aggregate_array(T_regions)
+    T_total      = T_total
+    T_variants   = T_variants
+    T_uk         = T_uk
+    T_age_groups = T_age_groups
+    T_regions    = T_regions
 
     # Get weekly values
     T_total_week = aggregate_array(T_total, chunk_size=7)
@@ -91,26 +91,40 @@ def load_from_file(filename) :
     return T_total, f, T_age_groups, T_variants, T_regions
 
 
-def compute_loglikelihood(arr, data, transformation_function = lambda x : x) :
+def parse_time_ranges(start_date, end_date) :
+
+    t_tests = pd.date_range(start=start_date, end=end_date, freq="D")
+    t_tests = t_tests[:-1]
+
+    _, c    = np.unique(t_tests.isocalendar().week, return_counts=True)
+    t_f     = pd.date_range(start=start_date, end=end_date, freq="W-SUN")
+
+    # Ensure only full weeks are included
+    if c[0] < 7 :
+        t_f = t_f[1:]
+
+    return t_tests, t_f
+
+def compute_loglikelihood(input_data, validation_data, transformation_function = lambda x : x) :
 
     # Unpack values
-    data_values, data_sigma, data_offset = data
-    if len(arr) >= len(data_values) + data_offset :
+    input_values, t_input = input_data
+    data_values, data_sigma, t_data = validation_data
 
-        # Get the range corresponding to the tests
-        arr_model = arr[data_offset:data_offset+len(data_values)]
+    intersection = t_input.intersection(t_data)
 
-        # Calculate (log) proability for every point
-        log_prop = norm.logpdf(transformation_function(arr_model), loc=data_values, scale=data_sigma)
+    arr_model = [val for val, t in zip(input_values, t_input) if t in intersection]
 
-        # Determine scaled the log likelihood
-        return np.sum(log_prop) / len(log_prop)
+    arr_data  = [val for val, t in zip(data_values,  t_data)  if t in intersection]
+    arr_sigma = [val for val, t in zip(data_sigma,   t_data)  if t in intersection]
 
-    else :
-        return np.nan
+    # Calculate (log) proability for every point
+    log_prop = norm.logpdf(transformation_function(arr_model), loc=arr_data, scale=arr_sigma)
 
+    # Determine scaled the log likelihood
+    return np.sum(log_prop) / len(log_prop)
 
-def load_covid_index(start_date) :
+def load_covid_index() :
 
     # Load the covid index data
     df_index = pd.read_feather(file_loaders.load_yaml('cfg/files.yaml')['CovidIndex'])
@@ -119,18 +133,13 @@ def load_covid_index(start_date) :
     beta       = df_index["beta"][0]
     beta_sigma = df_index["beta_sd"][0]
 
-    # Find the index for the starting date
-    ind = np.where(df_index["date"] == datetime.datetime(2021, 1, 1).date())[0][0]
 
     # Only fit to data after this date
-    logK       = df_index["logI"][ind:]     # Renaming the index I to index K to avoid confusion with I state in SIR model
-    logK_sigma = df_index["logI_sd"][ind:] / 3
-    t          = df_index["date"][ind:]
+    logK       = df_index["logI"]     # Renaming the index I to index K to avoid confusion with I state in SIR model
+    logK_sigma = df_index["logI_sd"]
+    t          = df_index["date"]
 
-    # Determine the covid_index_offset
-    covid_index_offset = (datetime.datetime(2021, 1, 1).date() - start_date).days
-
-    return (logK, logK_sigma, beta, covid_index_offset, t)
+    return (logK, logK_sigma, beta, pd.to_datetime(t))
 
 
 def load_b117_fraction() :
@@ -143,11 +152,10 @@ def load_b117_fraction() :
 
     fraction = p
     fraction_sigma = 2 * np.sqrt(p_var)
-    fraction_offset = 1
 
-    t = pd.date_range(start = datetime.datetime(2020, 12, 28), periods = len(fraction), freq = "W-SUN")
+    t = pd.date_range(start='2020-12-28', periods=len(fraction), freq="W-SUN")
 
-    return (fraction, fraction_sigma, fraction_offset, t)
+    return (fraction, fraction_sigma, t)
 
 
 def load_infected_per_category(beta, category='AgeGr') :

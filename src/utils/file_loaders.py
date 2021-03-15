@@ -18,6 +18,10 @@ from io import BytesIO
 from zipfile import ZipFile
 import urllib.request
 import datetime
+import geopandas as gpd
+from shapely.geometry import Point, Polygon
+from shapely.geometry import mapping as _polygon_to_array
+
 
 from src.analysis.helpers import load_infected_per_category
 
@@ -262,6 +266,25 @@ def parse_age_distribution_data(filename, kommune_dict=None) :
 
     return age_dist
 
+def parse_age_distribution_data_sogn(filename, kommune_dict=None) :
+
+    age_dist_raw      = pd.read_csv(filename, index_col=0)
+    kommune_names_raw = age_dist_raw.index
+    age_dist_raw      = age_dist_raw.to_numpy()
+
+    age_dist = np.zeros( (len(kommune_dict), age_dist_raw.shape[1], len(eval(age_dist_raw[0, 0]))), dtype=float)
+
+    for i in range(age_dist_raw.shape[0]) :
+
+        i_out = kommune_dict[kommune_names_raw[i]]
+
+        for j in range(age_dist_raw.shape[1]) :
+            age_dist[i_out, j, :] = eval(age_dist_raw[i, j])
+
+
+    return age_dist
+
+
 
 def parse_household_data(filename, kommune_dict=None) :
 
@@ -280,6 +303,53 @@ def parse_household_data(filename, kommune_dict=None) :
 
     return household_dist
 
+def load_sogn_to_kommune_idx(filename="Data/population_information/sogn_to_kommune.csv"):
+    # list of the n-th sogn in sogne_household_file to kommune idx
+    return np.loadtxt(filename)
+
+def parse_household_data_sogn(filename, kommune_dict=None) :
+
+    df = pd.read_excel(filename, skiprows=3, engine='openpyxl')
+    df = df.set_index(df.columns[0])
+    df=df.fillna(0)
+    df = df.rename({"6+":6},axis='columns')
+    return df
+
+def load_kommune_shapefiles(verbose=False) :
+    shapefile_size = "large"
+    shp_file = {}
+    shp_file["large"]  = "Data/population_information/KOMMUNE.shp"
+
+    if verbose :
+        print(f"Loading {shapefile_size} kommune shape files")
+    kommuner = gpd.read_file(shp_file[shapefile_size]).to_crs({"proj" : "latlong"})  # convert to lat lon, compared to UTM32_EUREF89
+    #print(kommuner)
+
+    kommune_navn, kommune_idx = np.unique(kommuner["KOMNAVN"], return_inverse=True)
+    name_to_idx = dict(zip(kommune_navn, range(len(kommune_navn))))
+    idx_to_name = {v : k for k, v in name_to_idx.items()}
+
+    kommuner["idx"] = kommune_idx
+    kommuner = kommuner.set_index(kommuner.columns[12])
+    return kommuner, name_to_idx, idx_to_name
+
+def load_sogne_shapefiles(verbose=False) :
+    shapefile_size = "large"
+    shp_file = {}
+    shp_file["large"]  = "Data/population_information/SOGN.shp"
+
+    if verbose :
+        print(f"Loading {shapefile_size} sogne shape files")
+    sogne = gpd.read_file(shp_file[shapefile_size]).to_crs({"proj" : "latlong"})  # convert to lat lon, compared to UTM32_EUREF89
+
+
+    sogne_navn, sogne_idx = np.unique(sogne["SOGNEKODE"], return_inverse=True)
+    name_to_idx = dict(zip(sogne_navn, range(len(sogne_navn))))
+    idx_to_name = {v : k for k, v in name_to_idx.items()}
+
+    sogne["idx"] = sogne_idx
+    sogne = sogne.set_index(sogne.columns[9])
+    return sogne, name_to_idx, idx_to_name
 
 def load_household_data(kommune_dict) :
 
@@ -288,6 +358,12 @@ def load_household_data(kommune_dict) :
 
     return household_dist, age_dist
 
+def load_household_data_sogn(kommune_dict) :
+
+    household_dist_sogn = parse_household_data_sogn(load_yaml('cfg/files.yaml')['PeopleInHouseholdSogn'])
+    age_dist = parse_age_distribution_data_sogn(load_yaml('cfg/files.yaml')['AgeDistribution'],  kommune_dict=kommune_dict)
+
+    return household_dist_sogn, age_dist
 
 def load_age_stratified_file(file) :
     """ Loads and parses the contact matrix from the .csv file specifed
@@ -333,7 +409,6 @@ def load_contact_matrices(scenario = 'reference', N_labels = 1) :
             filenames.append(os.path.join(base_path, scenario + '_label_' + str(label)))
         else :
             filenames.append(os.path.join(base_path, scenario))
-
 
     for filename_set in filenames:
         tmp_matrix_work, tmp_matrix_other, tmp_work_other_ratio, tmp_age_groups_work = load_contact_matrix_set(filename_set)
@@ -448,11 +523,10 @@ def load_municipality_data(zfile) :
     return pd.read_csv(zfile.open('Municipality_cases_time_series.csv'), sep=';', index_col=0)
 
 def load_age_data(zfile) :
-    df = pd.read_csv(zfile.open('Cases_by_age.csv'), usecols=['Aldersgruppe', 'Antal_bekræftede_COVID-19'], sep=';', index_col=0)
+    df = pd.read_csv(zfile.open('Cases_by_age.csv'), usecols=['Aldersgruppe', 'Antal_bekræftede_COVID-19'], dtype={'Aldersgruppe' : str, 'Antal_bekræftede_COVID-19' : str}, sep=';', index_col=0)
 
     # Remove thousands seperator
     col = 'Antal_bekræftede_COVID-19'
-    df[col] = df[col].astype(str)
     df[col] = df[col].str.replace('.', '', regex=False)
     df[col] = df[col].astype(float)
 
@@ -546,48 +620,36 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
 
     else :
 
-        _, positive_per_age_group = load_infected_per_category(0.55, category='AgeGr')
+        if initial_distribution_file.lower() == 'newest' :
+            date_current = newest_SSI_filename()
+        else :
+            date_current = initial_distribution_file
 
-        age_distribution_immunized = np.sum(positive_per_age_group[:-7, :], axis = 0)
-        age_distribution_infected =  np.sum(positive_per_age_group[-7:, :], axis = 0)
+        date_delayed = datetime.datetime.strptime(date_current, '%Y_%m_%d') - datetime.timedelta(days=7)
+        date_delayed = date_delayed.strftime('%Y_%m_%d')
 
-        tmp = age_distribution_immunized[-1]
-        age_distribution_immunized = age_distribution_immunized[:-1]
-        age_distribution_immunized[-1] += tmp
+        _, df_current = get_SSI_data(date=date_current, return_data=True)
+        _, df_delayed = get_SSI_data(date=date_delayed, return_data=True)
 
-        tmp = age_distribution_infected[-1]
-        age_distribution_infected = age_distribution_infected[:-1]
-        age_distribution_infected[-1] += tmp
+        age_distribution_current_raw = df_current.to_numpy().flatten()
+        age_distribution_delayed_raw = df_delayed.to_numpy().flatten()
 
-        # if initial_distribution_file.lower() == 'newest' :
-        #     date_current = newest_SSI_filename()
-        # else :
-        #     date_current = initial_distribution_file
+        # Filter out ages of 70 and below
+        age_distribution_current = age_distribution_current_raw[:N_ages]
+        age_distribution_delayed = age_distribution_delayed_raw[:N_ages]
 
-        # date_delayed = datetime.datetime.strptime(date_current, '%Y_%m_%d') - datetime.timedelta(days=7)
-        # date_delayed = date_delayed.strftime('%Y_%m_%d')
+        # Add the data for the ages above 70
+        age_distribution_current[-1] += np.sum(age_distribution_current[N_ages:])
+        age_distribution_delayed[-1] += np.sum(age_distribution_delayed[N_ages:])
 
-        # _, df_current = get_SSI_data(date=date_current, return_data=True)
-        # _, df_delayed = get_SSI_data(date=date_delayed, return_data=True)
+        age_distribution_infected  = age_distribution_current - age_distribution_delayed
+        age_distribution_immunized = age_distribution_delayed
 
-        # age_distribution_current_raw = df_current.to_numpy().flatten()
-        # age_distribution_delayed_raw = df_delayed.to_numpy().flatten()
-
-        # # Filter out ages of 70 and below
-        # age_distribution_current = age_distribution_current_raw[:N_ages]
-        # age_distribution_delayed = age_distribution_delayed_raw[:N_ages]
-
-        # # Add the data for the ages above 70
-        # age_distribution_current[-1] += np.sum(age_distribution_current[N_ages:])
-        # age_distribution_delayed[-1] += np.sum(age_distribution_delayed[N_ages:])
-
-        # age_distribution_infected  = age_distribution_current - age_distribution_delayed
-        # age_distribution_immunized = age_distribution_delayed
-
-        # if np.any(age_distribution_infected < 0) :
-        #     raise ValueError(f'Age distribution is corrupted for {date_current}')
+        if np.any(age_distribution_infected < 0) :
+            raise ValueError(f'Age distribution is corrupted for {date_current}')
 
     return age_distribution_infected, age_distribution_immunized
+
 
 def load_kommune_infection_distribution(initial_distribution_file, kommune_dict) :
 

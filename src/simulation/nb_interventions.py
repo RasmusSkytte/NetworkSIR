@@ -236,7 +236,12 @@ def reset_rates_of_connection(my, g, agent, ith_contact, intervention, two_way=T
     contact = my.connections[agent][ith_contact]
 
     # Compute the infection rate
-    infection_rate = my.infection_weight[agent] * my.beta_connection_type[my.connection_type[agent][ith_contact]]
+    infection_rate = my.infection_weight[agent]
+    infection_rate *= my.beta_connection_type[my.connection_type[agent][ith_contact]]
+    infection_rate *= my.cfg.label_betas[my.label[agent]]
+
+    if my.corona_type[agent] == 1 :
+        infection_rate *= my.cfg.beta_UK_multiplier
 
     # TODO: Here we should implement transmission risk for vaccinted persons
 
@@ -588,9 +593,9 @@ def matrix_restriction_on_label(my, g, intervention, label, n, verbose=False) :
                     prev += 1
 
     for agent in range(my.cfg_network.N_tot) :
-        my.restricted_status[agent] = 1
-        remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label)
-
+        if my.label[agent] == label :
+            my.restricted_status[agent] = 1
+            remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label)
 
     if verbose :
         after = 0
@@ -661,11 +666,13 @@ def apply_symptom_testing(my, intervention, agent, state, click) :
 def apply_random_testing(my, intervention, click) :
     # choose N_daily_test people at random to test
     N_daily_test = int(my.cfg.daily_tests * my.cfg_network.N_tot / 5_800_000)
+
     agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
+
     random_agents_to_be_tested = np.random.choice(agents, N_daily_test)
-    intervention.clicks_when_tested[random_agents_to_be_tested] = (
-        click + intervention.cfg.test_delay_in_clicks[1]
-    )
+
+    intervention.clicks_when_tested[random_agents_to_be_tested] = click + intervention.cfg.test_delay_in_clicks[1]
+
     # specify that random test is the reason for test
     intervention.reason_for_test[random_agents_to_be_tested] = 1
 
@@ -677,17 +684,17 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
         threshold_info = np.array([[1, 2], [200, 100], [20, 20]]) #TODO : remove
         check_if_intervention_on_labels_can_be_removed(my, g, intervention, day, click, threshold_info)
 
-        for i_label, clicks_when_restriction_stops in enumerate(intervention.clicks_when_restriction_stops) :
+        for ith_label, clicks_when_restriction_stops in enumerate(intervention.clicks_when_restriction_stops) :
             if clicks_when_restriction_stops == click :
-                remove_intervention_at_label(my, g, intervention, i_label)
-                intervention.clicks_when_restriction_stops[i_label] = -1
-                intervention_type_n = intervention.types[i_label]
-                intervention.types[i_label] = 0
-                intervention.started_as[i_label] = 0
+                remove_intervention_at_label(my, g, intervention, ith_label)
+                intervention.clicks_when_restriction_stops[ith_label] = -1
+                intervention_type_n = intervention.types[ith_label]
+                intervention.types[ith_label] = 0
+                intervention.started_as[ith_label] = 0
                 if intervention.verbose :
                     intervention_type_name = ['nothing', 'lockdown', 'masking', 'error', 'error', 'error', 'error', 'matrix_based']
                     print(
-                        *('remove ', intervention_type_name[intervention_type_n], ' at num of infected', i_label),
+                        *('remove ', intervention_type_name[intervention_type_n], ' at num of infected', ith_label),
                         *('at day', day)
                     )
 
@@ -758,6 +765,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                                     label=ith_label,
                                     rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[int(i/2)]
                                 )
+
                             # if masking
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 2 :
                                 if verbose :
@@ -770,6 +778,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                                     label=ith_label,
                                     rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[int(i/2)]
                                 )
+
                             # if matrix restriction
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3 :
 
@@ -787,8 +796,9 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                                     int(i/2),
                                     verbose=verbose
                                 )
+
                     else :
-                        for i_label, intervention_type in enumerate(intervention.types) :
+                        for ith_label, intervention_type in enumerate(intervention.types) :
 
                             # Matrix restrictions are not removed # TODO: Remove if no restrictions follow
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3 :
@@ -797,13 +807,15 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                             if verbose :
                                 print('Intervention removed')
 
-                            remove_intervention_at_label(my, g, intervention, i_label)
+                            remove_intervention_at_label(my, g, intervention, ith_label)
 
 
 @njit
 def test_tagged_agents(my, g, intervention, day, click) :
+
     # test everybody whose counter say we should test
     for agent in range(my.cfg_network.N_tot) :
+
         # testing everybody who should be tested
         if intervention.clicks_when_tested[agent] == click:
             test_agent(my, g, intervention, agent, click)
@@ -814,18 +826,18 @@ def test_tagged_agents(my, g, intervention, day, click) :
                 g,
                 intervention,
                 agent,
-                rate_reduction=intervention.cfg.isolation_rate_reduction,
-            )
+                rate_reduction=intervention.cfg.isolation_rate_reduction)
 
         # getting results for people
         if intervention.clicks_when_tested_result[agent] == click :
+
             intervention.clicks_when_tested_result[agent] = -1
             intervention.day_found_infected[agent] = day
+
             if intervention.apply_isolation :
                 cut_rates_of_agent(
                     my,
                     g,
                     intervention,
                     agent,
-                    rate_reduction=intervention.cfg.isolation_rate_reduction,
-                )
+                    rate_reduction=intervention.cfg.isolation_rate_reduction)

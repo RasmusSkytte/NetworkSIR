@@ -231,38 +231,13 @@ def initialize_states(
     state_total_counts,
     stratified_infection_counts,
     agents_in_state,
+    subgroup_beta_multiplier,
     possible_agents,
     N_init,
     R_init,
     prior_infected,
     prior_immunized,
     verbose=False) :
-
-
-    R_state = g.N_states - 1
-
-    if R_init > 0 :
-
-        agents = choose_initial_agents(my, possible_agents, R_init, prior_immunized)
-
-        #  Make initial immunizations
-        for agent in agents :
-
-            # Update the state
-            my.state[agent] = R_state
-
-            if np.random.rand() < my.cfg.N_init_UK_frac :
-                my.corona_type[agent] = 1
-
-            agents_in_state[R_state].append(np.uint32(agent))
-
-            state_total_counts[R_state] += 1
-
-            g.total_sum_of_state_changes += SIR_transition_rates[R_state]
-            g.cumulative_sum_of_state_changes[R_state :] += SIR_transition_rates[R_state]
-
-            # Disable incomming rates
-            update_infection_list_for_newly_infected_agent(my, g, agent)
 
 
     if N_init > 0 :
@@ -272,16 +247,12 @@ def initialize_states(
         #  Make initial infections
         for agent in agents :
 
-            # If infected, do not immunize # TODO: Discuss if this is the best way to immunize agents
-            if my.state[agent] == R_state :
-                continue
-
             # Choose corona type
             if np.random.rand() < my.cfg.N_init_UK_frac :
                 my.corona_type[agent] = 1
-                rel_beta = my.cfg.beta_UK_multiplier
+                rel_beta = subgroup_beta_multiplier * my.cfg.beta_UK_multiplier
             else :
-                rel_beta = 1
+                rel_beta = subgroup_beta_multiplier
 
             #weights = calc_E_I_distribution_linear(my.cfg.R_guess * rel_beta)
             weights = calc_E_I_distribution(my, my.cfg.R_guess * rel_beta)
@@ -305,8 +276,15 @@ def initialize_states(
                 for ith_contact, contact in enumerate(my.connections[agent]) :
                     # update rates if contact is susceptible
                     if my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact) :
+
+                        # label specific multiplier
+                        g.rates[agent][ith_contact] *= subgroup_beta_multiplier
+
+                        # Strain specific multiplier
                         if my.corona_type[agent] == 1 :
                             g.rates[agent][ith_contact] *= my.cfg.beta_UK_multiplier
+
+                        # Set the rates
                         rate = g.rates[agent][ith_contact]
                         g.update_rates(my, +rate, agent)
 
@@ -314,6 +292,36 @@ def initialize_states(
                 stratified_infection_counts[my.label[agent]][my.corona_type[agent]][my.age[agent]] += 1
 
             # Make sure agent can not be re-infected
+            update_infection_list_for_newly_infected_agent(my, g, agent)
+
+
+    R_state = g.N_states - 1
+
+    if R_init > 0 :
+
+        agents = choose_initial_agents(my, possible_agents, R_init, prior_immunized)
+
+        #  Make initial immunizations
+        for agent in agents :
+
+            # If infected, do not immunize # TODO: Discuss if this is the best way to immunize agents
+            if my.state[agent] >= 0 :
+                continue
+
+            # Update the state
+            my.state[agent] = R_state
+
+            if np.random.rand() < my.cfg.N_init_UK_frac :
+                my.corona_type[agent] = 1
+
+            agents_in_state[R_state].append(np.uint32(agent))
+
+            state_total_counts[R_state] += 1
+
+            g.total_sum_of_state_changes += SIR_transition_rates[R_state]
+            g.cumulative_sum_of_state_changes[R_state :] += SIR_transition_rates[R_state]
+
+            # Disable incomming rates
             update_infection_list_for_newly_infected_agent(my, g, agent)
 
 
@@ -601,12 +609,15 @@ def run_simulation(
 
             # Moves TO infectious State from non-infectious
             if my.state[agent] == N_infectious_states :
-                # for i, (contact, rate) in enumerate(zip(my.connections[agent], g.rates[agent])) :
+
                 for ith_contact, contact in enumerate(my.connections[agent]) :
+
                     # update rates if contact is susceptible
                     if my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact) :
+
                         if my.corona_type[agent] == 1 :
                             g.rates[agent][ith_contact] *= my.cfg.beta_UK_multiplier
+
                         rate = g.rates[agent][ith_contact]
                         g.update_rates(my, +rate, agent)
 
@@ -689,14 +700,17 @@ def run_simulation(
         while nts * click  < real_time :
 
             daily_counter += 1
-            if ((len(out_time) == 0) or (real_time != out_time[-1])) and day >= 0 :
 
-                # Update the output variables
-                out_time.append(real_time)
-                out_state_counts.append(state_total_counts.copy())
-                out_stratified_infection_counts.append(stratified_infection_counts.copy())
+
 
             if daily_counter >= 10 :
+
+                if day >= 0 and day < my.cfg.day_max:
+
+                    # Update the output variables
+                    out_time.append(real_time)
+                    out_state_counts.append(state_total_counts.copy())
+                    out_stratified_infection_counts.append(stratified_infection_counts.copy())
 
                 # Advance day
                 day += 1
@@ -714,10 +728,9 @@ def run_simulation(
                     if intervention.apply_vaccinations :
 
                         if start_date_offset > 0 :
-                            for day in range(start_date_offset) :
-                                vaccinate(my, g, intervention, day, verbose=verbose)
+                            for d in range(start_date_offset - 1) :
+                                vaccinate(my, g, intervention, d, verbose=verbose)
 
-                            intervention.vaccination_schedule + start_date_offset
                             start_date_offset = 0
 
                         vaccinate(my, g, intervention, day, verbose=verbose)

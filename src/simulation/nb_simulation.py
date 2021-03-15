@@ -616,7 +616,7 @@ def run_simulation(
                     # update rates if contact is susceptible
                     if my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact) :
 
-                        g.rates[agent][ith_contact] *= my.cfg.label_betas[my.label[agent]]
+                        #g.rates[agent][ith_contact] *= my.cfg.label_betas[my.label[agent]]
 
                         if my.corona_type[agent] == 1 :
                             g.rates[agent][ith_contact] *= my.cfg.beta_UK_multiplier

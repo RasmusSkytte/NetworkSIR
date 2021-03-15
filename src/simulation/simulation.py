@@ -238,6 +238,15 @@ class Simulation :
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
 
+
+        wm = np.array(work_matrix_restrict)
+        om = np.array(other_matrix_restrict)
+
+        for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
+            for l in range(len(np.unique(labels))) :
+                    wm[s,l,:,:] *= self.cfg.label_betas[l]
+                    om[s,l,:,:] *= self.cfg.label_betas[l]
+
         # Store the labels in my
         self.my.initialize_labels(labels)
 
@@ -247,8 +256,8 @@ class Simulation :
             labels = labels,
             vaccinations_per_age_group = np.array(vaccinations_per_age_group),
             vaccination_schedule = np.array(vaccination_schedule),
-            work_matrix_restrict = np.array(work_matrix_restrict),
-            other_matrix_restrict = np.array(other_matrix_restrict),
+            work_matrix_restrict = wm,
+            other_matrix_restrict = om,
             verbose=verbose_interventions)
 
 

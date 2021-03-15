@@ -300,6 +300,7 @@ def load_age_stratified_file(file) :
 
     # Get the age groups from the dataframe
     age_groups = list(data)
+    age_groups = [age_group.replace('+', '-') for age_group in age_groups]
 
     # Extract the lowest age from the age group intervals
     lower_breaks = [int(age_group.split('-')[0]) for age_group in age_groups]

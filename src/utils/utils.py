@@ -1342,13 +1342,6 @@ def initialize_non_infectable(N_tot, my_number_of_contacts) :
     return res
 
 
-def initialize_SIR_transition_rates(N_states, N_infectious_states, cfg) :
-    SIR_transition_rates = np.zeros(N_states, dtype=np.float64)
-    SIR_transition_rates[:N_infectious_states] = cfg.lambda_E
-    SIR_transition_rates[N_infectious_states : 2 * N_infectious_states] = cfg.lambda_I
-    return SIR_transition_rates
-
-
 @njit
 def _compute_agents_in_age_group(ages, N_ages) :
     agents_in_age_group = initialize_nested_lists(N_ages, dtype=np.uint32)

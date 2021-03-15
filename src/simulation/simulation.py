@@ -260,9 +260,10 @@ class Simulation :
 
         np.random.seed(utils.hash_to_seed(self.hash))
 
-        self.nts = 0.1  # Time step (0.1 - ten times a day)
         self.N_states = 9  # number of states
         self.N_infectious_states = 4  # This means the 5'th state
+
+        self.nts = 0.1  # Time step (0.1 - ten times a day)
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
         self.state_total_counts          = np.zeros(self.N_states, dtype=np.uint32)
@@ -270,10 +271,7 @@ class Simulation :
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
-        self.g = nb_jitclass.Gillespie(self.my, self.N_states)
-
-        self.SIR_transition_rates = utils.initialize_SIR_transition_rates(self.N_states, self.N_infectious_states, self.cfg)
-
+        self.g = nb_jitclass.Gillespie(self.my, self.N_states, self.N_infectious_states)
 
         # Find the possible agents
         possible_agents = nb_simulation.find_possible_agents(self.my, self.initial_ages_exposed, self.agents_in_age_group)
@@ -376,7 +374,6 @@ class Simulation :
                 self.my,
                 self.g,
                 self.intervention,
-                self.SIR_transition_rates,
                 self.state_total_counts,
                 self.stratified_infection_counts,
                 self.agents_in_state,
@@ -420,7 +417,7 @@ class Simulation :
 
                 if self.my.cfg.R_init > 0 :
 
-                    kommune = [self.my.kommune[agent] for agent in possible_agents if self.my.state[agent] == self.g.N_states]
+                    kommune = [self.my.kommune[agent] for agent in possible_agents if self.my.state[agent] == self.N_states]
                     dist = np.zeros(np.shape(infected_per_kommune))
                     for k in kommune :
                         dist[k] += 1
@@ -440,11 +437,9 @@ class Simulation :
             self.my,
             self.g,
             self.intervention,
-            self.SIR_transition_rates,
             self.state_total_counts,
             self.stratified_infection_counts,
             self.agents_in_state,
-            self.N_infectious_states,
             self.nts,
             self.verbose)
 

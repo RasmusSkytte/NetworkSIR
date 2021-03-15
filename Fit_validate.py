@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import scipy
 from datetime import datetime
 
@@ -16,7 +15,7 @@ from src import rc_params
 from src.analysis.helpers import *
 
 # Define the subset to plot on
-subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan', '2021_fase1']}]
+subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan', 'fase3_S3_0B_1', 'fase3_S3_0B_2', 'fase3_S3_0B_3', 'fase3_S3_0B_3']}]
 
 
 for subset in subsets :
@@ -128,11 +127,11 @@ for subset in subsets :
         h  = plot_simulation(total_tests, f, t_tests, t_f, axes1)
         h2 = plot_simulation_growth_rates(tests_by_variant, t_tests, axes2)
         h3 = plot_simulation_category(tests_per_age_group, t_tests, axes3)
-        h4 = plot_simulation_category(tests_by_region, t_tests, axes4)
+        #h4 = plot_simulation_category(tests_by_region, t_tests, axes4)
 
         h.extend(h2)
         h.extend(h3)
-        h.extend(h4)
+        #h.extend(h4)
 
         # Evaluate
         ll =  compute_loglikelihood((total_tests, t_tests), (logK,         logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
@@ -201,7 +200,7 @@ for subset in subsets :
     # Get restriction_thresholds from a cfg
     restriction_thresholds = abm_files.cfgs[0].restriction_thresholds
 
-    axes1[0].set_ylim(0, 2000)
+    axes1[0].set_ylim(0, 50000)
     axes1[0].set_ylabel('Daglige positive')
 
 
@@ -323,42 +322,42 @@ for subset in subsets :
 
 
 
-    ########  ########  ######   ####  #######  ##    ##  ######
-    ##     ## ##       ##    ##   ##  ##     ## ###   ## ##    ##
-    ##     ## ##       ##         ##  ##     ## ####  ## ##
-    ########  ######   ##   ####  ##  ##     ## ## ## ##  ######
-    ##   ##   ##       ##    ##   ##  ##     ## ##  ####       ##
-    ##    ##  ##       ##    ##   ##  ##     ## ##   ### ##    ##
-    ##     ## ########  ######   ####  #######  ##    ##  ######
+    # ########  ########  ######   ####  #######  ##    ##  ######
+    # ##     ## ##       ##    ##   ##  ##     ## ###   ## ##    ##
+    # ##     ## ##       ##         ##  ##     ## ####  ## ##
+    # ########  ######   ##   ####  ##  ##     ## ## ## ##  ######
+    # ##   ##   ##       ##    ##   ##  ##     ## ##  ####       ##
+    # ##    ##  ##       ##    ##   ##  ##     ## ##   ### ##    ##
+    # ##     ## ########  ######   ####  #######  ##    ##  ######
 
-    # Load tests per region
-    t, positive_per_region = load_infected_per_category(beta, category='Region')
-    positive_per_region = positive_per_region[:, [3, 0, 2, 1, 4]]
+    # # Load tests per region
+    # t, positive_per_region = load_infected_per_category(beta, category='Region')
+    # positive_per_region = positive_per_region[:, [3, 0, 2, 1, 4]]
 
-    for i in range(len(axes4)) :
+    # for i in range(len(axes4)) :
 
-        # Delete empty axes
-        if i == len(cfg['label_names']) :
-            for ax in axes4[i:] :
-                ax.remove()
-            break
+    #     # Delete empty axes
+    #     if i == len(cfg['label_names']) :
+    #         for ax in axes4[i:] :
+    #             ax.remove()
+    #         break
 
-        axes4[i].scatter(t, positive_per_region[:, i], color='k', s=10, zorder=100)
+    #     axes4[i].scatter(t, positive_per_region[:, i], color='k', s=10, zorder=100)
 
-        axes4[i].set_xlim([start_date, end_date])
-        axes4[i].set_ylim(0, 500)
+    #     axes4[i].set_xlim([start_date, end_date])
+    #     axes4[i].set_ylim(0, 500)
 
-        axes4[i].set_title(cfg['label_names'][i], fontsize=24, pad=5)
+    #     axes4[i].set_title(cfg['label_names'][i], fontsize=24, pad=5)
 
-        axes4[i].xaxis.set_major_locator(months)
-        axes4[i].xaxis.set_major_formatter(months_fmt)
+    #     axes4[i].xaxis.set_major_locator(months)
+    #     axes4[i].xaxis.set_major_formatter(months_fmt)
 
-        axes4[i].tick_params(axis='x', labelsize=24)
-        axes4[i].tick_params(axis='y', labelsize=24)
+    #     axes4[i].tick_params(axis='x', labelsize=24)
+    #     axes4[i].tick_params(axis='y', labelsize=24)
 
 
 
-    fig4.savefig(os.path.splitext(fig_name)[0] + '_regions.png')
+    # fig4.savefig(os.path.splitext(fig_name)[0] + '_regions.png')
 
 
 

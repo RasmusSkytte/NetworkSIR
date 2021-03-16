@@ -303,9 +303,11 @@ def parse_household_data(filename, kommune_dict=None) :
 
     return household_dist
 
+
 def load_sogn_to_kommune_idx(filename="Data/population_information/sogn_to_kommune.csv"):
     # list of the n-th sogn in sogne_household_file to kommune idx
     return np.loadtxt(filename)
+
 
 def parse_household_data_sogn(filename, kommune_dict=None) :
 
@@ -314,6 +316,7 @@ def parse_household_data_sogn(filename, kommune_dict=None) :
     df=df.fillna(0)
     df = df.rename({"6+":6},axis='columns')
     return df
+
 
 def load_kommune_shapefiles(verbose=False) :
     shapefile_size = "large"

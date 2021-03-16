@@ -185,11 +185,27 @@ class Simulation :
         my_hdf5ready = file_loaders.jitclass_to_hdf5_ready_dict(self.my)
 
         with h5py.File(filename, "w", **hdf5_kwargs) as f :
+            # My
             group_my = f.create_group("my")
             file_loaders.save_jitclass_hdf5ready(group_my, my_hdf5ready)
+
+            # agents_in_age_group
             utils.NestedArray(self.agents_in_age_group).add_to_hdf5_file(f, "agents_in_age_group")
+
+            # N_ages
             f.create_dataset("N_ages", data=self.N_ages)
+
+            # cfg
             self._add_cfg_to_hdf5_file(f)
+
+        # kommune_dict
+        self.kommune_dict['id_to_name'].to_hdf(filename, key='id_to_name')
+        self.kommune_dict['name_to_id'].to_hdf(filename, key='name_to_id')
+        #f.create_dataset("kommune_dict_keys",   data=list(self.kommune_dict.keys()))
+        #print(list(self.kommune_dict))
+        #print(type(list(self.kommune_dict.values())[0]))
+        #f.create_dataset("kommune_dict_values", data=list(self.kommune_dict.values()))
+
 
     def _load_initialized_network(self, filename) :
 
@@ -197,18 +213,22 @@ class Simulation :
             print(f"Loading previously initialized network, please wait", flush=True)
 
         with h5py.File(filename, "r") as f :
-            self.agents_in_age_group = utils.NestedArray.from_hdf5(
-                f, "agents_in_age_group"
-            ).to_nested_numba_lists()
-            self.N_ages = f["N_ages"][()]
-
+            # My
             my_hdf5ready = file_loaders.load_jitclass_to_dict(f["my"])
             self.my = file_loaders.load_My_from_dict(my_hdf5ready, self.cfg.deepcopy())
 
-        _, kommune_name_to_idx, _ = file_loaders.load_kommune_shapefiles(self.verbose)
-        names = kommune_name_to_idx.keys()
-        IDs   = kommune_name_to_idx.values()
-        self.kommune_dict = {'id_to_name' : pd.Series(names, index=IDs), 'name_to_id' : pd.Series(IDs, index=names)}
+            # agents_in_age_group
+            self.agents_in_age_group = utils.NestedArray.from_hdf5(
+                f, "agents_in_age_group"
+            ).to_nested_numba_lists()
+
+            # N_ages
+            self.N_ages = f["N_ages"][()]
+
+        # kommune_dict
+        self.kommune_dict = {'id_to_name' : pd.read_hdf(filename, 'id_to_name'),
+                             'name_to_id' : pd.read_hdf(filename, 'name_to_id')}
+
 
         # Update connection weights
         for agent in range(self.cfg.network.N_tot) :

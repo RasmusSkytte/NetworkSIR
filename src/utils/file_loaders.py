@@ -451,10 +451,10 @@ def load_vaccination_schedule(cfg) :
     """
 
     if cfg.Intervention_vaccination_schedule_name == 'None' :
-        return np.zeros( (1, 1, len(cfg.network.work_matrix)), dtype=np.int32), np.zeros( (1, 2), dtype=np.int32)
+        return np.zeros( (1, 1, len(cfg.network.work_matrix)), dtype=np.int64), np.zeros( (1, 2), dtype=np.int64)
 
 
-    vaccinations_per_age_group, vaccination_schedule, _ = load_vaccination_schedule_file(scenario = cfg.Intervention_vaccination_schedule_name)
+    vaccinations_per_age_group, vaccination_schedule = load_vaccination_schedule_file(scenario = cfg.Intervention_vaccination_schedule_name)
 
     # Check that lengths match
     utils.test_length(vaccinations_per_age_group, cfg.Intervention_vaccination_effect_delays, "Loaded vaccination schedules does not match with the length of vaccination_effect_delays")
@@ -469,7 +469,7 @@ def load_vaccination_schedule(cfg) :
         # Determine the timing of effective vaccines
         vaccination_schedule[i] = cfg.start_date_offset + np.array([0, (vaccination_schedule[i][-1] - vaccination_schedule[i][0]).days]) + cfg.Intervention_vaccination_effect_delays[i]
 
-    return vaccinations_per_age_group, vaccination_schedule
+    return np.array(vaccinations_per_age_group), np.array(vaccination_schedule)
 
 
 def load_vaccination_schedule_file(scenario = "reference") :
@@ -480,7 +480,6 @@ def load_vaccination_schedule_file(scenario = "reference") :
     # Prepare output files
     vaccine_counts  = []
     schedule        = []
-    age_groups      = []
 
     # Determine the number of files that matches the requested scenario
     i = 0
@@ -502,7 +501,7 @@ def load_vaccination_schedule_file(scenario = "reference") :
         i += 1
 
     # Normalize the contact matrices after this ratio has been determined
-    return vaccine_counts, schedule, age_groups
+    return vaccine_counts, schedule
 
 
 

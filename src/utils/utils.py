@@ -1404,7 +1404,6 @@ def counts_to_df(time, state_counts, stratified_infected, stratified_vaccination
     stratified_infected = np.array(stratified_infected)
     stratified_vaccination = np.array(stratified_vaccination)
 
-
     N_states     = np.size(state_counts, 1)
     N_labels     = np.size(stratified_infected, 1)
     N_variants   = np.size(stratified_infected, 2)

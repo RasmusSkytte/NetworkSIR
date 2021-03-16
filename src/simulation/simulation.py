@@ -201,10 +201,6 @@ class Simulation :
         # kommune_dict
         self.kommune_dict['id_to_name'].to_hdf(filename, key='id_to_name')
         self.kommune_dict['name_to_id'].to_hdf(filename, key='name_to_id')
-        #f.create_dataset("kommune_dict_keys",   data=list(self.kommune_dict.keys()))
-        #print(list(self.kommune_dict))
-        #print(type(list(self.kommune_dict.values())[0]))
-        #f.create_dataset("kommune_dict_values", data=list(self.kommune_dict.values()))
 
 
     def _load_initialized_network(self, filename) :

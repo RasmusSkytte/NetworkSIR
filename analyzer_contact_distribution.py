@@ -22,11 +22,8 @@ verbose = True
 simulation.run_simulations({'N_tot' : int(5_800_000 * f), 'day_max' : 0, 'initial_infection_distribution' : 'random'}, num_cores_max=1, verbose=verbose)
 
 # 3) Get the contact distribution
-network_files = file_loaders.ABM_simulations(base_dir="Output/network", filetype="hdf5")
+network_files = file_loaders.ABM_simulations(base_dir="Output/network", subset={'day_max' : 0}, filetype="hdf5")
 
-
-print(len(network_files))
-x = x
 
 #pdf_name = f"Figures/Number_of_contacts.pdf"
 #Path(pdf_name).parent.mkdir(parents=True, exist_ok=True)

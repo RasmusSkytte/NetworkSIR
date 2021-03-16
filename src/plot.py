@@ -891,7 +891,7 @@ def plot_single_number_of_contacts(
     my_state, my_number_of_contacts = _load_my_state_and_my_number_of_contacts(filename)
 
     cfg = file_loaders.filename_to_cfg(filename)
-    N_tot = cfg.N_tot
+    N_tot = cfg.network.N_tot
     factor = 1 / N_tot
 
     mask_S = my_state[-1] == -1

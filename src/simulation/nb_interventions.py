@@ -845,3 +845,17 @@ def test_tagged_agents(my, g, intervention, day, click) :
                     intervention,
                     agent,
                     rate_reduction=intervention.cfg.isolation_rate_reduction)
+
+
+
+@njit
+def apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose) :
+
+    if intervention.apply_interventions_on_label and day >= 0 :
+        apply_interventions_on_label(my, g, intervention, day, click, verbose)
+
+    if intervention.apply_random_testing :
+        apply_random_testing(my, intervention, click)
+
+    if intervention.apply_vaccinations :
+        vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=verbose)

@@ -227,11 +227,11 @@ def initialize_states(
     my,
     g,
     intervention,
-    SIR_transition_rates,
     state_total_counts,
     stratified_infection_counts,
     agents_in_state,
     subgroup_beta_multiplier,
+    subgroup_UK_frac,
     possible_agents,
     N_init,
     R_init,
@@ -248,7 +248,7 @@ def initialize_states(
         for agent in agents :
 
             # Choose corona type
-            if np.random.rand() < my.cfg.N_init_UK_frac :
+            if np.random.rand() < subgroup_UK_frac * my.cfg.N_init_UK_frac :
                 my.corona_type[agent] = 1
                 rel_beta = subgroup_beta_multiplier * my.cfg.beta_UK_multiplier
             else :
@@ -263,8 +263,8 @@ def initialize_states(
             agents_in_state[new_state].append(np.uint32(agent))
             state_total_counts[new_state] += 1
 
-            g.total_sum_of_state_changes += SIR_transition_rates[new_state]
-            g.cumulative_sum_of_state_changes[new_state :] += SIR_transition_rates[new_state]
+            g.total_sum_of_state_changes += g.SIR_transition_rates[new_state]
+            g.cumulative_sum_of_state_changes[new_state :] += g.SIR_transition_rates[new_state]
 
             if intervention.apply_interventions and intervention.apply_symptom_testing :
                 for i in range(new_state) :
@@ -311,15 +311,15 @@ def initialize_states(
             # Update the state
             my.state[agent] = R_state
 
-            if np.random.rand() < my.cfg.N_init_UK_frac :
+            if np.random.rand() < subgroup_UK_frac * my.cfg.N_init_UK_frac :
                 my.corona_type[agent] = 1
 
             agents_in_state[R_state].append(np.uint32(agent))
 
             state_total_counts[R_state] += 1
 
-            g.total_sum_of_state_changes += SIR_transition_rates[R_state]
-            g.cumulative_sum_of_state_changes[R_state :] += SIR_transition_rates[R_state]
+            g.total_sum_of_state_changes += g.SIR_transition_rates[R_state]
+            g.cumulative_sum_of_state_changes[R_state :] += g.SIR_transition_rates[R_state]
 
             # Disable incomming rates
             update_infection_list_for_newly_infected_agent(my, g, agent)
@@ -393,8 +393,8 @@ def initialize_states(
             agents_in_state[new_state].append(np.uint32(agent))
             state_total_counts[new_state] += 1
 
-            g.total_sum_of_state_changes += SIR_transition_rates[new_state]
-            g.cumulative_sum_of_state_changes[new_state :] += SIR_transition_rates[new_state]
+            g.total_sum_of_state_changes += g.SIR_transition_rates[new_state]
+            g.cumulative_sum_of_state_changes[new_state :] += g.SIR_transition_rates[new_state]
 
             # Moves TO infectious State from non-infectious
             if my.agent_is_infectious(agent) :
@@ -525,11 +525,10 @@ def run_simulation(
     my,
     g,
     intervention,
-    SIR_transition_rates,
     state_total_counts,
     stratified_infection_counts,
+    stratified_vaccination_counts,
     agents_in_state,
-    N_infectious_states,
     nts,
     verbose=False) :
 
@@ -537,9 +536,10 @@ def run_simulation(
         print("Apply intervention", intervention.apply_interventions)
 
     # Define outputs
-    out_time = List()                       # Sampled times
-    out_state_counts = List()               # Tne counts of the SEIR states
+    out_time = List()                            # Sampled times
+    out_state_counts = List()                    # Tne counts of the SEIR states
     out_stratified_infection_counts = List()     # The counts of infected per age group
+    out_stratified_vaccination_counts = List()   # The counts of infected per age group
     out_my_state = List()
 
     daily_counter = 0
@@ -592,12 +592,12 @@ def run_simulation(
             state_total_counts[state_now]   -= 1
             state_total_counts[state_after] += 1
 
-            g.total_sum_of_state_changes -= SIR_transition_rates[state_now]
-            g.total_sum_of_state_changes += SIR_transition_rates[state_after]
+            g.total_sum_of_state_changes -= g.SIR_transition_rates[state_now]
+            g.total_sum_of_state_changes += g.SIR_transition_rates[state_after]
 
-            g.cumulative_sum_of_state_changes[state_now] -= SIR_transition_rates[state_now]
+            g.cumulative_sum_of_state_changes[state_now] -= g.SIR_transition_rates[state_now]
             g.cumulative_sum_of_state_changes[state_after :] += (
-                SIR_transition_rates[state_after] - SIR_transition_rates[state_now]
+                g.SIR_transition_rates[state_after] - g.SIR_transition_rates[state_now]
             )
 
             g.cumulative_sum_infection_rates[state_now] -= g.sum_of_rates[agent]
@@ -608,7 +608,7 @@ def run_simulation(
                 apply_symptom_testing(my, intervention, agent, my.state[agent], click)
 
             # Moves TO infectious State from non-infectious
-            if my.state[agent] == N_infectious_states :
+            if my.state[agent] == g.N_infectious_states :
 
                 for ith_contact, contact in enumerate(my.connections[agent]) :
 
@@ -669,8 +669,8 @@ def run_simulation(
 
                                 agents_in_state[0].append(np.uint32(contact))
                                 state_total_counts[0] += 1
-                                g.total_sum_of_state_changes += SIR_transition_rates[0]
-                                g.cumulative_sum_of_state_changes += SIR_transition_rates[0]
+                                g.total_sum_of_state_changes += g.SIR_transition_rates[0]
+                                g.cumulative_sum_of_state_changes += g.SIR_transition_rates[0]
                                 accept = True
                                 agent_getting_infected = contact
                                 break
@@ -705,17 +705,6 @@ def run_simulation(
 
             if daily_counter >= 10 :
 
-                if day >= 0 and day < my.cfg.day_max:
-
-                    # Update the output variables
-                    out_time.append(real_time)
-                    out_state_counts.append(state_total_counts.copy())
-                    out_stratified_infection_counts.append(stratified_infection_counts.copy())
-
-                # Advance day
-                day += 1
-                daily_counter = 0
-
                 # Apply interventions
                 if intervention.apply_interventions :
 
@@ -729,11 +718,11 @@ def run_simulation(
 
                         if start_date_offset > 0 :
                             for d in range(start_date_offset - 1) :
-                                vaccinate(my, g, intervention, d, verbose=verbose)
+                                vaccinate(my, g, intervention, d, stratified_vaccination_counts, verbose=verbose)
 
                             start_date_offset = 0
 
-                        vaccinate(my, g, intervention, day, verbose=verbose)
+                        vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=verbose)
 
 
 
@@ -745,8 +734,25 @@ def run_simulation(
                         day,
                         agents_in_state,
                         state_total_counts,
-                        SIR_transition_rates,
                         where_infections_happened_counter)
+
+
+                # Update the output variables
+                if day >= 0 and day < my.cfg.day_max:
+
+                    out_time.append(real_time)
+                    out_state_counts.append(state_total_counts.copy())
+                    out_stratified_infection_counts.append(stratified_infection_counts.copy())
+                    out_stratified_vaccination_counts.append(stratified_vaccination_counts.copy())
+                    out_my_state.append(my.state.copy())
+
+                    intervention.R_true_list.append(calculate_R_True(my, g))
+                    intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
+                    intervention.R_true_list_brit.append(calculate_R_True_brit(my, g))
+
+                # Advance day
+                day += 1
+                daily_counter = 0
 
 
                 if verbose :
@@ -755,14 +761,6 @@ def run_simulation(
                     print("R_true : ", np.round(intervention.R_true_list[-1], 3))
                     print("freedom_impact : ", np.round(intervention.freedom_impact_list[-1], 3))
                     print("R_true_list_brit : ", np.round(intervention.R_true_list_brit[-1], 3))
-
-
-                if day >= 0 :
-                    out_my_state.append(my.state.copy())
-
-                    intervention.R_true_list.append(calculate_R_True(my, g))
-                    intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
-                    intervention.R_true_list_brit.append(calculate_R_True_brit(my, g))
 
             if intervention.apply_interventions:
                 test_tagged_agents(my, g, intervention, day, click)
@@ -805,5 +803,5 @@ def run_simulation(
         # print("N_daily_tests", intervention.N_daily_tests)
         # print("N_positive_tested", N_positive_tested)
 
-    return out_time, out_state_counts, out_stratified_infection_counts, out_my_state, intervention
+    return out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_my_state, intervention
     #return out_time, out_state_counts, out_variant_counts, out_my_state, intervention

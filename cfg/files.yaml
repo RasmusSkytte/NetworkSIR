@@ -1,10 +1,11 @@
 PeopleInHousehold: Data/population_information/household_dist.csv
 AgeDistribution: Data/population_information/age_dist.csv
 PeopleInHouseholdSogn: Data/population_information/sogne_hustande.xlsx
+wgsDistribution: Data/wgs_data/2021_03_04.csv
 
 ageCasesFolder: Data/age_cases
 municipalityCasesFolder: Data/municipality_cases
 contactMatrixFolder: Data/contact_matrices
 
-RegionData: Data/region_data/allCases_hosp_2021-02-16.txt
+RegionData: Data/region_data/allCases_hosp_2021-03-10.txt
 CovidIndex: Data/covid_index_2021.feather

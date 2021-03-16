@@ -39,6 +39,7 @@ spec_cfg = {
     "label_map" : ListType(ListType(nb.types.unicode_type)),
     "label_names" : ListType(nb.types.unicode_type),
     "label_betas" : nb.float32[:],
+    "label_frac" : nb.float32[:],
     "clustering_connection_retries" : nb.uint32,
     "beta_UK_multiplier" : nb.float32,
     "outbreak_position_UK" : nb.types.unicode_type,
@@ -98,6 +99,7 @@ class Config(object) :
         self.labels = 'none'
         self.label_names = List('Danmark')
         self.label_betas = np.array([1.0], dtype=np.float32)
+        self.label_frac  = np.array([0.0], dtype=np.float32)
         self.day_max = 0
         self.clustering_connection_retries = 0
         self.beta_UK_multiplier = 1.0
@@ -303,12 +305,14 @@ def initialize_My(cfg) :
 spec_g = {
     "N_tot" : nb.uint32,
     "N_states" : nb.uint8,
+    "N_infectious_states" : nb.uint8,
     "total_sum" : nb.float64,
     "total_sum_infections" : nb.float64,
     "total_sum_of_state_changes" : nb.float64,
     "cumulative_sum" : nb.float64,
     "cumulative_sum_of_state_changes" : nb.float64[:],
     "cumulative_sum_infection_rates" : nb.float64[:],
+    "SIR_transition_rates" : nb.float64[:],
     "rates" : ListType(nb.float64[ : :1]),  # ListType[array(float64, 1d, C)] (C vs. A)
     "sum_of_rates" : nb.float64[:],
 }
@@ -316,8 +320,9 @@ spec_g = {
 
 @jitclass(spec_g)
 class Gillespie(object) :
-    def __init__(self, my, N_states) :
+    def __init__(self, my, N_states, N_infectious_states) :
         self.N_states = N_states
+        self.N_infectious_states = N_infectious_states
         self.total_sum = 0.0
         self.total_sum_infections = 0.0
         self.total_sum_of_state_changes = 0.0
@@ -325,15 +330,11 @@ class Gillespie(object) :
         self.cumulative_sum_of_state_changes = np.zeros(N_states, dtype=np.float64)
         self.cumulative_sum_infection_rates = np.zeros(N_states, dtype=np.float64)
         self._initialize_rates(my)
+        self._initialize_SIR_rates(my)
 
     def _initialize_rates(self, my) :
         rates = List()
         for i in range(my.cfg_network.N_tot) :
-            # x = np.full(
-            #     shape=my.number_of_contacts[i],
-            #     fill_value=my.infection_weight[i],
-            #     dtype=np.float64,
-            # )
             x = np.zeros(my.number_of_contacts[i])
             for j in range(my.number_of_contacts[i]) :
                 x[j] = my.beta_connection_type[my.connection_type[i][j]] * my.infection_weight[i]
@@ -342,14 +343,16 @@ class Gillespie(object) :
         self.rates = rates
         self.sum_of_rates = np.zeros(my.cfg_network.N_tot, dtype=np.float64)
 
+    def _initialize_SIR_rates(self, my) :
+        self.SIR_transition_rates = np.zeros(self.N_states, dtype=np.float64)
+        self.SIR_transition_rates[:self.N_infectious_states] = my.cfg.lambda_E
+        self.SIR_transition_rates[self.N_infectious_states : 2 * self.N_infectious_states] = my.cfg.lambda_I
+
+
     def update_rates(self, my, rate, agent) :
         self.total_sum_infections += rate
         self.sum_of_rates[agent] += rate
         self.cumulative_sum_infection_rates[my.state[agent] :] += rate
-
-
-
-
 
 
 
@@ -379,8 +382,8 @@ spec_intervention = {
     "clicks_when_restriction_stops" : nb.int32[:],
     "types" : nb.uint8[:],
     "started_as" : nb.uint8[:],
-    "vaccinations_per_age_group" : nb.int64[:, :, :],
-    "vaccination_schedule" : nb.int64[:, :],
+    "vaccinations_per_age_group" : nb.int32[:, :, :],
+    "vaccination_schedule" : nb.int32[:, :],
     "work_matrix_restrict" : nb.float64[:, :, :, :],
     "other_matrix_restrict" : nb.float64[:, :, :, :],
     "verbose" : nb.boolean,
@@ -445,23 +448,24 @@ class Intervention(object) :
 
         self._initialize_labels(labels)
 
-        self.day_found_infected = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.freedom_impact = np.full(self.cfg_network.N_tot, fill_value=0.0, dtype=np.float64)
-        self.freedom_impact_list = List([0.0])
-        self.R_true_list = List([0.0])
-        self.R_true_list_brit = List([0.0])
-        self.reason_for_test = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
-        self.positive_test_counter = np.zeros(3, dtype=np.uint32)
-        self.clicks_when_tested = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.clicks_when_tested_result = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.clicks_when_isolated = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.day_found_infected            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.freedom_impact                = np.full(self.cfg_network.N_tot, fill_value=0.0, dtype=np.float64)
+        self.freedom_impact_list           = List([0.0])
+        self.R_true_list                   = List([0.0])
+        self.R_true_list_brit              = List([0.0])
+        self.reason_for_test               = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
+        self.positive_test_counter         = np.zeros(3, dtype=np.uint32)
+        self.clicks_when_tested            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.clicks_when_tested_result     = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.clicks_when_isolated          = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_restriction_stops = np.full(self.N_labels, fill_value=-1, dtype=np.int32)
         self.types = np.zeros(self.N_labels, dtype=np.uint8)
         self.started_as = np.zeros(self.N_labels, dtype=np.uint8)
+
         self.vaccinations_per_age_group = vaccinations_per_age_group
-        self.vaccination_schedule = vaccination_schedule
-        self.work_matrix_restrict  = work_matrix_restrict
-        self.other_matrix_restrict = other_matrix_restrict
+        self.vaccination_schedule       = vaccination_schedule
+        self.work_matrix_restrict       = work_matrix_restrict
+        self.other_matrix_restrict      = other_matrix_restrict
 
         self.verbose = verbose
 

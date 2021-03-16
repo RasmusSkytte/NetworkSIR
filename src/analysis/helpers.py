@@ -40,26 +40,42 @@ def load_from_file(filename) :
     # Load the csv summery file
     df = file_loaders.pandas_load_file(filename)
 
+
+
+
     # Find all columns with "T_"
-    data_cols = [col for col in df.columns if 'T_l' in col]
+    test_cols = [col for col in df.columns if 'T_l' in col]
 
     # Determine the output dimension
-    N_labels     = len(np.unique(np.array([int(col.split('_')[2]) for col in data_cols])))
-    N_variants   = len(np.unique(np.array([int(col.split('_')[4]) for col in data_cols])))
-    N_age_groups = len(np.unique(np.array([int(col.split('_')[6]) for col in data_cols])))
-
+    N_labels     = len(np.unique(np.array([int(col.split('_')[2]) for col in test_cols])))
+    N_variants   = len(np.unique(np.array([int(col.split('_')[4]) for col in test_cols])))
+    N_age_groups = len(np.unique(np.array([int(col.split('_')[6]) for col in test_cols])))
 
     # Load into a multidimensional array
     stratified_infections = np.zeros((len(df), N_labels, N_variants, N_age_groups))
 
-    for col in data_cols :
+    for col in test_cols :
         l, v, a = (int(col.split('_')[2]), int(col.split('_')[4]), int(col.split('_')[6]))
 
         stratified_infections[:, l, v, a] = df[col]
 
-
     # Scale the tests
     stratified_infections *= (5_800_000 / cfg.network.N_tot) / 2.7
+
+
+
+
+    # Find all columns with "V_"
+    vaccine_cols = [col for col in df.columns if 'V_' in col]
+
+    # Load into a multidimensional array
+    stratified_vaccinations = np.zeros((len(df), N_age_groups))
+
+    for col in vaccine_cols :
+        a = int(col.split('_')[2])
+
+        stratified_vaccinations[:, a] = df[col]
+
 
 
     # Convert to observables
@@ -71,6 +87,9 @@ def load_from_file(filename) :
     T_age_groups = np.sum(stratified_infections, axis=(1, 2))
 
     T_regions    = np.sum(stratified_infections, axis=(2, 3))
+
+    V_age_groups = stratified_vaccinations
+
 
     # Get daily values
     T_total      = T_total
@@ -88,7 +107,7 @@ def load_from_file(filename) :
         f = T_uk_week / T_total_week
         f[np.isnan(f)] = -1
 
-    return T_total, f, T_age_groups, T_variants, T_regions
+    return T_total, f, T_age_groups, T_variants, T_regions, V_age_groups
 
 
 def parse_time_ranges(start_date, end_date) :
@@ -102,6 +121,9 @@ def parse_time_ranges(start_date, end_date) :
     # Ensure only full weeks are included
     if c[0] < 7 :
         t_f = t_f[1:]
+
+    if c[-1] < 7 :
+        t_f = t_f[:-1]
 
     return t_tests, t_f
 

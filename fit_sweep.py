@@ -7,7 +7,7 @@ from tqdm import tqdm
 from contexttimer import Timer
 
 
-params, start_date = utils.load_params("cfg/simulation_parameters_fit_2021_fase2.yaml")
+params, start_date = utils.load_params("cfg/simulation_parameters_debugging.yaml")
 
 if utils.is_local_computer():
     f = 0.1
@@ -15,9 +15,9 @@ if utils.is_local_computer():
     num_cores_max = 3
     N_runs = 3
 else :
-    f = 0.2
-    n_steps = 2
-    num_cores_max = 15
+    f = 0.5
+    n_steps = 3
+    num_cores_max = 5
     N_runs = 1
 
 
@@ -33,16 +33,9 @@ else :
     noise = lambda m, d : np.round(m + np.linspace(-d, d, 2*(n_steps - 1) + 1), 5)
 
 # Sweep around parameter set
-#params["beta"]               = [0.02, 0.025, 0.03, 0.035, 0.04]
 params["beta"]               = noise(params["beta"], 0.005)
-#params["beta_UK_multiplier"] = [1.5]
-#params["beta_UK_multiplier"] = noise(params["beta_UK_multiplier"], 0.1)
-
 params["N_init"]             = noise(params["N_init"] * f, 500 * f)
-#params["N_init"] = int(params["N_init"] * f)
-
-#params["N_init_UK_frac"]     = [0.02, 0.025, 0.03]
-#params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 0.005)
+params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 1)
 
 # Scale the population
 params["N_tot"]  = int(params["N_tot"]  * f)
@@ -87,7 +80,7 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
             for filename in abm_files.cfg_to_filenames(cfg) :
 
                 # Load
-                I_tot_scaled, f, _, _, _= load_from_file(filename)
+                I_tot_scaled, f, _, _, _, _= load_from_file(filename)
 
 
                 start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
@@ -147,43 +140,10 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
         best = lambda arr : np.array([np.mean(lls[arr == v]) for v in np.unique(arr)])
         err  = lambda arr : np.array([np.std( lls[arr == v]) for v in np.unique(arr)])
 
-        if False:# utils.is_local_computer() :
-            rc_params.set_rc_params()
-
-            fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 8))
-            axes = axes.flatten()
-
-            axes[0].errorbar(np.unique(betas), best(betas), yerr=err(betas), fmt="o")
-            axes[0].scatter(cfg_best.beta, ll_best, fmt="x")
-            axes[0].set_xlabel('beta')
-
-            axes[1].errorbar(np.unique(N_init), best(N_init), yerr=err(N_init), fmt="o")
-            axes[1].scatter(cfg_best.N_init, ll_best, fmt="x")
-            axes[1].set_xlabel('N_init')
-
-            axes[2].errorbar(np.unique(rel_betas), best(rel_betas), yerr=err(rel_betas), fmt="o")
-            axes[2].scatter(cfg_best.beta_UK_multiplier, ll_best, fmt="x")
-            axes[2].set_xlabel('rel. beta')
-
-            axes[3].errorbar(np.unique(N_init_UK_frac), best(N_init_UK_frac), yerr=err(N_init_UK_frac), fmt="o")
-            axes[3].scatter(cfg_best.N_init_UK_frac, ll_best, fmt="x")
-            axes[3].set_xlabel('N_init_UK_frac')
-
-            plt.savefig('Figures/LogLikelihood_parameters.png')
-
 
         def terminal_printer(name, arr, val, lls) :
             # Unique paramter values
             u_arr = np.unique(arr)
-
-            # Average loglikelihood value for parameter sets
-            #lls_param = np.zeros(np.shape(u_arr))
-            #for i, val in enumerate(u_arr) :
-            #    lls_param[i] = np.nanmean(lls[arr == val])
-
-            #s_lls = np.array(sorted(lls_param))
-            #s_lls = s_lls[~np.isnan(s_lls)]
-            #d_lls = s_lls[-1] / s_lls[-2]
 
             # Higtest likelihood location
             I = np.argmax(u_arr == val)
@@ -201,5 +161,5 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
         print("--- Maximum likelihood value locations ---")
         terminal_printer("beta* :      ", betas,          cfg_best.beta                 , lls)
         #terminal_printer("rel_beta* :  ", rel_betas,      cfg_best.beta_UK_multiplier   , lls)
-        #terminal_printer("N_init* :    ", N_init,         cfg_best.N_init               , lls)
-        #terminal_printer("N_UK_frac* : ", N_init_UK_frac, cfg_best.N_init_UK_frac       , lls)
+        terminal_printer("N_init* :    ", N_init,         cfg_best.N_init               , lls)
+        terminal_printer("N_UK_frac* : ", N_init_UK_frac, cfg_best.N_init_UK_frac       , lls)

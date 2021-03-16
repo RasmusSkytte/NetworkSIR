@@ -314,6 +314,15 @@ class Simulation :
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
 
+
+        wm = np.array(work_matrix_restrict)
+        om = np.array(other_matrix_restrict)
+
+        for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
+            for l in range(len(np.unique(labels))) :
+                    wm[s,l,:,:] *= self.cfg.label_betas[l]
+                    om[s,l,:,:] *= self.cfg.label_betas[l]
+
         # Store the labels in my
         self.my.initialize_labels(labels)
 
@@ -321,10 +330,10 @@ class Simulation :
             self.my.cfg,
             self.my.cfg_network,
             labels = labels,
-            vaccinations_per_age_group = np.array(vaccinations_per_age_group),
-            vaccination_schedule = np.array(vaccination_schedule),
-            work_matrix_restrict = np.array(work_matrix_restrict),
-            other_matrix_restrict = np.array(other_matrix_restrict),
+            vaccinations_per_age_group = vaccinations_per_age_group,
+            vaccination_schedule = vaccination_schedule,
+            work_matrix_restrict = wm,
+            other_matrix_restrict = om,
             verbose=verbose_interventions)
 
 
@@ -336,20 +345,19 @@ class Simulation :
 
         np.random.seed(utils.hash_to_seed(self.hash))
 
-        self.nts = 0.1  # Time step (0.1 - ten times a day)
         self.N_states = 9  # number of states
         self.N_infectious_states = 4  # This means the 5'th state
+
+        self.nts = 0.1  # Time step (0.1 - ten times a day)
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
-        self.state_total_counts          = np.zeros(self.N_states, dtype=np.uint32)
-        self.stratified_infection_counts = np.zeros((self.intervention.N_labels, 2, self.N_ages), dtype=np.uint32)
+        self.state_total_counts            = np.zeros(self.N_states, dtype=np.uint32)
+        self.stratified_infection_counts   = np.zeros((self.intervention.N_labels, 2, self.N_ages), dtype=np.uint32)
+        self.stratified_vaccination_counts = np.zeros(self.N_ages, dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
-        self.g = nb_jitclass.Gillespie(self.my, self.N_states)
-
-        self.SIR_transition_rates = utils.initialize_SIR_transition_rates(self.N_states, self.N_infectious_states, self.cfg)
-
+        self.g = nb_jitclass.Gillespie(self.my, self.N_states, self.N_infectious_states)
 
         # Find the possible agents
         possible_agents = nb_simulation.find_possible_agents(self.my, self.initial_ages_exposed, self.agents_in_age_group)
@@ -421,9 +429,10 @@ class Simulation :
                 prior_infected  /= prior_infected.sum()
                 prior_immunized /= prior_immunized.sum()
 
-                kommune_beta = self.my.cfg.label_betas[self.my.label[agents_in_kommune[0]]]
+                kommune_beta    = self.my.cfg.label_betas[self.my.label[agents_in_kommune[0]]]
+                kommune_UK_frac = self.my.cfg.label_frac[self.my.label[agents_in_kommune[0]]]
 
-                initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized, kommune_beta))
+                initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized, kommune_beta, kommune_UK_frac))
 
         else :
 
@@ -439,23 +448,23 @@ class Simulation :
             prior_infected  /= prior_infected.sum()
             prior_immunized /= prior_immunized.sum()
 
-            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, self.my.cfg.label_betas[0])]
+            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, self.my.cfg.label_betas[0], self.my.cfg.label_frac[0])]
 
 
         # Loop over subgroups and initialize
         for subgroup in tqdm(initialization_subgroups, total=len(initialization_subgroups), disable=(not self.verbose), position=0, leave=True) :
 
-            agents_in_subgroup, N_subgroup, R_subgroup, prior_infected_subgroup, prior_immunized_subgroup, subgroup_beta_multiplier = subgroup
+            agents_in_subgroup, N_subgroup, R_subgroup, prior_infected_subgroup, prior_immunized_subgroup, subgroup_beta_multiplier, subgroup_UK_frac = subgroup
 
             nb_simulation.initialize_states(
                 self.my,
                 self.g,
                 self.intervention,
-                self.SIR_transition_rates,
                 self.state_total_counts,
                 self.stratified_infection_counts,
                 self.agents_in_state,
                 subgroup_beta_multiplier,
+                subgroup_UK_frac,
                 agents_in_subgroup,
                 N_subgroup,
                 R_subgroup,
@@ -494,7 +503,7 @@ class Simulation :
 
                 if self.my.cfg.R_init > 0 :
 
-                    kommune = [self.my.kommune[agent] for agent in possible_agents if self.my.state[agent] == self.g.N_states]
+                    kommune = [self.my.kommune[agent] for agent in possible_agents if self.my.state[agent] == self.N_states]
                     dist = np.zeros(np.shape(infected_per_kommune))
                     for k in kommune :
                         dist[k] += 1
@@ -514,39 +523,41 @@ class Simulation :
             self.my,
             self.g,
             self.intervention,
-            self.SIR_transition_rates,
             self.state_total_counts,
             self.stratified_infection_counts,
+            self.stratified_vaccination_counts,
             self.agents_in_state,
-            self.N_infectious_states,
             self.nts,
             self.verbose)
 
-
-        out_time, out_state_counts, out_stratified_infection_counts, out_my_state, intervention = res
+        out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_my_state, intervention = res
 
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
-        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_infection_counts, self.cfg)
+        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, self.cfg)
         self.intervention = intervention
 
         return self.df
+
 
     def _get_filename(self, name="ABM", filetype="hdf5") :
         date = datetime.datetime.now().strftime("%Y-%m-%d")
         filename = f"Output/{name}/{self.hash}/{name}_{date}_{self.hash}_ID__{self.cfg.network.ID}.{filetype}"
         return filename
 
+
     def _save_cfg(self) :
         date = datetime.datetime.now().strftime("%Y-%m-%d")
         filename_cfg = f"Output/cfgs/cfg_{date}_{self.hash}.yaml"
         self.cfg.dump_to_file(filename_cfg, exclude="network.ID")
+
 
     def _add_cfg_to_hdf5_file(self, f, cfg=None) :
         if cfg is None :
             cfg = self.cfg
 
         utils.add_cfg_to_hdf5_file(f, cfg)
+
 
     def _save_dataframe(self, save_csv=False, save_hdf5=True) :
 
@@ -593,6 +604,7 @@ class Simulation :
                 f.create_dataset("time_elapsed", data=time_elapsed)
 
             self._add_cfg_to_hdf5_file(f)
+
 
     def save(self, save_csv=False, save_hdf5=True, save_only_ID_0=False, time_elapsed=None) :
         self._save_cfg()

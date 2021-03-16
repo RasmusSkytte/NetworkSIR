@@ -3,16 +3,15 @@ import scipy
 from datetime import datetime
 
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 
 from tqdm import tqdm
 from pathlib import Path
 import os
 
 from src.utils import file_loaders
-from src import rc_params
 
-from src.analysis.helpers import *
+from src.analysis.helpers  import *
+from src.analysis.plotters import *
 
 # Define the subset to plot on
 subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan', 'fase3_S3_0A_1']} ]
@@ -23,59 +22,6 @@ for subset in subsets :
 
     # Number of plots to keep
     N = 25
-
-    def plot_simulation(total_tests, f, t_day, t_week, axes) :
-
-        # Create the plots
-        tmp_handles_0 = axes[0].plot(t_day,  total_tests, lw=4, c='k')[0]
-        tmp_handles_1 = axes[1].plot(t_week, f,           lw=4, c='k')[0]
-
-        return [tmp_handles_0, tmp_handles_1]
-
-    def plot_simulation_category(tests_by_category, t, axes) :
-
-        tmp_handles = []
-        # Create the plots
-        for i in range(np.size(tests_by_category, 1)) :
-            tmp_handle = axes[i].plot(t, tests_by_category[:, i], lw=4, c=plt.cm.tab10(i))[0]
-            tmp_handles.append(tmp_handle)
-
-        return tmp_handles
-
-    def plot_simulation_growth_rates(tests_by_variant, t, axes) :
-
-        # Add the total tests also
-        tests_by_variant = np.concatenate((np.sum(tests_by_variant, axis=1).reshape(-1, 1), tests_by_variant), axis=1)
-
-        t += datetime.timedelta(days=0.5)
-        tmp_handles = []
-
-        for i in range(tests_by_variant.shape[1]) :
-
-            y = tests_by_variant[:, i]
-
-            if np.all(y == 0) :
-                continue
-
-            window_size = 7 # days
-            t_w = np.arange(window_size)
-            R_w = []
-
-            t_max = len(y)-window_size
-            if np.any(y == 0) :
-                t_max = min(t_max, np.where(y > 0)[0][-1])
-
-            for j in range(t_max) :
-                y_w = y[j:(j+window_size)]
-                res, _ = scipy.optimize.curve_fit(lambda t, a, r: a * np.exp(r * t), t_w, y_w, p0=(np.max(y_w), 0))
-                R_w.append(1 + 4.7 * res[1])
-
-            t_w = t[window_size:(window_size+t_max)]
-            tmp_handles.append(axes[i].plot(t_w, R_w, lw=4, c='k')[0])
-
-        return tmp_handles
-
-    rc_params.set_rc_params()
 
     # Load the ABM simulations
     abm_files = file_loaders.ABM_simulations(base_dir='Output/ABM', subset=subset, verbose=True)
@@ -233,13 +179,8 @@ for subset in subsets :
             ax.plot([restiction_date, restiction_date], lim, '--', color='k', linewidth=2)
 
 
+    set_date_xaxis(axes1[1], start_date, end_date)
 
-    months     = mdates.MonthLocator()
-    months_fmt = mdates.DateFormatter('%b')
-
-    axes1[1].xaxis.set_major_locator(months)
-    axes1[1].xaxis.set_major_formatter(months_fmt)
-    axes1[1].set_xlim([start_date, end_date])
 
 
     for ax, lim in zip(axes1, ylims) :
@@ -267,11 +208,9 @@ for subset in subsets :
 
         axes2[i].plot([start_date, end_date], [R_t[i], R_t[i]], 'b--', lw=2)
 
-        axes2[i].set_xlim([start_date, end_date])
         axes2[i].set_ylim(0, 2)
 
-        axes2[i].xaxis.set_major_locator(months)
-        axes2[i].xaxis.set_major_formatter(months_fmt)
+        set_date_xaxis(axes2[i], start_date, end_date)
 
         if i == 0 :
             axes2[i].set_title(f'All variants', fontsize=24, pad=5)
@@ -314,11 +253,9 @@ for subset in subsets :
 
         axes3[i].scatter(t, positive_per_age_group[:, i], color='k', s=10, zorder=100)
 
-        axes3[i].set_xlim([start_date, end_date])
         axes3[i].set_ylim(0, 300)
 
-        axes3[i].xaxis.set_major_locator(months)
-        axes3[i].xaxis.set_major_formatter(months_fmt)
+        set_date_xaxis(axes3[i], start_date, end_date)
 
         axes3[i].set_title(f'{10*i}-{10*(i+1)-1}', fontsize=24, pad=5)
 
@@ -358,13 +295,11 @@ for subset in subsets :
 
         axes4[i].scatter(t, positive_per_region[:, i], color='k', s=10, zorder=100)
 
-        axes4[i].set_xlim([start_date, end_date])
         axes4[i].set_ylim(0, 500)
 
-        axes4[i].set_title(cfg['label_names'][i], fontsize=24, pad=5)
+        set_date_xaxis(axes4[i], start_date, end_date)
 
-        axes4[i].xaxis.set_major_locator(months)
-        axes4[i].xaxis.set_major_formatter(months_fmt)
+        axes4[i].set_title(cfg['label_names'][i], fontsize=24, pad=5)
 
         axes4[i].tick_params(axis='x', labelsize=24)
         axes4[i].tick_params(axis='y', labelsize=24)
@@ -387,10 +322,7 @@ for subset in subsets :
 
     for i in range(len(axes5)) :
 
-        axes5[i].set_xlim([start_date, end_date])
-
-        axes5[i].xaxis.set_major_locator(months)
-        axes5[i].xaxis.set_major_formatter(months_fmt)
+        set_date_xaxis(axes5[i], start_date, end_date)
 
         axes5[i].set_title(f'{10*i}-{10*(i+1)-1}', fontsize=24, pad=5)
 

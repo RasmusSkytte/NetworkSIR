@@ -33,7 +33,7 @@ def aggregate_array(arr, chunk_size=10) :
         return out_arr
 
 
-def load_from_file(filename) :
+def load_from_file(filename, start_date) :
 
     cfg = utils.read_cfg_from_hdf5_file(filename)
 
@@ -99,8 +99,14 @@ def load_from_file(filename) :
     T_regions    = T_regions
 
     # Get weekly values
-    T_total_week = aggregate_array(T_total, chunk_size=7)
-    T_uk_week    = aggregate_array(T_uk,    chunk_size=7)
+    # Remove days if not starting on a monday
+    if start_date.weekday() > 0 :
+        I = 7-start_date.weekday()
+    else :
+        I = 0
+
+    T_total_week = aggregate_array(T_total[I:], chunk_size=7)
+    T_uk_week    = aggregate_array(T_uk[I:],    chunk_size=7)
 
     # Get the fraction of UK variants
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -112,20 +118,14 @@ def load_from_file(filename) :
 
 def parse_time_ranges(start_date, end_date) :
 
-    t_tests = pd.date_range(start=start_date, end=end_date, freq="D")
-    t_tests = t_tests[:-1]
+    t_day = pd.date_range(start=start_date, end=end_date, freq="D")
+    t_day = t_day[:-1]
 
-    _, c    = np.unique(t_tests.isocalendar().week, return_counts=True)
-    t_f     = pd.date_range(start=start_date, end=end_date, freq="W-SUN")
+    weeks =  [w for w in pd.unique(t_day.isocalendar().week) if np.sum(t_day.isocalendar().week == w) == 7]
+    t_week = pd.to_datetime([date for date, dayofweek, week in zip(t_day, t_day.dayofweek, t_day.isocalendar().week) if (dayofweek == 6 and week in weeks)])
 
-    # Ensure only full weeks are included
-    if c[0] < 7 :
-        t_f = t_f[1:]
+    return t_day, t_week
 
-    if c[-1] < 7 :
-        t_f = t_f[:-1]
-
-    return t_tests, t_f
 
 def compute_loglikelihood(input_data, validation_data, transformation_function = lambda x : x) :
 

@@ -15,7 +15,7 @@ from src import rc_params
 from src.analysis.helpers import *
 
 # Define the subset to plot on
-subsets = [ {'Intervention_contact_matrices_name' : ['basis']}]
+subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan', 'fase3_S3_0A_1']} ]
 
 
 for subset in subsets :
@@ -128,7 +128,7 @@ for subset in subsets :
             tests_per_age_group,
             tests_by_variant,
             tests_by_region,
-            vaccinations_by_age_group) = load_from_file(filename)
+            vaccinations_by_age_group) = load_from_file(filename, start_date)
 
         # Add vaccine summery graph
         vaccinations_by_age_group = np.concatenate((vaccinations_by_age_group, np.sum(vaccinations_by_age_group, axis=1).reshape(-1, 1)), axis=1)
@@ -388,7 +388,6 @@ for subset in subsets :
     for i in range(len(axes5)) :
 
         axes5[i].set_xlim([start_date, end_date])
-        axes5[i].set_ylim(0, 300)
 
         axes5[i].xaxis.set_major_locator(months)
         axes5[i].xaxis.set_major_formatter(months_fmt)

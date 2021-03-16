@@ -10,10 +10,10 @@ from contexttimer import Timer
 params, start_date = utils.load_params("cfg/simulation_parameters_fit_2021_fase2.yaml")
 
 if utils.is_local_computer():
-    f = 0.01
+    f = 0.1
     n_steps = 1
     num_cores_max = 3
-    N_runs = 1
+    N_runs = 3
 else :
     f = 0.5
     n_steps = 3
@@ -80,7 +80,7 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
             for filename in abm_files.cfg_to_filenames(cfg) :
 
                 # Load
-                I_tot_scaled, f, _, _, _= load_from_file(filename)
+                I_tot_scaled, f, _, _, _, _= load_from_file(filename)
 
 
                 start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)

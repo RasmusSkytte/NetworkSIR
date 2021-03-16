@@ -33,33 +33,49 @@ def aggregate_array(arr, chunk_size=10) :
         return out_arr
 
 
-def load_from_file(filename) :
+def load_from_file(filename, start_date) :
 
     cfg = utils.read_cfg_from_hdf5_file(filename)
 
     # Load the csv summery file
     df = file_loaders.pandas_load_file(filename)
 
+
+
+
     # Find all columns with "T_"
-    data_cols = [col for col in df.columns if 'T_l' in col]
+    test_cols = [col for col in df.columns if 'T_l' in col]
 
     # Determine the output dimension
-    N_labels     = len(np.unique(np.array([int(col.split('_')[2]) for col in data_cols])))
-    N_variants   = len(np.unique(np.array([int(col.split('_')[4]) for col in data_cols])))
-    N_age_groups = len(np.unique(np.array([int(col.split('_')[6]) for col in data_cols])))
-
+    N_labels     = len(np.unique(np.array([int(col.split('_')[2]) for col in test_cols])))
+    N_variants   = len(np.unique(np.array([int(col.split('_')[4]) for col in test_cols])))
+    N_age_groups = len(np.unique(np.array([int(col.split('_')[6]) for col in test_cols])))
 
     # Load into a multidimensional array
     stratified_infections = np.zeros((len(df), N_labels, N_variants, N_age_groups))
 
-    for col in data_cols :
+    for col in test_cols :
         l, v, a = (int(col.split('_')[2]), int(col.split('_')[4]), int(col.split('_')[6]))
 
         stratified_infections[:, l, v, a] = df[col]
 
-
     # Scale the tests
     stratified_infections *= (5_800_000 / cfg.network.N_tot) / 2.7
+
+
+
+
+    # Find all columns with "V_"
+    vaccine_cols = [col for col in df.columns if 'V_' in col]
+
+    # Load into a multidimensional array
+    stratified_vaccinations = np.zeros((len(df), N_age_groups))
+
+    for col in vaccine_cols :
+        a = int(col.split('_')[2])
+
+        stratified_vaccinations[:, a] = df[col]
+
 
 
     # Convert to observables
@@ -72,6 +88,9 @@ def load_from_file(filename) :
 
     T_regions    = np.sum(stratified_infections, axis=(2, 3))
 
+    V_age_groups = stratified_vaccinations
+
+
     # Get daily values
     T_total      = T_total
     T_variants   = T_variants
@@ -80,29 +99,33 @@ def load_from_file(filename) :
     T_regions    = T_regions
 
     # Get weekly values
-    T_total_week = aggregate_array(T_total, chunk_size=7)
-    T_uk_week    = aggregate_array(T_uk,    chunk_size=7)
+    # Remove days if not starting on a monday
+    if start_date.weekday() > 0 :
+        I = 7-start_date.weekday()
+    else :
+        I = 0
+
+    T_total_week = aggregate_array(T_total[I:], chunk_size=7)
+    T_uk_week    = aggregate_array(T_uk[I:],    chunk_size=7)
 
     # Get the fraction of UK variants
     with np.errstate(divide='ignore', invalid='ignore'):
         f = T_uk_week / T_total_week
         f[np.isnan(f)] = -1
 
-    return T_total, f, T_age_groups, T_variants, T_regions
+    return T_total, f, T_age_groups, T_variants, T_regions, V_age_groups
 
 
 def parse_time_ranges(start_date, end_date) :
 
-    t_tests = pd.date_range(start=start_date, end=end_date, freq="D")
-    t_tests = t_tests[:-1]
+    t_day = pd.date_range(start=start_date, end=end_date, freq="D")
+    t_day = t_day[:-1]
 
-    _, c    = np.unique(t_tests.isocalendar().week, return_counts=True)
-    t_f     = pd.date_range(start=start_date, end=end_date, freq="W-SUN")
+    weeks =  [w for w in pd.unique(t_day.isocalendar().week) if np.sum(t_day.isocalendar().week == w) == 7]
+    t_week = pd.to_datetime([date for date, dayofweek, week in zip(t_day, t_day.dayofweek, t_day.isocalendar().week) if (dayofweek == 6 and week in weeks)])
 
-    # Ensure only full weeks are included
-    t_f = t_f[1:]
+    return t_day, t_week
 
-    return t_tests, t_f
 
 def compute_loglikelihood(input_data, validation_data, transformation_function = lambda x : x) :
 

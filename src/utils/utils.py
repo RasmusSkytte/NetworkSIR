@@ -21,6 +21,7 @@ import copy
 import yaml
 import h5py
 import csv
+import random
 
 
 from scipy.stats import uniform as sp_uniform
@@ -49,6 +50,10 @@ from functools import reduce
 from operator import iand
 
 from sympy.parsing.sympy_parser import parse_expr
+
+import geopandas as gpd
+from shapely.geometry import Point, Polygon
+from shapely.geometry import mapping as _polygon_to_array
 
 
 def sha256(d) :
@@ -1277,15 +1282,6 @@ def df_coordinates_to_coordinates(df_coordinates) :
 
 
 
-def df_coordinates_to_kommune_dict(df_coordinates) :
-
-    # Construct the kommune dict
-    IDs, inds = np.unique(df_coordinates.idx, return_index=True)
-    names = df_coordinates.kommune[inds].values
-
-    return {'id_to_name' : pd.Series(names, index=IDs), 'name_to_id' : pd.Series(IDs, index=names)}
-
-
 @njit
 def calculate_epsilon(alpha_age, N_ages) :
     return 1 / N_ages * alpha_age
@@ -1347,13 +1343,6 @@ def initialize_non_infectable(N_tot, my_number_of_contacts) :
     return res
 
 
-def initialize_SIR_transition_rates(N_states, N_infectious_states, cfg) :
-    SIR_transition_rates = np.zeros(N_states, dtype=np.float64)
-    SIR_transition_rates[:N_infectious_states] = cfg.lambda_E
-    SIR_transition_rates[N_infectious_states : 2 * N_infectious_states] = cfg.lambda_I
-    return SIR_transition_rates
-
-
 @njit
 def _compute_agents_in_age_group(ages, N_ages) :
     agents_in_age_group = initialize_nested_lists(N_ages, dtype=np.uint32)
@@ -1408,11 +1397,13 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
 
 
 
-def counts_to_df(time, state_counts, stratified_infected, cfg) :  #
+def counts_to_df(time, state_counts, stratified_infected, stratified_vaccination, cfg) :  #
 
     time = np.array(time)
     state_counts = np.array(state_counts)
     stratified_infected = np.array(stratified_infected)
+    stratified_vaccination = np.array(stratified_vaccination)
+
 
     N_states     = np.size(state_counts, 1)
     N_labels     = np.size(stratified_infected, 1)
@@ -1436,6 +1427,7 @@ def counts_to_df(time, state_counts, stratified_infected, cfg) :  #
 
     df = pd.concat([df_time, df_states], axis=1)
 
+    # Add the test data
     for l in range(N_labels) :
         for v in range(N_variants) :
 
@@ -1444,6 +1436,11 @@ def counts_to_df(time, state_counts, stratified_infected, cfg) :  #
             df_age_group = pd.DataFrame(stratified_infected[:, l, v, :] * cfg.testing_penetration, columns=headers)
 
             df = pd.concat([df, df_age_group], axis=1)  # .convert_dtypes()
+
+    # Add the vaccination data
+    headers = ['V_A_' + str(i) for i in range(N_age_groups)]
+    df_age_group = pd.DataFrame(stratified_vaccination, columns=headers)
+    df = pd.concat([df, df_age_group], axis=1)  # .convert_dtypes()
 
     return df
 
@@ -2099,3 +2096,115 @@ def sort_nested_list(arr) :
                 arr[ind] = sort_nested_list(val)
 
     return arr
+
+
+def people_per_sogn(df):
+    people_in_sogn = []
+    for sogn in df.index:
+        people_in_sogn.append(sum(df.loc[sogn][1:6]))
+    return people_in_sogn
+
+
+def generate_coordinate(sogn, sogne):
+    sogne_translator= {'7247':'9323',
+     '7247':'9323',
+     '7636':'9195',
+     '8885':'9196',
+     '7249':'9315',
+     '8744':'9317',
+     '7615':'9318',
+     '7250':'9315',
+     '7625':'9194',
+     '8654':'9320',
+     '9271':'9196',
+     '7643':'9319',
+     '7447':'9311',
+     '7616':'9318',
+     '8141':'9316',
+     '8164':'9193',
+     '8306':'9191',
+     '7240':'9183',
+     '8688':'9198',
+     '8846':'9314',
+     '7618':'9318',
+     '7902':'9188',
+     '7365':'9322',
+     '8884':'9196',
+     '7252':'9312',
+     '7619':'9321',
+     '7025':'9190',
+     '8320':'9187',
+     '9227':'9197',
+     '7398':'9186',
+     '7244':'9183',
+     '7329':'9324',
+     '7241':'9183',
+     '7397':'9186',
+     '8743':'9317',
+     '7637':'9195',
+     '7302':'9189',
+     '7612':'9318',
+     '8321':'9187',
+     '7647':'9319',
+     '8623':'9215',
+     '8687':'9198',
+     '7030':'9190',
+     '7366':'9322',
+     '7328':'9324',
+     '7638':'9195',
+     '7242':'9183',
+     '8322':'9232',
+     '7293':'9192',
+     '8163':'9193',
+     '8831':'9199',
+     '7331':'9324',
+     '8830':'9199',
+     '9064':'9197',
+     '9261':'9188',
+     '8845':'9314',
+     '7301':'9189',
+     '8923':'9313',
+     '7617':'9318',
+     '7243':'9183',
+     '8924':'9313',
+     '7624':'9194',
+     '7292':'9192',
+     '7251':'9312',
+     '8307':'9191',
+     '8653':'9320',
+     '9086':'9316',
+     '7621':'9194',
+     '7620':'9321',
+     '7248':'9323',
+     '9245':'9315',
+     '8620':'9214',
+     '7282':'9292',
+     }
+    sogn = str(sogn)
+    if sogn in sogne.index:
+        if gpd.geodataframe.GeoDataFrame == type(sogne.loc[sogn]):
+             for sogn_poly in pd.DataFrame(sogne.loc[sogn]).iterrows():
+                return generate_random_point(sogn_poly[1].loc["geometry"])
+
+        else:
+            return generate_random_point(sogne.loc[sogn]["geometry"])
+
+
+    elif sogne_translator[sogn] in sogne.index:
+        if gpd.geodataframe.GeoDataFrame == type(sogne.loc[sogne_translator[sogn]]):
+            for sogn_poly in pd.DataFrame(sogne.loc[sogne_translator[sogn]]).iterrows():
+                return generate_random_point(sogn_poly[1].loc["geometry"])
+
+        else:
+            return generate_random_point(sogne.loc[sogne_translator[sogn]]["geometry"])
+    else: print(sogn + "this sogn does not exist error")
+
+
+def generate_random_point(polygon):
+
+    minx, miny, maxx, maxy = polygon.bounds
+    #print(minx,miny,maxx,maxy)
+    while True:
+        pnt = Point(random.uniform(minx, maxx), random.uniform(miny, maxy))
+        if polygon.contains(pnt):
+            return pnt

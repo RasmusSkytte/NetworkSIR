@@ -19,8 +19,7 @@ from zipfile import ZipFile
 import urllib.request
 import datetime
 
-from src.analysis.helpers import load_infected_per_category
-
+import geopandas as gpd
 
 
 
@@ -263,6 +262,25 @@ def parse_age_distribution_data(filename, kommune_dict=None) :
     return age_dist
 
 
+def parse_age_distribution_data_sogn(filename, kommune_dict=None) :
+
+    age_dist_raw      = pd.read_csv(filename, index_col=0)
+    kommune_names_raw = age_dist_raw.index
+    age_dist_raw      = age_dist_raw.to_numpy()
+
+    age_dist = np.zeros( (len(kommune_dict), age_dist_raw.shape[1], len(eval(age_dist_raw[0, 0]))), dtype=float)
+
+    for i in range(age_dist_raw.shape[0]) :
+
+        i_out = kommune_dict[kommune_names_raw[i]]
+
+        for j in range(age_dist_raw.shape[1]) :
+            age_dist[i_out, j, :] = eval(age_dist_raw[i, j])
+
+
+    return age_dist
+
+
 def parse_household_data(filename, kommune_dict=None) :
 
     household_dist_raw = pd.read_csv(filename, index_col=0)
@@ -281,12 +299,70 @@ def parse_household_data(filename, kommune_dict=None) :
     return household_dist
 
 
+def load_sogn_to_kommune_idx(filename="Data/population_information/sogn_to_kommune.csv"):
+    # list of the n-th sogn in sogne_household_file to kommune idx
+    return np.loadtxt(filename)
+
+
+def parse_household_data_sogn(filename, kommune_dict=None) :
+
+    df = pd.read_excel(filename, skiprows=3, engine='openpyxl')
+    df = df.set_index(df.columns[0])
+    df=df.fillna(0)
+    df = df.rename({"6+":6},axis='columns')
+    return df
+
+
+def load_kommune_shapefiles(verbose=False) :
+    shapefile_size = "large"
+    shp_file = {}
+    shp_file["large"]  = "Data/population_information/KOMMUNE.shp"
+
+    if verbose :
+        print(f"Loading {shapefile_size} kommune shape files")
+    kommuner = gpd.read_file(shp_file[shapefile_size]).to_crs({"proj" : "latlong"})  # convert to lat lon, compared to UTM32_EUREF89
+    #print(kommuner)
+
+    kommune_navn, kommune_idx = np.unique(kommuner["KOMNAVN"], return_inverse=True)
+    name_to_idx = dict(zip(kommune_navn, range(len(kommune_navn))))
+    idx_to_name = {v : k for k, v in name_to_idx.items()}
+
+    kommuner["idx"] = kommune_idx
+    kommuner = kommuner.set_index(kommuner.columns[12])
+    return kommuner, name_to_idx, idx_to_name
+
+def load_sogne_shapefiles(verbose=False) :
+    shapefile_size = "large"
+    shp_file = {}
+    shp_file["large"]  = "Data/population_information/SOGN.shp"
+
+    if verbose :
+        print(f"Loading {shapefile_size} sogne shape files")
+    sogne = gpd.read_file(shp_file[shapefile_size]).to_crs({"proj" : "latlong"})  # convert to lat lon, compared to UTM32_EUREF89
+
+
+    sogne_navn, sogne_idx = np.unique(sogne["SOGNEKODE"], return_inverse=True)
+    name_to_idx = dict(zip(sogne_navn, range(len(sogne_navn))))
+    idx_to_name = {v : k for k, v in name_to_idx.items()}
+
+    sogne["idx"] = sogne_idx
+    sogne = sogne.set_index(sogne.columns[9])
+    return sogne, name_to_idx, idx_to_name
+
 def load_household_data(kommune_dict) :
 
     household_dist = parse_household_data(load_yaml('cfg/files.yaml')['PeopleInHousehold'], kommune_dict=kommune_dict)
     age_dist = parse_age_distribution_data(load_yaml('cfg/files.yaml')['AgeDistribution'],  kommune_dict=kommune_dict)
 
     return household_dist, age_dist
+
+
+def load_household_data_sogn(kommune_dict) :
+
+    household_dist_sogn = parse_household_data_sogn(load_yaml('cfg/files.yaml')['PeopleInHouseholdSogn'])
+    age_dist = parse_age_distribution_data_sogn(load_yaml('cfg/files.yaml')['AgeDistribution'],  kommune_dict=kommune_dict)
+
+    return household_dist_sogn, age_dist
 
 
 def load_age_stratified_file(file) :
@@ -310,7 +386,7 @@ def load_age_stratified_file(file) :
 
     return data.to_numpy(), row_names, lower_breaks
 
-def load_contact_matrices(scenario = 'basis', N_labels = 1) :
+def load_contact_matrices(scenario = 'reference', N_labels = 1) :
     """ Loads and parses the contact matrices corresponding to the chosen scenario.
         The function first determines what the relationship between work activites and other activites are
         After the work_other_ratio has been calculated, the function returns the normalized contact matrices
@@ -375,10 +451,10 @@ def load_vaccination_schedule(cfg) :
     """
 
     if cfg.Intervention_vaccination_schedule_name == 'None' :
-        return np.zeros( (1, 1, len(cfg.network.work_matrix)), dtype=np.int32), np.zeros( (1, 2), dtype=np.int32)
+        return np.zeros( (1, 1, len(cfg.network.work_matrix)), dtype=np.int64), np.zeros( (1, 2), dtype=np.int64)
 
 
-    vaccinations_per_age_group, vaccination_schedule, _ = load_vaccination_schedule_file(scenario = cfg.Intervention_vaccination_schedule_name)
+    vaccinations_per_age_group, vaccination_schedule = load_vaccination_schedule_file(scenario = cfg.Intervention_vaccination_schedule_name)
 
     # Check that lengths match
     utils.test_length(vaccinations_per_age_group, cfg.Intervention_vaccination_effect_delays, "Loaded vaccination schedules does not match with the length of vaccination_effect_delays")
@@ -393,7 +469,7 @@ def load_vaccination_schedule(cfg) :
         # Determine the timing of effective vaccines
         vaccination_schedule[i] = cfg.start_date_offset + np.array([0, (vaccination_schedule[i][-1] - vaccination_schedule[i][0]).days]) + cfg.Intervention_vaccination_effect_delays[i]
 
-    return vaccinations_per_age_group, vaccination_schedule
+    return np.array(vaccinations_per_age_group), np.array(vaccination_schedule)
 
 
 def load_vaccination_schedule_file(scenario = "reference") :
@@ -404,7 +480,6 @@ def load_vaccination_schedule_file(scenario = "reference") :
     # Prepare output files
     vaccine_counts  = []
     schedule        = []
-    age_groups      = []
 
     # Determine the number of files that matches the requested scenario
     i = 0
@@ -426,7 +501,7 @@ def load_vaccination_schedule_file(scenario = "reference") :
         i += 1
 
     # Normalize the contact matrices after this ratio has been determined
-    return vaccine_counts, schedule, age_groups
+    return vaccine_counts, schedule
 
 
 

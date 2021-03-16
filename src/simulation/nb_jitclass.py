@@ -305,12 +305,14 @@ def initialize_My(cfg) :
 spec_g = {
     "N_tot" : nb.uint32,
     "N_states" : nb.uint8,
+    "N_infectious_states" : nb.uint8,
     "total_sum" : nb.float64,
     "total_sum_infections" : nb.float64,
     "total_sum_of_state_changes" : nb.float64,
     "cumulative_sum" : nb.float64,
     "cumulative_sum_of_state_changes" : nb.float64[:],
     "cumulative_sum_infection_rates" : nb.float64[:],
+    "SIR_transition_rates" : nb.float64[:],
     "rates" : ListType(nb.float64[ : :1]),  # ListType[array(float64, 1d, C)] (C vs. A)
     "sum_of_rates" : nb.float64[:],
 }
@@ -318,8 +320,9 @@ spec_g = {
 
 @jitclass(spec_g)
 class Gillespie(object) :
-    def __init__(self, my, N_states) :
+    def __init__(self, my, N_states, N_infectious_states) :
         self.N_states = N_states
+        self.N_infectious_states = N_infectious_states
         self.total_sum = 0.0
         self.total_sum_infections = 0.0
         self.total_sum_of_state_changes = 0.0
@@ -327,15 +330,11 @@ class Gillespie(object) :
         self.cumulative_sum_of_state_changes = np.zeros(N_states, dtype=np.float64)
         self.cumulative_sum_infection_rates = np.zeros(N_states, dtype=np.float64)
         self._initialize_rates(my)
+        self._initialize_SIR_rates(my)
 
     def _initialize_rates(self, my) :
         rates = List()
         for i in range(my.cfg_network.N_tot) :
-            # x = np.full(
-            #     shape=my.number_of_contacts[i],
-            #     fill_value=my.infection_weight[i],
-            #     dtype=np.float64,
-            # )
             x = np.zeros(my.number_of_contacts[i])
             for j in range(my.number_of_contacts[i]) :
                 x[j] = my.beta_connection_type[my.connection_type[i][j]] * my.infection_weight[i]
@@ -343,6 +342,12 @@ class Gillespie(object) :
             rates.append(x)
         self.rates = rates
         self.sum_of_rates = np.zeros(my.cfg_network.N_tot, dtype=np.float64)
+
+    def _initialize_SIR_rates(self, my) :
+        self.SIR_transition_rates = np.zeros(self.N_states, dtype=np.float64)
+        self.SIR_transition_rates[:self.N_infectious_states] = my.cfg.lambda_E
+        self.SIR_transition_rates[self.N_infectious_states : 2 * self.N_infectious_states] = my.cfg.lambda_I
+
 
     def update_rates(self, my, rate, agent) :
         self.total_sum_infections += rate
@@ -377,8 +382,8 @@ spec_intervention = {
     "clicks_when_restriction_stops" : nb.int32[:],
     "types" : nb.uint8[:],
     "started_as" : nb.uint8[:],
-    "vaccinations_per_age_group" : nb.int32[:, :, :],
-    "vaccination_schedule" : nb.int32[:, :],
+    "vaccinations_per_age_group" : nb.int64[:, :, :],
+    "vaccination_schedule" : nb.int64[:, :],
     "work_matrix_restrict" : nb.float64[:, :, :, :],
     "other_matrix_restrict" : nb.float64[:, :, :, :],
     "verbose" : nb.boolean,

@@ -42,7 +42,7 @@ def calculate_contact_distribution_label(my, intervention):
 
 
 @njit
-def vaccinate(my, g, intervention, day, verbose=False) :
+def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=False) :
 
     # Loop over vaccine types
     for i in range(len(intervention.vaccination_schedule)) :
@@ -80,6 +80,9 @@ def vaccinate(my, g, intervention, day, verbose=False) :
 
                         else :
                             my.vaccination_type[agent] = -i
+
+                    # Update counter
+                    stratified_vaccination_counts[my.age[agent]] += 1
 
 
 @njit

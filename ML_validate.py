@@ -16,7 +16,7 @@ from src import rc_params
 from src.analysis.helpers import *
 
 # Define the subset to plot on
-subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan', '2021_fase1']}]
+subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan']}]
 
 
 for subset in subsets :

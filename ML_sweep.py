@@ -7,13 +7,13 @@ from tqdm import tqdm
 from contexttimer import Timer
 
 
-params, start_date = utils.load_params("cfg/simulation_parameters_debugging.yaml")
+params, start_date = utils.load_params("cfg/simulation_parameters_fit_2021_fase2.yaml")
 
 if utils.is_local_computer():
-    f = 0.01
+    f = 0.1
     n_steps = 1
-    num_cores_max = 1
-    N_runs = 1
+    num_cores_max = 3
+    N_runs = 3
 else :
     f = 0.2
     n_steps = 2

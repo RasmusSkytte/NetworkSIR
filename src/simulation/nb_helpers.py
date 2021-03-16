@@ -65,6 +65,19 @@ def nb_random_choice(arr, prob, size=1, replace=False, verbose=False) :
 
         return set_to_array(out)
 
+@njit
+def rand_choice_nb(prob) :
+    """
+    :param prob : A 1D numpy array of probabilities for the given samples.
+    :return : A random sample from the given array with a given probability.
+    """
+    prob = normalize_probabilities(prob)
+    return np.searchsorted(np.cumsum(prob), np.random.random(), side="right")
+    
+@njit
+def normalize_probabilities(p) :
+    return p / p.sum()
+
 
 @njit
 def exp_func(x, a, b, c) :

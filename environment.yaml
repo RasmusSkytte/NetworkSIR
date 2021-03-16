@@ -31,6 +31,7 @@ dependencies:
   - h5py
   # - pathos
   - geopandas
+  - openpyxl
   # - descartes
   - tinydb
   # - flake8

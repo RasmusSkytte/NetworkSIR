@@ -1,5 +1,6 @@
 PeopleInHousehold: Data/population_information/household_dist.csv
 AgeDistribution: Data/population_information/age_dist.csv
+PeopleInHouseholdSogn: Data/population_information/sogne_hustande.xlsx
 wgsDistribution: Data/wgs_data/2021_03_04.csv
 
 ageCasesFolder: Data/age_cases

@@ -510,33 +510,23 @@ def connect_work_and_others(
     mu_tot = my.cfg_network.mu / 2 * my.cfg_network.N_tot # total number of connections in the network, when done
     while mu_counter < mu_tot : # continue until all connections are made
 
-        # determining if next connections is work or other.
-        ra_work_other = np.random.rand()
-        if ra_work_other < my.cfg_network.work_other_ratio :
-            matrix   = matrix_work
-            run_algo = run_algo_work
-        else :
-            matrix   = matrix_other
-            run_algo = run_algo_other
-
-        #draw ages from connectivity matrix
-        age1, age2 = find_two_age_groups(N_ages, matrix)
-
         #some number small number of connections is independent on distance. eg. you now some people on the other side of the country. Data is based on pendling data.
         if np.random.rand() > my.cfg_network.epsilon_rho :
             rho_tmp = my.cfg_network.rho
         else :
             rho_tmp = 0.0
 
-        #make connection
-        run_algo(
-            my,
-            agents_in_age_group,
-            age1,
-            age2,
-            rho_tmp,
-        )
+        # determining if next connections is work or other.
+        # 1) draw ages from connectivity matrix
+        # 2) make connection
+        if np.random.rand() < my.cfg_network.work_other_ratio :
+            age1, age2 = find_two_age_groups(N_ages, matrix_work)
+            run_algo_work(my, agents_in_age_group, age1, age2, rho_tmp)
+        else :
+            age1, age2 = find_two_age_groups(N_ages, matrix_other)
+            run_algo_other(my, agents_in_age_group, age1, age2, rho_tmp)
 
+        # Update counters
         mu_counter += 1
         if verbose :
             progress = mu_counter / mu_tot

@@ -314,14 +314,18 @@ class Simulation :
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
 
-
+        # Rescale the restriction matrices
         wm = np.array(work_matrix_restrict)
         om = np.array(other_matrix_restrict)
 
         for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
             for l in range(len(np.unique(labels))) :
-                    wm[s,l,:,:] *= self.cfg.label_betas[l]
-                    om[s,l,:,:] *= self.cfg.label_betas[l]
+                wm[s,l,:,:] *= self.cfg.label_betas[l]
+                om[s,l,:,:] *= self.cfg.label_betas[l]
+
+
+        # Load the seasonal data
+        seasonal_list = file_loaders.load_seasonal_list(scenario = self.cfg.seasonal_list_name, cfg.start_date_offset))
 
         # Store the labels in my
         self.my.initialize_labels(labels)
@@ -334,6 +338,7 @@ class Simulation :
             vaccination_schedule = vaccination_schedule,
             work_matrix_restrict = wm,
             other_matrix_restrict = om,
+            seasonal_lists = seasonal_list,
             verbose=verbose_interventions)
 
 

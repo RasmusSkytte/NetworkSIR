@@ -421,6 +421,10 @@ def load_contact_matrices(scenario = 'reference', N_labels = 1) :
 
     return matrix_work, matrix_other, work_other_ratio, age_groups_work
 
+def load_seasonal_list(scenario = 'reference', start_day) :
+    base_path = load_yaml('cfg/files.yaml')['seasonalFolder']
+    seasonal_index = np.loadtxt(filename)
+
 
 def load_contact_matrix_set(matrix_path) :
 

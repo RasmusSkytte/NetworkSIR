@@ -386,6 +386,7 @@ spec_intervention = {
     "vaccination_schedule" : nb.int64[:, :],
     "work_matrix_restrict" : nb.float64[:, :, :, :],
     "other_matrix_restrict" : nb.float64[:, :, :, :],
+    "seasonal_effect"
     "verbose" : nb.boolean,
 }
 
@@ -447,6 +448,7 @@ class Intervention(object) :
         self.cfg_network = nb_cfg_network
 
         self._initialize_labels(labels)
+        self._initialize_seasonal_effect(seasonal_list)
 
         self.day_found_infected            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.freedom_impact                = np.full(self.cfg_network.N_tot, fill_value=0.0, dtype=np.float64)
@@ -479,6 +481,20 @@ class Intervention(object) :
 
     def agent_found_positive(self, agent) :
         return not self.agent_not_found_positive(agent)
+
+    def _initialize_seasonal_effect(self, seasonal_list):
+        if self.cfg.day_max - len(seasonal_list) - self.start_date_offset > 0:
+            seasonal_effect = np.ones(self.cfg.day_max + 1, dtype = np.float32)
+            seasonal_effect[:self.start_date_offset] *= seasonal_list[0]
+            seasonal_effect[self.start_date_offset:self.start_date_offset + len(seasonal_list)] = seasonal_list
+            seasonal_effect[self.start_date_offset + len(seasonal_list):] *= seasonal_list[-1]
+        else:
+            seasonal_effect = np.ones(self.cfg.start_date_offset + len(seasonal_list), dtype = np.float32)
+            seasonal_effect[:self.start_date_offset] *= seasonal_list[0]
+            seasonal_effect[self.start_date_offset:self.start_date_offset + len(seasonal_list)] = seasonal_list
+        self.seasonal_effect = seasonal_effect
+
+
 
     @property
     def apply_interventions(self) :

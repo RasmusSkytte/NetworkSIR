@@ -80,7 +80,7 @@ for subset in subsets :
         vaccinations_by_age_group = np.concatenate((vaccinations_by_age_group, np.sum(vaccinations_by_age_group, axis=1).reshape(-1, 1)), axis=1)
 
         # Plot
-        h  = plot_simulation(total_tests, f, t_day, t_week, axes1)
+        h  = plot_simulation_cases_and_variant_fraction(total_tests, f, t_day, t_week, axes1)
         h2 = plot_simulation_growth_rates(tests_by_variant, t_day, axes2)
         h3 = plot_simulation_category(tests_per_age_group, t_day, axes3)
         h4 = plot_simulation_category(tests_by_region, t_day, axes4)

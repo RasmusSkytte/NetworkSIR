@@ -1,12 +1,9 @@
 import numpy as np
 import pandas as pd
 
-from numba.typed import List
 from numba.core.errors import (
     NumbaTypeSafetyWarning,
-    NumbaExperimentalFeatureWarning,
-    NumbaPendingDeprecationWarning, # TODO : Delete line
-)
+    NumbaExperimentalFeatureWarning)
 
 
 
@@ -24,9 +21,7 @@ from functools import partial
 
 from tqdm import tqdm
 from p_tqdm import p_umap, p_uimap
-import geopandas as gpd
-from shapely.geometry import Point, Polygon
-from shapely.geometry import mapping as _polygon_to_array
+
 
 check_distributions = False
 
@@ -64,6 +59,7 @@ class Simulation :
         self.N_tot = cfg.network.N_tot
 
         self.hash = cfg.hash
+
         self.my = nb_jitclass.initialize_My(self.cfg.deepcopy())
 
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
@@ -572,28 +568,33 @@ class Simulation :
         if save_only_ID_0 and self.cfg.network.ID != 0 :
             return
 
-        filename_hdf5 = self._get_filename(name="network", filetype="hdf5")
+        filename_hdf5 = self._get_filename(name='network', filetype='hdf5')
         file_loaders.make_sure_folder_exist(filename_hdf5)
 
-        with h5py.File(filename_hdf5, "w", **hdf5_kwargs) as f :  #
-            f.create_dataset("my_state", data=self.my_state)
-            f.create_dataset("my_corona_type", data=self.my.corona_type)
-            f.create_dataset("my_number_of_contacts", data=self.my.number_of_contacts)
-            f.create_dataset("day_found_infected", data=self.intervention.day_found_infected)
-            f.create_dataset("coordinates", data=self.my.coordinates)
+        with h5py.File(filename_hdf5, 'w', **hdf5_kwargs) as f :  #
+            f.create_dataset('my_state', data=self.my_state)
+            f.create_dataset('my_corona_type', data=self.my.corona_type)
+
+
+            f.create_dataset('my_number_of_contacts', data=self.my.number_of_contacts)
+            f.create_dataset('my_connection_type',   data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_type,   pad_value=-1))
+            f.create_dataset('my_connection_status', data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_status, pad_value=-1))
+
+            f.create_dataset('day_found_infected', data=self.intervention.day_found_infected)
+            f.create_dataset('coordinates', data=self.my.coordinates)
             # import ast; ast.literal_eval(str(cfg))
-            f.create_dataset("cfg_str", data=str(self.cfg))
-            f.create_dataset("R_true", data=self.intervention.R_true_list)
-            f.create_dataset("freedom_impact", data=self.intervention.freedom_impact_list)
-            f.create_dataset("R_true_brit", data=self.intervention.R_true_list_brit)
-            f.create_dataset("df", data=utils.dataframe_to_hdf5_format(self.df))
+            f.create_dataset('cfg_str', data=str(self.cfg))
+            f.create_dataset('R_true', data=self.intervention.R_true_list)
+            f.create_dataset('freedom_impact', data=self.intervention.freedom_impact_list)
+            f.create_dataset('R_true_brit', data=self.intervention.R_true_list_brit)
+            f.create_dataset('df', data=utils.dataframe_to_hdf5_format(self.df))
             # f.create_dataset(
-            #     "df_coordinates",
-            #     data=utils.dataframe_to_hdf5_format(self.df_coordinates, cols_to_str="kommune"),
+            #     'df_coordinates',
+            #     data=utils.dataframe_to_hdf5_format(self.df_coordinates, cols_to_str='kommune'),
             # )
 
             if time_elapsed :
-                f.create_dataset("time_elapsed", data=time_elapsed)
+                f.create_dataset('time_elapsed', data=time_elapsed)
 
             self._add_cfg_to_hdf5_file(f)
 

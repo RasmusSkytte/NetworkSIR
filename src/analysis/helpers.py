@@ -146,6 +146,7 @@ def compute_loglikelihood(input_data, validation_data, transformation_function =
     # Determine scaled the log likelihood
     return np.sum(log_prop) / len(log_prop)
 
+
 def load_covid_index() :
 
     # Load the covid index data

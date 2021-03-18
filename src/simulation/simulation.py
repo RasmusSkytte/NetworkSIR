@@ -1,9 +1,12 @@
 import numpy as np
 import pandas as pd
 
+from numba.typed import List
 from numba.core.errors import (
     NumbaTypeSafetyWarning,
-    NumbaExperimentalFeatureWarning)
+    NumbaExperimentalFeatureWarning,
+    NumbaPendingDeprecationWarning, # TODO : Delete line
+)
 
 
 
@@ -21,7 +24,9 @@ from functools import partial
 
 from tqdm import tqdm
 from p_tqdm import p_umap, p_uimap
-
+import geopandas as gpd
+from shapely.geometry import Point, Polygon
+from shapely.geometry import mapping as _polygon_to_array
 
 check_distributions = False
 
@@ -59,7 +64,6 @@ class Simulation :
         self.N_tot = cfg.network.N_tot
 
         self.hash = cfg.hash
-
         self.my = nb_jitclass.initialize_My(self.cfg.deepcopy())
 
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
@@ -197,6 +201,10 @@ class Simulation :
         # kommune_dict
         self.kommune_dict['id_to_name'].to_hdf(filename, key='id_to_name')
         self.kommune_dict['name_to_id'].to_hdf(filename, key='name_to_id')
+        #f.create_dataset("kommune_dict_keys",   data=list(self.kommune_dict.keys()))
+        #print(list(self.kommune_dict))
+        #print(type(list(self.kommune_dict.values())[0]))
+        #f.create_dataset("kommune_dict_values", data=list(self.kommune_dict.values()))
 
 
     def _load_initialized_network(self, filename) :
@@ -270,15 +278,19 @@ class Simulation :
         if self.cfg.labels.lower() == "kommune" :
             labels = self.my.kommune
 
-        elif self.cfg.labels.lower() == "none" :
-            labels = np.zeros(np.shape(self.my.kommune))
-
-        else :
+        elif self.cfg.labels.lower() == "custom" :
             labels_raw = self.my.kommune
             labels = np.zeros(np.shape(labels_raw))
 
             for new_label, label_group in enumerate(self.cfg['label_map']) :
                 labels[np.isin(labels_raw, self.kommune_dict['name_to_id'][label_group])] = new_label + 1
+
+        elif self.cfg.labels.lower() == "none" :
+            labels = np.zeros(np.shape(self.my.kommune))
+
+        else :
+            raise ValueError(f'Label name: {self.cfg.labels.lower()} not known')
+
 
         if verbose_interventions is None :
             verbose_interventions = self.verbose
@@ -568,33 +580,28 @@ class Simulation :
         if save_only_ID_0 and self.cfg.network.ID != 0 :
             return
 
-        filename_hdf5 = self._get_filename(name='network', filetype='hdf5')
+        filename_hdf5 = self._get_filename(name="network", filetype="hdf5")
         file_loaders.make_sure_folder_exist(filename_hdf5)
 
-        with h5py.File(filename_hdf5, 'w', **hdf5_kwargs) as f :  #
-            f.create_dataset('my_state', data=self.my_state)
-            f.create_dataset('my_corona_type', data=self.my.corona_type)
-
-
-            f.create_dataset('my_number_of_contacts', data=self.my.number_of_contacts)
-            f.create_dataset('my_connection_type',   data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_type,   pad_value=-1))
-            f.create_dataset('my_connection_status', data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_status, pad_value=-1))
-
-            f.create_dataset('day_found_infected', data=self.intervention.day_found_infected)
-            f.create_dataset('coordinates', data=self.my.coordinates)
+        with h5py.File(filename_hdf5, "w", **hdf5_kwargs) as f :  #
+            f.create_dataset("my_state", data=self.my_state)
+            f.create_dataset("my_corona_type", data=self.my.corona_type)
+            f.create_dataset("my_number_of_contacts", data=self.my.number_of_contacts)
+            f.create_dataset("day_found_infected", data=self.intervention.day_found_infected)
+            f.create_dataset("coordinates", data=self.my.coordinates)
             # import ast; ast.literal_eval(str(cfg))
-            f.create_dataset('cfg_str', data=str(self.cfg))
-            f.create_dataset('R_true', data=self.intervention.R_true_list)
-            f.create_dataset('freedom_impact', data=self.intervention.freedom_impact_list)
-            f.create_dataset('R_true_brit', data=self.intervention.R_true_list_brit)
-            f.create_dataset('df', data=utils.dataframe_to_hdf5_format(self.df))
+            f.create_dataset("cfg_str", data=str(self.cfg))
+            f.create_dataset("R_true", data=self.intervention.R_true_list)
+            f.create_dataset("freedom_impact", data=self.intervention.freedom_impact_list)
+            f.create_dataset("R_true_brit", data=self.intervention.R_true_list_brit)
+            f.create_dataset("df", data=utils.dataframe_to_hdf5_format(self.df))
             # f.create_dataset(
-            #     'df_coordinates',
-            #     data=utils.dataframe_to_hdf5_format(self.df_coordinates, cols_to_str='kommune'),
+            #     "df_coordinates",
+            #     data=utils.dataframe_to_hdf5_format(self.df_coordinates, cols_to_str="kommune"),
             # )
 
             if time_elapsed :
-                f.create_dataset('time_elapsed', data=time_elapsed)
+                f.create_dataset("time_elapsed", data=time_elapsed)
 
             self._add_cfg_to_hdf5_file(f)
 
@@ -643,8 +650,6 @@ def run_single_simulation(
 
 
 def update_database(db_cfg, q, cfg) :
-    if cfg is None :
-        return
 
     if not db_cfg.contains((q.hash == cfg.hash) & (q.network.ID == cfg.network.ID)) :
         db_cfg.insert(cfg)
@@ -652,7 +657,7 @@ def update_database(db_cfg, q, cfg) :
 
 def run_simulations(
         simulation_parameters,
-        N_runs=1,
+        N_runs=2,
         num_cores_max=None,
         N_tot_max=False,
         verbose=False,

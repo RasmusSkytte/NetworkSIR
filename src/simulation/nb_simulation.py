@@ -453,7 +453,7 @@ def do_bug_check(
     s,
     x) :
 
-    if my.cfg.day_max > 0 and day > my.cfg.day_max :
+    if day > my.cfg.day_max :
         if verbose :
             print("--- day exceeded day_max ---")
         continue_run = False

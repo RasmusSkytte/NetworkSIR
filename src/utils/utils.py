@@ -1620,9 +1620,9 @@ def path(file) :
     return file
 
 
-def hash_to_filenames(hash_, base_dir="Output/ABM", filetype="hdf5") :
+def hash_to_filenames(hash_, base_dir='Output/ABM', filetype='hdf5') :
     folder = path(base_dir) / hash_
-    files = list(folder.rglob(f"*.{filetype}"))
+    files = list(folder.rglob(f'*.{filetype}'))
     return [str(file) for file in files]
 
 
@@ -2203,3 +2203,12 @@ def generate_random_point(polygon):
         pnt = Point(random.uniform(minx, maxx), random.uniform(miny, maxy))
         if polygon.contains(pnt):
             return pnt
+
+
+def nested_numba_list_to_rectangular_numpy_array(nested_list, pad_value) :
+
+    # Get the maximum dimension
+    arrlen = max(map(len, nested_list))
+
+    # Create retangular numpy arraye
+    return np.array([list(tl)+[pad_value]*(arrlen-len(tl)) for tl in nested_list])

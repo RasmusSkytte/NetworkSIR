@@ -467,6 +467,9 @@ def remove_and_reduce_rates_of_agent(my, g, intervention, agent, rate_reduction)
 @njit
 def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label) :
 
+    if my.number_of_contacts[agent] == 0 :
+        return
+
     # Extract the contact matrices
     if n == 0 :
         work_matrix_previous  = my.cfg_network.work_matrix

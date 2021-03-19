@@ -521,7 +521,11 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label
     sum_connection_probability = np.sum(connection_probability_current)
 
     # Compute the probability modifier (generalized logistic function dependent on the log ratio of number of contacts to mu)
-    logit = 1 / (1 + (my.cfg_network.mu / my.number_of_contacts[agent])**2 )
+    # For k != 1, a factor is needed to improve accuracy. Reason unknown. See notebooks: restriction_transformation_function
+    # Only needed when contact distribution has a long tail.
+    # k = 1   -> factor = 1.22 ish
+    # k = 0.5 -> factor = 1.25 ish
+    logit = 1 / (1 + (1.22 * my.cfg_network.mu / my.number_of_contacts[agent]))
 
     # Loop over all active (non-home) conenctions
     for ith_contact in range(my.number_of_contacts[agent]) :

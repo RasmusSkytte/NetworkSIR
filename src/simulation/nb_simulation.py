@@ -230,7 +230,6 @@ def initialize_states(
     state_total_counts,
     stratified_infection_counts,
     agents_in_state,
-    subgroup_beta_multiplier,
     subgroup_UK_frac,
     possible_agents,
     N_init,
@@ -250,9 +249,9 @@ def initialize_states(
             # Choose corona type
             if np.random.rand() < subgroup_UK_frac * my.cfg.N_init_UK_frac :
                 my.corona_type[agent] = 1
-                rel_beta = subgroup_beta_multiplier * my.cfg.beta_UK_multiplier
+                rel_beta = my.cfg.beta_UK_multiplier
             else :
-                rel_beta = subgroup_beta_multiplier
+                rel_beta = 1
 
             #weights = calc_E_I_distribution_linear(my.cfg.R_guess * rel_beta)
             weights = calc_E_I_distribution(my, my.cfg.R_guess * rel_beta)
@@ -276,9 +275,6 @@ def initialize_states(
                 for ith_contact, contact in enumerate(my.connections[agent]) :
                     # update rates if contact is susceptible
                     if my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact) :
-
-                        # label specific multiplier
-                        g.rates[agent][ith_contact] *= subgroup_beta_multiplier
 
                         # Strain specific multiplier
                         if my.corona_type[agent] == 1 :

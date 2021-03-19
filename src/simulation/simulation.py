@@ -308,8 +308,8 @@ class Simulation :
 
         for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
             for l in range(len(np.unique(labels))) :
-                    wm[s,l,:,:] *= self.cfg.label_betas[l]
-                    om[s,l,:,:] *= self.cfg.label_betas[l]
+                wm[s,l,:,:] *= self.cfg.label_multiplier[l]
+                om[s,l,:,:] *= self.cfg.label_multiplier[l]
 
         # Store the labels in my
         self.my.initialize_labels(labels)
@@ -417,10 +417,9 @@ class Simulation :
                 prior_infected  /= prior_infected.sum()
                 prior_immunized /= prior_immunized.sum()
 
-                kommune_beta    = self.my.cfg.label_betas[self.my.label[agents_in_kommune[0]]]
                 kommune_UK_frac = self.my.cfg.label_frac[self.my.label[agents_in_kommune[0]]]
 
-                initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized, kommune_beta, kommune_UK_frac))
+                initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized, kommune_UK_frac))
 
         else :
 
@@ -436,14 +435,15 @@ class Simulation :
             prior_infected  /= prior_infected.sum()
             prior_immunized /= prior_immunized.sum()
 
-            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, self.my.cfg.label_betas[0], self.my.cfg.label_frac[0])]
+            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, self.my.cfg.label_frac[0])]
 
 
         # Loop over subgroups and initialize
         for subgroup in tqdm(initialization_subgroups, total=len(initialization_subgroups), disable=(not self.verbose), position=0, leave=True) :
 
-            agents_in_subgroup, N_subgroup, R_subgroup, prior_infected_subgroup, prior_immunized_subgroup, subgroup_beta_multiplier, subgroup_UK_frac = subgroup
+            agents_in_subgroup, N_subgroup, R_subgroup, prior_infected_subgroup, prior_immunized_subgroup, subgroup_UK_frac = subgroup
 
+            # TODO: Move loop inside initialize_states()
             nb_simulation.initialize_states(
                 self.my,
                 self.g,
@@ -451,7 +451,6 @@ class Simulation :
                 self.state_total_counts,
                 self.stratified_infection_counts,
                 self.agents_in_state,
-                subgroup_beta_multiplier,
                 subgroup_UK_frac,
                 agents_in_subgroup,
                 N_subgroup,
@@ -574,7 +573,6 @@ class Simulation :
         with h5py.File(filename_hdf5, 'w', **hdf5_kwargs) as f :  #
             f.create_dataset('my_state', data=self.my_state)
             f.create_dataset('my_corona_type', data=self.my.corona_type)
-
 
             f.create_dataset('my_number_of_contacts', data=self.my.number_of_contacts)
             f.create_dataset('my_connection_type',   data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_type,   pad_value=-1))

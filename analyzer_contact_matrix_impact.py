@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 
 # 1) Define network to generate
-f = 0.01
+f = 0.1
 verbose = False
 
 

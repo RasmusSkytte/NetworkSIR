@@ -531,8 +531,16 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label
             # if a connection is active, and the connection probability is lower now than before, check if this connection should be disabled
             if connection_probability_current[ith_contact] < connection_probability_previous[ith_contact] :
 
-                # Update the connection
-                p = 1 - np.sqrt(connection_probability_current[ith_contact])
+                # Naiive probability connection should be open
+                p = 1 - connection_probability_current[ith_contact]
+
+                # Transform p through a generalized logistics function
+                p = logit ** (-np.log(p) / np.log(2))
+
+                # Account for two way connection
+                p = 1 - np.sqrt(1 - p)
+
+                # Try to close connections
                 if np.random.rand() < p :
                     close_connection(my, g, agent, ith_contact, intervention)
 
@@ -559,8 +567,16 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label
 
         if not current_contacts[ith_contact]:
 
-            # Update the connection
-            p = 1 - np.sqrt(1 - min(1.0, connection_probability_current[ith_contact]))
+            # Naiive probability connection should be closed
+            p = 1 - min(1.0, connection_probability_current[ith_contact])
+
+            # Transform p through a generalized logistics function
+            p = logit ** (-np.log(p) / np.log(2))
+
+            # Account for two way connection
+            p = 1 - np.sqrt(p)
+
+            # Try to close connections
             if np.random.rand() < p :
                 open_connection(my, g, agent, ith_contact, intervention)
 

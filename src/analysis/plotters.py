@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import matplotlib.dates  as mdates
 
 from src.utils import utils
-from src.utils import file_loaders
 
 def plot_simulation_cases_and_variant_fraction(total_tests, f, t_day, t_week, axes) :
 

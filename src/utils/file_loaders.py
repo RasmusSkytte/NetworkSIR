@@ -31,8 +31,8 @@ import geopandas as gpd
 ##    ##  ##  ##     ## ##     ## ##       ##     ##    ##     ##  ##     ## ##   ### ##    ##
  ######  #### ##     ##  #######  ######## ##     ##    ##    ####  #######  ##    ##  ######
 
-def get_all_ABM_filenames(base_dir="Output/ABM", filetype="hdf5") :
-    "get all ABM result files with filetype {filetype}"
+def get_all_filenames(base_dir="Output/ABM", filetype="hdf5") :
+    "get all result files with filetype {filetype}"
     files = path(base_dir).rglob(f"*.{filetype}")
     # files = sorted(files, )
     return sorted(

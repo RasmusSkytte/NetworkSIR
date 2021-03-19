@@ -12,7 +12,7 @@ params, start_date = utils.load_params("cfg/simulation_parameters_debugging.yaml
 if utils.is_local_computer():
     f = 0.1
     n_steps = 1
-    num_cores_max = 1
+    num_cores_max = 3
     N_runs = 3
 else :
     f = 0.5
@@ -61,7 +61,7 @@ fraction, fraction_sigma, t_fraction = load_b117_fraction()
 for subset in [{'Intervention_contact_matrices_name' : params['Intervention_contact_matrices_name'][0]}] :
     if __name__ == '__main__':
         # Load the ABM simulations
-        abm_files = file_loaders.ABM_simulations(base_dir='Output/ABM', subset=subset, verbose=True)
+        abm_files = file_loaders.ABM_simulations(subset=subset, verbose=True)
 
         if len(abm_files.cfgs) == 0 :
             raise ValueError('No files found')

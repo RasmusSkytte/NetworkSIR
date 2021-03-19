@@ -21,7 +21,7 @@ from tqdm import tqdm
 
 # 1) Define network to generate
 f = 0.01
-verbose = False
+verbose = True
 
 
 Intervention_contact_matrices_name = ['ned2021jan', 'fase3_S3_0A_1']

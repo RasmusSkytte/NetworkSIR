@@ -74,7 +74,7 @@ def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=F
                     # pick agent if it is susceptible (in S state)
                     if my.agent_is_susceptible(agent) :
                         # "vaccinate agent"
-                        if np.random.rand() < my.cfg.Intervention_vaccination_efficacies[i-1] :
+                        if np.random.rand() < my.cfg.Intervention_vaccination_efficacies[i] :
                             multiply_incoming_rates(my, g, agent, np.array([0.0, 0.0, 0.0]))  # Reduce rates to zero
                             my.vaccination_type[agent] = i
 

@@ -119,7 +119,6 @@ def load_from_file(filename, start_date) :
 def parse_time_ranges(start_date, end_date) :
 
     t_day = pd.date_range(start=start_date, end=end_date, freq="D")
-    t_day = t_day[:-1]
 
     weeks =  [w for w in pd.unique(t_day.isocalendar().week) if np.sum(t_day.isocalendar().week == w) == 7]
     t_week = pd.to_datetime([date for date, dayofweek, week in zip(t_day, t_day.dayofweek, t_day.isocalendar().week) if (dayofweek == 6 and week in weeks)])

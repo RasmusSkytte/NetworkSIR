@@ -21,22 +21,21 @@ lambda_I: 4 / 5
 
 
 
-start_date : 2020-12-21
-end_date : 2021-01-15
+start_date : 2021-01-15
+end_date : 2021-03-15
 
 contact_matrices_name: basis  # Target activity
 
-Intervention_contact_matrices_name : [[basis]]
+Intervention_contact_matrices_name : [[ned2021jan]]
 restriction_thresholds: [[2021-03-16]]  # Opening date for fase 1
 threshold_interventions_to_apply: [[3]]
 
 
 
-
-Intervention_vaccination_schedule_name : None
+Intervention_vaccination_schedule_name : reference_2021_mar_12
 start_date_offset: 2020-12-28 # Start date for vaccinations
-Intervention_vaccination_effect_delays : [[10, 21]]
-Intervention_vaccination_efficacies : [[0.95, 0.65]]
+Intervention_vaccination_effect_delays : [[21, 28]]
+Intervention_vaccination_efficacies : [[0.9, 0.6]]
 
 
 intervention_removal_delay_in_clicks: 0

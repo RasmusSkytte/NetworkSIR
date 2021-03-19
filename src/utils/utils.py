@@ -1021,6 +1021,11 @@ def get_cfg_default() :
     """ Default Simulation Parameters """
     cfg              = file_loaders.load_yaml("cfg/simulation_parameters_default.yaml")
     cfg.network      = file_loaders.load_yaml("cfg/simulation_parameters_network.yaml")
+
+    # Load the network contact matrix
+    work_matix, other_matrix, work_other_ratio, _ = file_loaders.load_contact_matrices(scenario = cfg.network.contact_matrices_name)
+    cfg["network"].update({"work_matrix" : work_matix[0], "other_matrix" : other_matrix[0], "work_other_ratio" : work_other_ratio[0]})
+
     #cfg.intervention = file_loaders.load_yaml("cfg/simulation_parameters_intervention.yaml")
     return cfg
 
@@ -1399,7 +1404,6 @@ def counts_to_df(time, state_counts, stratified_infected, stratified_vaccination
     stratified_infected = np.array(stratified_infected)
     stratified_vaccination = np.array(stratified_vaccination)
 
-
     N_states     = np.size(state_counts, 1)
     N_labels     = np.size(stratified_infected, 1)
     N_variants   = np.size(stratified_infected, 2)
@@ -1620,9 +1624,9 @@ def path(file) :
     return file
 
 
-def hash_to_filenames(hash_, base_dir="Output/ABM", filetype="hdf5") :
+def hash_to_filenames(hash_, base_dir='Output/ABM', filetype='hdf5') :
     folder = path(base_dir) / hash_
-    files = list(folder.rglob(f"*.{filetype}"))
+    files = list(folder.rglob(f'*.{filetype}'))
     return [str(file) for file in files]
 
 
@@ -1894,10 +1898,9 @@ def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True) :
 
 
 
-
-
 def add_cfg_to_hdf5_file(f, cfg) :
     add_cfg_to_hdf5_file_recursively(f, cfg)
+
 
 def add_cfg_to_hdf5_file_recursively(f, cfg, path = 'cfg') :
 
@@ -2203,3 +2206,12 @@ def generate_random_point(polygon):
         pnt = Point(random.uniform(minx, maxx), random.uniform(miny, maxy))
         if polygon.contains(pnt):
             return pnt
+
+
+def nested_numba_list_to_rectangular_numpy_array(nested_list, pad_value) :
+
+    # Get the maximum dimension
+    arrlen = max(map(len, nested_list))
+
+    # Create retangular numpy arraye
+    return np.array([list(tl)+[pad_value]*(arrlen-len(tl)) for tl in nested_list])

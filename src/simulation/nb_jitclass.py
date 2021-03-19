@@ -208,7 +208,7 @@ spec_my = {
     "coordinates" : nb.float32[:, :],
     "connection_weight" : nb.float32[:],
     "infection_weight" : nb.float64[:],
-    "number_of_contacts" : nb.uint16[:],
+    "number_of_contacts" : nb.int16[:],
     "state" : nb.int8[:],
     "kommune" : nb.uint8[:],
     "label" : nb.uint8[:],

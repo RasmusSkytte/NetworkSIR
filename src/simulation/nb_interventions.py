@@ -467,6 +467,10 @@ def remove_and_reduce_rates_of_agent(my, g, intervention, agent, rate_reduction)
 @njit
 def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label) :
 
+    # Check if agent has contacts
+    if my.number_of_contacts[agent] == 0 :
+        return
+
     # Extract the contact matrices
     if n == 0 :
         work_matrix_previous  = my.cfg_network.work_matrix
@@ -516,6 +520,13 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label
     # Store the connection weight
     sum_connection_probability = np.sum(connection_probability_current)
 
+    # Compute the probability modifier (generalized logistic function dependent on the log ratio of number of contacts to mu)
+    # For k != 1, a factor is needed to improve accuracy. Reason unknown. See notebooks: restriction_transformation_function
+    # Only needed when contact distribution has a long tail.
+    # k = 1   -> factor = 1.22 ish
+    # k = 0.5 -> factor = 1.25 ish
+    logit = 1 / (1 + (1.22 * my.cfg_network.mu / my.number_of_contacts[agent]))
+
     # Loop over all active (non-home) conenctions
     for ith_contact in range(my.number_of_contacts[agent]) :
 
@@ -524,8 +535,16 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label
             # if a connection is active, and the connection probability is lower now than before, check if this connection should be disabled
             if connection_probability_current[ith_contact] < connection_probability_previous[ith_contact] :
 
-                # Update the connection
-                p = 1 - np.sqrt(connection_probability_current[ith_contact])
+                # Naiive probability connection should be closed
+                p = 1 - connection_probability_current[ith_contact]
+
+                # Transform p through a generalized logistics function
+                p = logit ** (-np.log(p) / np.log(2))
+
+                # Account for two way connection
+                p = 1 - np.sqrt(1 - p)
+
+                # Try to close connections
                 if np.random.rand() < p :
                     close_connection(my, g, agent, ith_contact, intervention)
 
@@ -552,8 +571,16 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label
 
         if not current_contacts[ith_contact]:
 
-            # Update the connection
-            p = 1 - np.sqrt(1 - min(1.0, connection_probability_current[ith_contact]))
+            # Naiive probability connection should be closed
+            p = 1 - min(1.0, connection_probability_current[ith_contact])
+
+            # Transform p through a generalized logistics function
+            p = logit ** (-np.log(p) / np.log(2))
+
+            # Account for two way connection
+            p = 1 - np.sqrt(p)
+
+            # Try to close connections
             if np.random.rand() < p :
                 open_connection(my, g, agent, ith_contact, intervention)
 
@@ -845,3 +872,17 @@ def test_tagged_agents(my, g, intervention, day, click) :
                     intervention,
                     agent,
                     rate_reduction=intervention.cfg.isolation_rate_reduction)
+
+
+
+@njit
+def apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose) :
+
+    if intervention.apply_interventions_on_label and day >= 0 :
+        apply_interventions_on_label(my, g, intervention, day, click, verbose)
+
+    if intervention.apply_random_testing :
+        apply_random_testing(my, intervention, click)
+
+    if intervention.apply_vaccinations :
+        vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=verbose)

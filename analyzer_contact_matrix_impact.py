@@ -68,8 +68,8 @@ for k, (network_filename, cfg) in enumerate(tqdm(
 
         N_contacts[k, i] = np.sum(number_of_contacts)
 
-        x_min = np.min(number_of_contacts) - 0.5
-        x_max = np.max(number_of_contacts) + 0.5
+        x_min = -0.5
+        x_max = 20 * (np.floor(np.max(number_of_contacts) / 20) + 1) + 0.5
 
         x_range = (x_min, x_max)
         N_bins = int(x_max - x_min)
@@ -97,8 +97,8 @@ with h5py.File(initial_network_filename, 'r') as f :
 
         N_contacts[-1, i] = np.sum(number_of_contacts)
 
-        x_min = np.min(number_of_contacts) - 0.5
-        x_max = np.max(number_of_contacts) + 0.5
+        x_min = -0.5
+        x_max = 10 * (np.floor(np.max(number_of_contacts) / 10) + 1) + 0.5
 
         x_range = (x_min, x_max)
         N_bins = int(x_max - x_min)
@@ -123,4 +123,13 @@ for i in range(2, len(axes)) :
     axes[i].legend(['N: ' + str(n) for n in N_contacts[:, i]], fontsize = 18)
 
 plt.tight_layout()
+
+
+fig.canvas.draw()
+
+# Adjust the y axes
+for ax in axes :
+    ylim = ax.get_ylim()
+    ax.set_ylim(0, .1 * (np.floor(ylim[1]/.1) + 1))
+
 fig.savefig('Figures/contacts_' + '_'.join(Intervention_contact_matrices_name) + '.png')

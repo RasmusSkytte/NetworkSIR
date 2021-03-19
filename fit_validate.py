@@ -14,7 +14,7 @@ from src.analysis.helpers  import *
 from src.analysis.plotters import *
 
 # Define the subset to plot on
-subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan']} ]
+subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan', 'fase3_S3_0A_1']} ]
 
 
 for subset in subsets :
@@ -158,7 +158,7 @@ for subset in subsets :
     # Get restriction_thresholds from a cfg
     restriction_thresholds = abm_files.cfgs[0].restriction_thresholds
 
-    axes1[0].set_ylim(0, 50000)
+    axes1[0].set_ylim(0, 10000)
     axes1[0].set_ylabel('Daglige positive')
 
 

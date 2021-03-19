@@ -551,7 +551,7 @@ def run_simulation(
         apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
 
         if my.cfg.start_date_offset > 0 :
-            for d in range(my.cfg.start_date_offset - 1) :
+            for d in range(-my.cfg.start_date_offset, 1) :
                 vaccinate(my, g, intervention, d, stratified_vaccination_counts, verbose=verbose)
 
 

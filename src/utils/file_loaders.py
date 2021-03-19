@@ -488,7 +488,7 @@ def load_vaccination_schedule(cfg) :
         np.multiply(vaccinations_per_age_group[i], cfg.network.N_tot / 5_800_000, out=vaccinations_per_age_group[i], casting='unsafe')
 
         # Determine the timing of effective vaccines
-        vaccination_schedule[i] = cfg.start_date_offset + np.array([0, (vaccination_schedule[i][-1] - vaccination_schedule[i][0]).days]) + cfg.Intervention_vaccination_effect_delays[i]
+        vaccination_schedule[i] = np.array([0, (vaccination_schedule[i][-1] - vaccination_schedule[i][0]).days]) + cfg.Intervention_vaccination_effect_delays[i] - cfg.start_date_offset
 
     return np.array(vaccinations_per_age_group), np.array(vaccination_schedule)
 

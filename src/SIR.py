@@ -5,6 +5,11 @@ from numba import njit
 from functools import lru_cache
 import matplotlib.pyplot as plt
 
+try:
+    from src import file_loaders
+except ImportError:
+    import file_loaders
+
 
 # from scipy.signal import savgol_filter
 def interpolate_array(y, time, t_interpolated, force_positive=True):

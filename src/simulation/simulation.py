@@ -657,7 +657,7 @@ def update_database(db_cfg, q, cfg) :
 
 def run_simulations(
         simulation_parameters,
-        N_runs=2,
+        N_runs=1,
         num_cores_max=None,
         N_tot_max=False,
         verbose=False,

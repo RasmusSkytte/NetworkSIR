@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 
 # 1) Define network to generate
-f = 0.1
+f = 0.01
 verbose = False
 
 
@@ -64,12 +64,12 @@ for k, (network_filename, cfg) in enumerate(tqdm(
 
     for i, (types, title) in enumerate(zip(filters, titles)) :
 
-        number_of_contacts = contact_counter(   connection_type,    connection_status, types=types)
+        number_of_contacts = contact_counter(connection_type, connection_status, types=types)
 
         N_contacts[k, i] = np.sum(number_of_contacts)
 
         x_min = -0.5
-        x_max = 20 * (np.floor(np.max(number_of_contacts) / 20) + 1) + 0.5
+        x_max = 10 * (np.floor(np.max(number_of_contacts) / 10) + 1) + 0.5
 
         x_range = (x_min, x_max)
         N_bins = int(x_max - x_min)
@@ -117,13 +117,13 @@ with h5py.File(initial_network_filename, 'r') as f :
 
 
 names = Intervention_contact_matrices_name + [cfg.network.contact_matrices_name]
-axes[0].legend(names, fontsize = 18)
+axes[1].legend(names, fontsize = 18)
 
-for i in range(2, len(axes)) :
-    axes[i].legend(['N: ' + str(n) for n in N_contacts[:, i]], fontsize = 18)
+for i in [0, 2, 3] :
+    axes[i].legend([f'N : {n:,}'.replace(',','.') for n in N_contacts[:, i]], fontsize = 18)
+
 
 plt.tight_layout()
-
 
 fig.canvas.draw()
 

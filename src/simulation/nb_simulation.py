@@ -438,9 +438,6 @@ def update_infection_list_for_newly_infected_agent(my, g, agent) :
                     g.update_rates(my, -rate, contact)
 
                 break
-@njit
-def seasonal_total_sum_infection(total_sum_infection, day, seasonal_effect):
-    return total_sum_infection*seasonal_effect[day]
 
 @njit
 def do_bug_check(
@@ -471,7 +468,7 @@ def do_bug_check(
             print("=== step_number > 100_000_000 === ")
         continue_run = False
 
-    elif (g.total_sum_infections + g.total_sum_of_state_changes < 0.0001) and (g.total_sum_of_state_changes + g.total_sum_infections > -0.00001) :
+    elif (g.total_sum_infections(day) + g.total_sum_of_state_changes < 0.0001) and (g.total_sum_of_state_changes + g.total_sum_infections(day)  > -0.00001) :
         continue_run = False
         if verbose :
             print("Equilibrium")
@@ -486,7 +483,7 @@ def do_bug_check(
     elif not accept :
         print("\nNo Chosen rate")
         print("s : \t", s)
-        print("g.total_sum_infections : \t", g.total_sum_infections)
+        print("g.total_sum_infections : \t", g.total_sum_infections(day) )
         print("g.cumulative_sum_infection_rates : \t", g.cumulative_sum_infection_rates)
         print("g.cumulative_sum_of_state_changes : \t", g.cumulative_sum_of_state_changes)
         print("x : \t", x)
@@ -496,13 +493,13 @@ def do_bug_check(
     elif (g.total_sum_of_state_changes < 0) and (g.total_sum_of_state_changes > -0.001) :
         g.total_sum_of_state_changes = 0
 
-    elif (g.total_sum_infections < 0) and (g.total_sum_infections > -0.001) :
-        g.total_sum_infections = 0
+    elif (g.total_sum_infections(day)  < 0) and (g.total_sum_infections(day)  > -0.001) :
+        g._total_sum_infections = 0
 
-    elif (g.total_sum_of_state_changes < 0) or (g.total_sum_infections < 0) :
-        print("\nNegative Problem", g.total_sum_of_state_changes, g.total_sum_infections)
+    elif (g.total_sum_of_state_changes < 0) or (g.total_sum_infections(day)  < 0) :
+        print("\nNegative Problem", g.total_sum_of_state_changes, g.total_sum_infections(day) )
         print("s : \t", s)
-        print("g.total_sum_infections : \t", g.total_sum_infections)
+        print("g.total_sum_infections : \t", g.total_sum_infections(day) )
         print("g.cumulative_sum_infection_rates : \t", g.cumulative_sum_infection_rates)
         print("g.cumulative_sum_of_state_changes : \t", g.cumulative_sum_of_state_changes)
         print("x : \t", x)
@@ -565,7 +562,7 @@ def run_simulation(
         s = 0
 
         step_number += 1
-        g.total_sum = g.total_sum_of_state_changes + seasonal_total_sum_infection(g.total_sum_infection, day, intervention.seasonal_effect)
+        g.total_sum = g.total_sum_of_state_changes + g.total_sum_infections(day)
 
         dt = -np.log(np.random.rand()) / g.total_sum
         real_time += dt
@@ -721,7 +718,7 @@ def run_simulation(
                     out_stratified_vaccination_counts.append(stratified_vaccination_counts.copy())
                     out_my_state.append(my.state.copy())
 
-                    intervention.R_true_list.append(calculate_R_True(my, g))
+                    intervention.R_true_list.append(calculate_R_True(my, g, day))
                     intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
                     intervention.R_true_list_brit.append(calculate_R_True_brit(my, g))
 

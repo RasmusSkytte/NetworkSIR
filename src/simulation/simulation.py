@@ -320,11 +320,8 @@ class Simulation :
 
         for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
             for l in range(len(np.unique(labels))) :
-                wm[s,l,:,:] *= self.cfg.label_betas[l]
-                om[s,l,:,:] *= self.cfg.label_betas[l]
-
-        # Load the seasonal data
-        seasonal_list = file_loaders.load_seasonal_list(scenario = self.cfg.seasonal_list_name, cfg.start_date_offset))
+                wm[s,l,:,:] *= self.cfg.label_multiplier[l]
+                om[s,l,:,:] *= self.cfg.label_multiplier[l]
 
         # Store the labels in my
         self.my.initialize_labels(labels)
@@ -337,7 +334,6 @@ class Simulation :
             vaccination_schedule = vaccination_schedule,
             work_matrix_restrict = wm,
             other_matrix_restrict = om,
-            seasonal_lists = seasonal_list,
             verbose=verbose_interventions)
 
 
@@ -361,7 +357,10 @@ class Simulation :
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
-        self.g = nb_jitclass.Gillespie(self.my, self.N_states, self.N_infectious_states)
+        # Load the seasonal data
+        seasonal_effect = file_loaders.load_seasonal_list(scenario=self.cfg.seasonal_list_name, offset=self.cfg.start_date_offset)
+
+        self.g = nb_jitclass.Gillespie(self.my, self.N_states, self.N_infectious_states, np.array(seasonal_effect), self.cfg.seasonal_strength)
 
         # Find the possible agents
         possible_agents = nb_simulation.find_possible_agents(self.my, self.initial_ages_exposed, self.agents_in_age_group)

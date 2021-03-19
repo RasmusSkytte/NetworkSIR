@@ -18,61 +18,63 @@ from src.utils import utils
 
 spec_cfg = {
     # Default parameters
-    "version" : nb.float32,
-    "beta" : nb.float32,
-    "sigma_beta" : nb.float32,
-    "beta_connection_type" : nb.float32[:],
-    "R_guess": nb.float32,
-    "algo" : nb.uint8,
-    "N_init" : nb.uint16,
-    "N_init_UK_frac" : nb.float32,
-    "R_init" : nb.uint16,
-    "initial_infection_distribution" : nb.types.unicode_type,
-    "lambda_E" : nb.float32,
-    "lambda_I" : nb.float32,
+    'version' : nb.float32,
+    'beta' : nb.float32,
+    'sigma_beta' : nb.float32,
+    'beta_connection_type' : nb.float32[:],
+    'R_guess': nb.float32,
+    'algo' : nb.uint8,
+    'N_init' : nb.uint16,
+    'N_init_UK_frac' : nb.float32,
+    'R_init' : nb.uint16,
+    'initial_infection_distribution' : nb.types.unicode_type,
+    'lambda_E' : nb.float32,
+    'lambda_I' : nb.float32,
     # other
-    "day_max" : nb.int32,
-    "make_random_initial_infections" : nb.boolean,
-    "weighted_random_initial_infections" : nb.boolean,
-    "initialize_at_kommune_level" : nb.boolean,
-    "labels" : nb.types.unicode_type,
-    "label_map" : ListType(ListType(nb.types.unicode_type)),
-    "label_names" : ListType(nb.types.unicode_type),
-    "label_multiplier" : nb.float32[:],
-    "label_frac" : nb.float32[:],
-    "clustering_connection_retries" : nb.uint32,
-    "beta_UK_multiplier" : nb.float32,
-    "outbreak_position_UK" : nb.types.unicode_type,
-    "start_date_offset" : nb.int16,
+    'day_max' : nb.int32,
+    'make_random_initial_infections' : nb.boolean,
+    'weighted_random_initial_infections' : nb.boolean,
+    'initialize_at_kommune_level' : nb.boolean,
+    'labels' : nb.types.unicode_type,
+    'label_map' : ListType(ListType(nb.types.unicode_type)),
+    'label_names' : ListType(nb.types.unicode_type),
+    'label_multiplier' : nb.float32[:],
+    'label_frac' : nb.float32[:],
+    'clustering_connection_retries' : nb.uint32,
+    'beta_UK_multiplier' : nb.float32,
+    'outbreak_position_UK' : nb.types.unicode_type,
+    'start_date_offset' : nb.int16,
     # events
-    "N_events" : nb.uint16,
-    "event_size_max" : nb.uint16,
-    "event_size_mean" : nb.float32,
-    "event_beta_scaling" : nb.float32,
-    "event_weekend_multiplier" : nb.float32,
+    'N_events' : nb.uint16,
+    'event_size_max' : nb.uint16,
+    'event_size_mean' : nb.float32,
+    'event_beta_scaling' : nb.float32,
+    'event_weekend_multiplier' : nb.float32,
     # lockdown-related / interventions
-    "do_interventions" : nb.boolean,
-    "threshold_type" : nb.int8, # which thing set off restrictions : 0 : certain date. 1 : "real" incidens rate 2 : measured incidens rate
-    "restriction_thresholds" : nb.int16[:], # len == 2*nr of different thresholds, on the form [start stop start stop etc.]
-    "threshold_interventions_to_apply" : ListType(nb.int64),
-    "list_of_threshold_interventions_effects" : nb.float64[:, :, :],
-    "continuous_interventions_to_apply" : ListType(nb.int64),
-    "daily_tests" : nb.uint16,
-    "test_delay_in_clicks" : nb.int64[:],
-    "results_delay_in_clicks" : nb.int64[:],
-    "chance_of_finding_infected" : nb.float64[:],
-    "days_looking_back" : nb.int64,
-    "testing_penetration" : nb.float32[:],
-    #"masking_rate_reduction" : nb.float64[ :, : :1],  # to make the type C instead if A
-    #"lockdown_rate_reduction" : nb.float64[ :, : :1],  # to make the type C instead if A
-    "isolation_rate_reduction" : nb.float64[:],
-    "tracing_rates" : nb.float64[:],
-    "tracing_delay" : nb.int64,
-    "intervention_removal_delay_in_clicks" : nb.int32,
-    "Intervention_contact_matrices_name" : ListType(nb.types.unicode_type),
-    "Intervention_vaccination_schedule_name" : nb.types.unicode_type,
-    "Intervention_vaccination_effect_delays" : nb.int16[:],
-    "Intervention_vaccination_efficacies" : nb.float32[:],
+    'do_interventions' : nb.boolean,
+    'threshold_type' : nb.int8, # which thing set off restrictions : 0 : certain date. 1 : 'real' incidens rate 2 : measured incidens rate
+    'restriction_thresholds' : nb.int16[:], # len == 2*nr of different thresholds, on the form [start stop start stop etc.]
+    'threshold_interventions_to_apply' : ListType(nb.int64),
+    'list_of_threshold_interventions_effects' : nb.float64[:, :, :],
+    'continuous_interventions_to_apply' : ListType(nb.int64),
+    'daily_tests' : nb.uint16,
+    'test_delay_in_clicks' : nb.int64[:],
+    'results_delay_in_clicks' : nb.int64[:],
+    'chance_of_finding_infected' : nb.float64[:],
+    'days_looking_back' : nb.int64,
+    'testing_penetration' : nb.float32[:],
+    #'masking_rate_reduction' : nb.float64[ :, : :1],  # to make the type C instead if A
+    #'lockdown_rate_reduction' : nb.float64[ :, : :1],  # to make the type C instead if A
+    'isolation_rate_reduction' : nb.float64[:],
+    'tracing_rates' : nb.float64[:],
+    'tracing_delay' : nb.int64,
+    'intervention_removal_delay_in_clicks' : nb.int32,
+    'Intervention_contact_matrices_name' : ListType(nb.types.unicode_type),
+    'Intervention_vaccination_schedule_name' : nb.types.unicode_type,
+    'Intervention_vaccination_effect_delays' : nb.int16[:],
+    'Intervention_vaccination_efficacies' : nb.float32[:],
+    'seasonal_list_name' : nb.types.unicode_type,
+    'seasonal_strength' : nb.float64
 }
 
 @jitclass(spec_cfg)
@@ -113,6 +115,10 @@ class Config(object) :
         # Interventions / Lockdown
         self.do_interventions = True
 
+        # Season effects
+        self.seasonal_list_name = 'None'
+        self.seasonal_strength = 0
+
 
 nb_cfg_type = Config.class_type.instance_type
 
@@ -133,7 +139,7 @@ def initialize_nb_cfg(obj, cfg, spec) :
                 val = np.array(val, dtype=spec[key].dtype.name)
 
             else :
-                raise AssertionError(f"Got {key} : {val}, not working")
+                raise AssertionError(f'Got {key} : {val}, not working')
 
         elif isinstance(val, dict) :
             continue
@@ -155,18 +161,18 @@ def initialize_nb_cfg(obj, cfg, spec) :
 
 spec_network = {
     # Default parameters
-    "N_tot" : nb.uint32,
-    "rho" : nb.float32,
-    "epsilon_rho" : nb.float32,
-    "mu" : nb.float32,
-    "sigma_mu" : nb.float32,
-    "contact_matrices_name" : nb.types.unicode_type,
-    "work_matrix" : nb.float64[:, :],
-    "other_matrix" : nb.float64[:, :],
-    "work_other_ratio" : nb.float64,  # 0.2 = 20% work, 80% other
-    "N_contacts_max" : nb.uint16,
+    'N_tot' : nb.uint32,
+    'rho' : nb.float32,
+    'epsilon_rho' : nb.float32,
+    'mu' : nb.float32,
+    'sigma_mu' : nb.float32,
+    'contact_matrices_name' : nb.types.unicode_type,
+    'work_matrix' : nb.float64[:, :],
+    'other_matrix' : nb.float64[:, :],
+    'work_other_ratio' : nb.float64,  # 0.2 = 20% work, 80% other
+    'N_contacts_max' : nb.uint16,
     # ID
-    "ID" : nb.uint16,
+    'ID' : nb.uint16,
 }
 
 @jitclass(spec_network)
@@ -200,24 +206,24 @@ nb_cfg_network_type = Network.class_type.instance_type
 
 
 spec_my = {
-    "age" : nb.uint8[:],
-    "connections" : ListType(ListType(nb.uint32)),
-    "connection_status" : ListType(ListType(nb.boolean)),
-    "connection_type" : ListType(ListType(nb.uint8)),
-    "beta_connection_type" : nb.float32[:],
-    "coordinates" : nb.float32[:, :],
-    "connection_weight" : nb.float32[:],
-    "infection_weight" : nb.float64[:],
-    "number_of_contacts" : nb.uint16[:],
-    "state" : nb.int8[:],
-    "kommune" : nb.uint8[:],
-    "label" : nb.uint8[:],
-    "infectious_states" : ListType(nb.int64),
-    "corona_type" : nb.uint8[:],
-    "vaccination_type" : nb.int8[:],
-    "restricted_status" : nb.uint8[:],
-    "cfg" : nb_cfg_type,
-    "cfg_network" : nb_cfg_network_type,
+    'age' : nb.uint8[:],
+    'connections' : ListType(ListType(nb.uint32)),
+    'connection_status' : ListType(ListType(nb.boolean)),
+    'connection_type' : ListType(ListType(nb.uint8)),
+    'beta_connection_type' : nb.float32[:],
+    'coordinates' : nb.float32[:, :],
+    'connection_weight' : nb.float32[:],
+    'infection_weight' : nb.float64[:],
+    'number_of_contacts' : nb.uint16[:],
+    'state' : nb.int8[:],
+    'kommune' : nb.uint8[:],
+    'label' : nb.uint8[:],
+    'infectious_states' : ListType(nb.int64),
+    'corona_type' : nb.uint8[:],
+    'vaccination_type' : nb.int8[:],
+    'restricted_status' : nb.uint8[:],
+    'cfg' : nb_cfg_type,
+    'cfg_network' : nb_cfg_network_type,
 }
 
 
@@ -303,32 +309,36 @@ def initialize_My(cfg) :
 
 
 spec_g = {
-    "N_tot" : nb.uint32,
-    "N_states" : nb.uint8,
-    "N_infectious_states" : nb.uint8,
-    "total_sum" : nb.float64,
-    "total_sum_infections" : nb.float64,
-    "total_sum_of_state_changes" : nb.float64,
-    "cumulative_sum" : nb.float64,
-    "cumulative_sum_of_state_changes" : nb.float64[:],
-    "cumulative_sum_infection_rates" : nb.float64[:],
-    "SIR_transition_rates" : nb.float64[:],
-    "rates" : ListType(nb.float64[ : :1]),  # ListType[array(float64, 1d, C)] (C vs. A)
-    "sum_of_rates" : nb.float64[:],
+    'N_tot' : nb.uint32,
+    'N_states' : nb.uint8,
+    'N_infectious_states' : nb.uint8,
+    'total_sum' : nb.float64,
+    '_total_sum_infections' : nb.float64,
+    'total_sum_of_state_changes' : nb.float64,
+    'cumulative_sum' : nb.float64,
+    'cumulative_sum_of_state_changes' : nb.float64[:],
+    'cumulative_sum_infection_rates' : nb.float64[:],
+    'SIR_transition_rates' : nb.float64[:],
+    'rates' : ListType(nb.float64[ : :1]),  # ListType[array(float64, 1d, C)] (C vs. A)
+    'sum_of_rates' : nb.float64[:],
+    'seasonal_effect' : nb.float64[:],
+    'seasonal_strength' : nb.float64
 }
 
 
 @jitclass(spec_g)
 class Gillespie(object) :
-    def __init__(self, my, N_states, N_infectious_states) :
+    def __init__(self, my, N_states, N_infectious_states, seasonal_effect, seasonal_strength) :
         self.N_states = N_states
         self.N_infectious_states = N_infectious_states
         self.total_sum = 0.0
-        self.total_sum_infections = 0.0
+        self._total_sum_infections = 0.0
         self.total_sum_of_state_changes = 0.0
         self.cumulative_sum = 0.0
         self.cumulative_sum_of_state_changes = np.zeros(N_states, dtype=np.float64)
         self.cumulative_sum_infection_rates = np.zeros(N_states, dtype=np.float64)
+        self.seasonal_effect = seasonal_effect
+        self.seasonal_strength = seasonal_strength
         self._initialize_rates(my)
         self._initialize_SIR_rates(my)
 
@@ -348,13 +358,13 @@ class Gillespie(object) :
         self.SIR_transition_rates[:self.N_infectious_states] = my.cfg.lambda_E
         self.SIR_transition_rates[self.N_infectious_states : 2 * self.N_infectious_states] = my.cfg.lambda_I
 
-
     def update_rates(self, my, rate, agent) :
-        self.total_sum_infections += rate
+        self._total_sum_infections += rate
         self.sum_of_rates[agent] += rate
         self.cumulative_sum_infection_rates[my.state[agent] :] += rate
 
-
+    def total_sum_infections(self, day) :
+        return self._total_sum_infections * (1 - self.seasonal_strength * ( 1 - self.seasonal_effect[day]))
 
 #### ##    ## ######## ######## ########  ##     ## ######## ##    ## ######## ####  #######  ##    ##
  ##  ###   ##    ##    ##       ##     ## ##     ## ##       ###   ##    ##     ##  ##     ## ###   ##
@@ -365,29 +375,28 @@ class Gillespie(object) :
 #### ##    ##    ##    ######## ##     ##    ###    ######## ##    ##    ##    ####  #######  ##    ##
 
 spec_intervention = {
-    "cfg" : nb_cfg_type,
-    "cfg_network" : nb_cfg_network_type,
-    "label_counter" : nb.uint32[:],
-    "N_labels" : nb.uint32,
-    "freedom_impact" : nb.float64[:],
-    "freedom_impact_list" : ListType(nb.float64),
-    "R_true_list" : ListType(nb.float64),
-    "R_true_list_brit" : ListType(nb.float64),
-    "day_found_infected" : nb.int32[:],
-    "reason_for_test" : nb.int8[:],
-    "positive_test_counter" : nb.uint32[:],
-    "clicks_when_tested" : nb.int32[:],
-    "clicks_when_tested_result" : nb.int32[:],
-    "clicks_when_isolated" : nb.int32[:],
-    "clicks_when_restriction_stops" : nb.int32[:],
-    "types" : nb.uint8[:],
-    "started_as" : nb.uint8[:],
-    "vaccinations_per_age_group" : nb.int64[:, :, :],
-    "vaccination_schedule" : nb.int64[:, :],
-    "work_matrix_restrict" : nb.float64[:, :, :, :],
-    "other_matrix_restrict" : nb.float64[:, :, :, :],
-    "seasonal_effect"
-    "verbose" : nb.boolean,
+    'cfg' : nb_cfg_type,
+    'cfg_network' : nb_cfg_network_type,
+    'label_counter' : nb.uint32[:],
+    'N_labels' : nb.uint32,
+    'freedom_impact' : nb.float64[:],
+    'freedom_impact_list' : ListType(nb.float64),
+    'R_true_list' : ListType(nb.float64),
+    'R_true_list_brit' : ListType(nb.float64),
+    'day_found_infected' : nb.int32[:],
+    'reason_for_test' : nb.int8[:],
+    'positive_test_counter' : nb.uint32[:],
+    'clicks_when_tested' : nb.int32[:],
+    'clicks_when_tested_result' : nb.int32[:],
+    'clicks_when_isolated' : nb.int32[:],
+    'clicks_when_restriction_stops' : nb.int32[:],
+    'types' : nb.uint8[:],
+    'started_as' : nb.uint8[:],
+    'vaccinations_per_age_group' : nb.int64[:, :, :],
+    'vaccination_schedule' : nb.int64[:, :],
+    'work_matrix_restrict' : nb.float64[:, :, :, :],
+    'other_matrix_restrict' : nb.float64[:, :, :, :],
+    'verbose' : nb.boolean,
 }
 
 
@@ -448,7 +457,6 @@ class Intervention(object) :
         self.cfg_network = nb_cfg_network
 
         self._initialize_labels(labels)
-        self._initialize_seasonal_effect(seasonal_list)
 
         self.day_found_infected            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.freedom_impact                = np.full(self.cfg_network.N_tot, fill_value=0.0, dtype=np.float64)
@@ -481,20 +489,6 @@ class Intervention(object) :
 
     def agent_found_positive(self, agent) :
         return not self.agent_not_found_positive(agent)
-
-    def _initialize_seasonal_effect(self, seasonal_list):
-        if self.cfg.day_max - len(seasonal_list) - self.start_date_offset > 0:
-            seasonal_effect = np.ones(self.cfg.day_max + 1, dtype = np.float32)
-            seasonal_effect[:self.start_date_offset] *= seasonal_list[0]
-            seasonal_effect[self.start_date_offset:self.start_date_offset + len(seasonal_list)] = seasonal_list
-            seasonal_effect[self.start_date_offset + len(seasonal_list):] *= seasonal_list[-1]
-        else:
-            seasonal_effect = np.ones(self.cfg.start_date_offset + len(seasonal_list), dtype = np.float32)
-            seasonal_effect[:self.start_date_offset] *= seasonal_list[0]
-            seasonal_effect[self.start_date_offset:self.start_date_offset + len(seasonal_list)] = seasonal_list
-        self.seasonal_effect = seasonal_effect
-
-
 
     @property
     def apply_interventions(self) :

@@ -102,3 +102,7 @@ Intervention_contact_matrices_name : [reference]
 Intervention_vaccination_schedule_name : None
 Intervention_vaccination_effect_delays : [0]
 Intervention_vaccination_efficacies : [0]
+
+# Season related parameters
+seasonal_list_name : None
+seasonal_strength : 0

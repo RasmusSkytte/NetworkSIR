@@ -421,9 +421,19 @@ def load_contact_matrices(scenario = 'reference', N_labels = 1) :
 
     return matrix_work, matrix_other, work_other_ratio, age_groups_work
 
-def load_seasonal_list(scenario = 'reference', start_day) :
+def load_seasonal_list(scenario=None, offset = 0) :
+
+    if scenario.lower() == 'none' :
+        return np.ones(365)
+
+    # Load season data 2020-12-28 - 2021-12-15
     base_path = load_yaml('cfg/files.yaml')['seasonalFolder']
-    seasonal_index = np.loadtxt(filename)
+
+    # Load data from offset and forward
+    season_effect = pd.read_csv(os.path.join(base_path, scenario + '.csv'), index_col = 0)[offset:]
+
+    # Scale to starting value
+    return season_effect / season_effect[0]
 
 
 def load_contact_matrix_set(matrix_path) :

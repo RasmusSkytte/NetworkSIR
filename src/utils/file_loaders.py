@@ -31,15 +31,14 @@ import geopandas as gpd
 ##    ##  ##  ##     ## ##     ## ##       ##     ##    ##     ##  ##     ## ##   ### ##    ##
  ######  #### ##     ##  #######  ######## ##     ##    ##    ####  #######  ##    ##  ######
 
-def get_all_filenames(base_dir="Output/ABM", filetype="hdf5") :
-    "get all result files with filetype {filetype}"
+def get_all_ABM_filenames(base_dir="Output/ABM", filetype="hdf5") :
+    "get all ABM result files with filetype {filetype}"
     files = path(base_dir).rglob(f"*.{filetype}")
     # files = sorted(files, )
     return sorted(
         [str(file) for file in files if not file_is_empty(file)],
         key=os.path.getmtime,
     )
-
 
 def load_Network_file( filename) :
     with h5py.File(filename, "r") as f :
@@ -132,20 +131,18 @@ def get_cfgs(all_folders) :
 
 
 class ABM_simulations :
-    def __init__(self, base_dir='Output', filetype='hdf5', subset=None, verbose=False) :
+    def __init__(self, base_dir="Output/ABM", filetype="hdf5", subset=None, verbose=False) :
         self.base_dir = utils.path(base_dir)
         self.filetype = filetype
         self.subset = subset
         self.verbose = verbose
-
         if verbose :
-            print('Loading ABM_simulations \n', flush=True)
+            print("Loading ABM_simulations \n", flush=True)
 
         if self.subset is None:
-            self.filenames   = get_all_filenames(os.path.join(base_dir, 'ABM'), filetype)
-            self.networks    = get_all_filenames(os.path.join(base_dir, 'network'), filetype)
-            self.all_folders = get_all_ABM_folders(self.all_filenames)
-            self.cfgs        = get_cfgs(self.all_folders)
+            self.all_filenames = get_all_ABM_filenames(base_dir, filetype)
+            self.all_folders   = get_all_ABM_folders(self.all_filenames)
+            self.cfgs          = get_cfgs(self.all_folders)
 
         else :
             # Steps:
@@ -161,14 +158,12 @@ class ABM_simulations :
 
             cfgs = db.search(query)
 
-            self.filenames = []
-            self.networks = []
+            self.all_filenames = []
 
             for hash_ in [cfg["hash"] for cfg in cfgs] :
-                self.filenames.extend(utils.hash_to_filenames(hash_, base_dir=os.path.join(base_dir, 'ABM')))
-                self.networks.extend( utils.hash_to_filenames(hash_, base_dir=os.path.join(base_dir, 'network')))
+                self.all_filenames.extend(utils.hash_to_filenames(hash_))
 
-            self.all_folders   = get_all_ABM_folders(self.filenames)
+            self.all_folders   = get_all_ABM_folders(self.all_filenames)
             self.cfgs          = get_cfgs(self.all_folders)
 
 
@@ -184,12 +179,8 @@ class ABM_simulations :
             d[cfg.hash] = utils.hash_to_filenames(cfg.hash, self.base_dir, self.filetype)
         return d
 
-    def iter_files(self) :
-        for filename in self.filenames :
-            yield filename
-
-    def iter_network_files(self) :
-        for filename in self.networks :
+    def iter_all_files(self) :
+        for filename in self.all_filenames :
             yield filename
 
     def iter_folders(self) :
@@ -226,7 +217,7 @@ class ABM_simulations :
     #     #     return self.all_files[key]
 
     def __len__(self) :
-        return len(self.filenames)
+        return len(self.all_filenames)
 
     def __repr__(self) :
         return (

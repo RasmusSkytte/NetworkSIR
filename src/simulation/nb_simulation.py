@@ -6,7 +6,7 @@ from numba.typed import List
 
 from src.utils import utils
 
-from src.simulation.nb_interventions   import test_tagged_agents, vaccinate, apply_symptom_testing, apply_daily_interventions
+from src.simulation.nb_interventions   import test_tagged_agents, vaccinate, apply_symptom_testing, apply_random_testing, apply_interventions_on_label
 from src.simulation.nb_interventions   import calculate_R_True, calculate_R_True_brit, calculate_population_freedom_impact
 from src.simulation.nb_events          import add_daily_events
 from src.simulation.nb_helpers         import nb_random_choice, single_random_choice
@@ -460,7 +460,7 @@ def do_bug_check(
     s,
     x) :
 
-    if day > my.cfg.day_max :
+    if my.cfg.day_max > 0 and day > my.cfg.day_max :
         if verbose :
             print("--- day exceeded day_max ---")
         continue_run = False
@@ -553,14 +553,7 @@ def run_simulation(
     s_counter = np.zeros(4)
     where_infections_happened_counter = np.zeros(4)
 
-    # Check for day 0 interventions
-    if intervention.apply_interventions :
-        apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
-
-        if my.cfg.start_date_offset > 0 :
-            for d in range(my.cfg.start_date_offset - 1) :
-                vaccinate(my, g, intervention, d, stratified_vaccination_counts, verbose=verbose)
-
+    start_date_offset = my.cfg.start_date_offset
 
 
     # Run the simulation ################################
@@ -706,19 +699,46 @@ def run_simulation(
 
         while nts * click  < real_time :
 
-            # Advance click
-            click += 1
             daily_counter += 1
 
-            # Apply interventions on clicks
-            if intervention.apply_interventions:
-                test_tagged_agents(my, g, intervention, day, click)
 
-            # Check if day is over
+
             if daily_counter >= 10 :
 
-                # Store the daily state
-                if day >= 0 and day <= my.cfg.day_max:
+                # Apply interventions
+                if intervention.apply_interventions :
+
+                    if intervention.apply_interventions_on_label and day >= 0 :
+                        apply_interventions_on_label(my, g, intervention, day, click, verbose)
+
+                    if intervention.apply_random_testing :
+                        apply_random_testing(my, intervention, click)
+
+                    if intervention.apply_vaccinations :
+
+                        if start_date_offset > 0 :
+                            for d in range(start_date_offset - 1) :
+                                vaccinate(my, g, intervention, d, stratified_vaccination_counts, verbose=verbose)
+
+                            start_date_offset = 0
+
+                        vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=verbose)
+
+
+
+                # Apply events
+                if my.cfg.N_events > 0 :
+                    add_daily_events(
+                        my,
+                        g,
+                        day,
+                        agents_in_state,
+                        state_total_counts,
+                        where_infections_happened_counter)
+
+
+                # Update the output variables
+                if day >= 0 and day < my.cfg.day_max:
 
                     out_time.append(real_time)
                     out_state_counts.append(state_total_counts.copy())
@@ -730,8 +750,11 @@ def run_simulation(
                     intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
                     intervention.R_true_list_brit.append(calculate_R_True_brit(my, g))
 
+                # Advance day
+                day += 1
+                daily_counter = 0
 
-                # Print current progress
+
                 if verbose :
                     print("--- day : ", day, " ---")
                     print("n_infected : ", np.round(np.sum(where_infections_happened_counter)))
@@ -739,26 +762,10 @@ def run_simulation(
                     print("freedom_impact : ", np.round(intervention.freedom_impact_list[-1], 3))
                     print("R_true_list_brit : ", np.round(intervention.R_true_list_brit[-1], 3))
 
+            if intervention.apply_interventions:
+                test_tagged_agents(my, g, intervention, day, click)
 
-                # Advance day
-                day += 1
-                daily_counter = 0
-
-                # Apply interventions for the new day
-                if intervention.apply_interventions :
-                    apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
-
-                # Apply events for the new day
-                if my.cfg.N_events > 0 :
-                    add_daily_events(
-                        my,
-                        g,
-                        day,
-                        agents_in_state,
-                        state_total_counts,
-                        where_infections_happened_counter)
-
-
+            click += 1
 
         continue_run = do_bug_check(
             my,

@@ -7,6 +7,7 @@ wgsDistribution: Data/wgs_data/2021_03_04.csv
 # Dynamical effects
 ageCasesFolder: Data/age_cases
 municipalityCasesFolder: Data/municipality_cases
+municipalityTestsFolder: Data/municipality_tests
 contactMatrixFolder: Data/contact_matrices
 seasonalFolder: Data/seasonal_effects
 

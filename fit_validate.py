@@ -158,7 +158,7 @@ for subset in subsets :
     # Get restriction_thresholds from a cfg
     restriction_thresholds = abm_files.cfgs[0].restriction_thresholds
 
-    axes1[0].set_ylim(0, 10000)
+    axes1[0].set_ylim(0, 4000)
     axes1[0].set_ylabel('Daglige positive')
 
 
@@ -203,7 +203,7 @@ for subset in subsets :
     ##    ##             ##
     ##     ## #######    ##
 
-    R_t = np.array([1, 0.75, 0.75*1.55])
+    R_t = np.array([1.1, 0.75, 0.75*1.55])
     for i in range(len(axes2)) :
 
         axes2[i].plot([start_date, end_date], [R_t[i], R_t[i]], 'b--', lw=2)
@@ -280,6 +280,54 @@ for subset in subsets :
     ##   ##   ##       ##    ##   ##  ##     ## ##  ####       ##
     ##    ##  ##       ##    ##   ##  ##     ## ##   ### ##    ##
     ##     ## ########  ######   ####  #######  ##    ##  ######
+
+    filename = f'Initialized_networks/{utils.cfg_to_hash(cfg.network, exclude_ID=False)}.hdf5'
+
+    kommune_dict = {'id_to_name' : pd.read_hdf(filename, 'id_to_name'),
+                    'name_to_id' : pd.read_hdf(filename, 'name_to_id')}
+
+    N_kommuner = np.max(kommune_dict['name_to_id']) + 1
+
+    infected_per_kommune  = np.zeros(N_kommuner)
+    immunized_per_kommune = np.zeros(N_kommuner)
+
+
+    df_cases, df_tests, _ = file_loaders.get_SSI_data(date='2021_03_19', return_data=True)
+
+    df_cases = df_cases.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA'])
+    df_tests = df_tests.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA', 'Christiansø'])
+
+    names_c  = df_cases.columns
+    values_c = df_cases.to_numpy()
+
+    names_t  = df_tests.columns
+    values_t = df_tests.to_numpy()
+
+    # Must have same dates in both datasets
+    intersection = df_cases.index.intersection(df_tests.index)
+    idx_c = np.isin(df_cases.index, intersection)
+    idx_t = np.isin(df_tests.index, intersection)
+
+    values_c = values_c[idx_c, :]
+    values_t = values_t[idx_t, :]
+
+    test_per_kommune   = np.zeros((len(values_t), N_kommuner))
+    cases_per_kommune  = np.zeros((len(values_c), N_kommuner))
+
+    # Match the columns indicies
+    i_out_c = kommune_dict['name_to_id'][names_c]
+    i_out_t = kommune_dict['name_to_id'][names_t]
+
+    cases_per_kommune[:, i_out_c] = values_c
+    test_per_kommune[:,  i_out_t] = values_t
+
+    # Divide and correct for nans
+    with np.errstate(divide="ignore", invalid="ignore") :
+        incidence_per_kommune = cases_per_kommune / test_per_kommune ** beta
+        incidence_per_kommune[test_per_kommune == 0] = 0
+
+    print([labels for labels in cfg.label_map])
+    x = x
 
     # Load tests per region
     t, positive_per_region = load_infected_per_category(beta, category='Region')

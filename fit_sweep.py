@@ -82,12 +82,10 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
                 # Load
                 I_tot_scaled, f, _, _, _, _= load_from_file(filename)
 
-
                 start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
                 end_date   = start_date + datetime.timedelta(days=cfg.day_max)
 
                 t_tests, t_f = parse_time_ranges(start_date, end_date)
-
 
                 # Evaluate
                 tmp_ll_s = compute_loglikelihood((I_tot_scaled, t_tests), (logK, logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))

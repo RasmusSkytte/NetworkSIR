@@ -56,11 +56,10 @@ N_contacts = np.zeros((len(Intervention_contact_matrices_name)+1, len(filters)),
 
 for k, (network_filename, cfg) in enumerate(tqdm(
     zip(data.iter_network_files(), data.iter_cfgs()),
-    desc='Analyzing number of contacts',
     total=len(data))) :
 
     # Get the distribution in the restricted network
-    connection_type, connection_status = plotters._load_data_from_network_file(network_filename, ['my_connection_type', 'my_connection_status'], cfg=cfg)
+    connection_type, connection_status = file_loaders.load_data_from_network_file(network_filename, ['my_connection_type', 'my_connection_status'], cfg=cfg)
 
     for i, (types, title) in enumerate(zip(filters, titles)) :
 

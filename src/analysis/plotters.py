@@ -90,23 +90,3 @@ def set_rc_params(dpi=300):
     mpl.rc('axes', edgecolor='k', linewidth=2)
 
 set_rc_params()
-
-
-def _load_data_from_network_file(filename, variables, cfg=None) :
-
-    if cfg is None :
-        cfg = utils.read_cfg_from_hdf5_file(filename)
-
-
-    with h5py.File(filename, "r") as f:
-
-        if not isinstance(variables, list) :
-            return f[variables][()]
-
-        else :
-            out = []
-
-            for variable in variables :
-                out.append(f[variable][()])
-
-            return out

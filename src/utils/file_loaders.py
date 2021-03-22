@@ -163,13 +163,14 @@ class ABM_simulations :
             self.filenames = []
             self.networks = []
 
-            for hash_ in [cfg["hash"] for cfg in cfgs] :
+            hashes = [cfg["hash"] for cfg in cfgs]
+
+            for hash_ in np.unique(hashes) :
                 self.filenames.extend(utils.hash_to_filenames(hash_, base_dir=os.path.join(base_dir, 'ABM')))
                 self.networks.extend( utils.hash_to_filenames(hash_, base_dir=os.path.join(base_dir, 'network')))
 
             self.all_folders   = get_all_ABM_folders(self.filenames)
             self.cfgs          = get_cfgs(self.all_folders)
-
 
         self.d = self._convert_all_files_to_dict(filetype)
 
@@ -178,9 +179,10 @@ class ABM_simulations :
         Dictionary containing all files related to a given hash :
         d[hash] = list of filenames
         """
-        d = {}
+        d = {'ABM':{}, 'network':{}}
         for cfg in self.cfgs :
-            d[cfg.hash] = utils.hash_to_filenames(cfg.hash, os.path.join(self.base_dir, 'ABM'), self.filetype)
+            d['ABM'][cfg.hash]     = utils.hash_to_filenames(cfg.hash, os.path.join(self.base_dir, 'ABM'), self.filetype)
+            d['network'][cfg.hash] = utils.hash_to_filenames(cfg.hash, os.path.join(self.base_dir, 'network'), self.filetype)
         return d
 
     def iter_files(self) :
@@ -201,6 +203,12 @@ class ABM_simulations :
             yield cfg
 
     def cfg_to_filenames(self, cfg) :
+        return self._cfg_to_outputfile(cfg)
+
+    def cfg_to_networks(self, cfg) :
+        return self._cfg_to_outputfile(cfg, output='network')
+
+    def _cfg_to_outputfile(self, cfg, output='ABM') :
 
         cfg = utils.DotDict(cfg)
         cfg_list = utils.query_cfg(cfg)
@@ -213,7 +221,7 @@ class ABM_simulations :
                 cfg_list,
             )
         try :
-            return self.d[cfg_list[0].hash]
+            return self.d[output][cfg_list[0].hash]
         except KeyError :
             return None
 
@@ -235,7 +243,24 @@ class ABM_simulations :
 
 
 
+def load_data_from_network_file(filename, variables, cfg=None) :
 
+    if cfg is None :
+        cfg = utils.read_cfg_from_hdf5_file(filename)
+
+
+    with h5py.File(filename, "r") as f:
+
+        if not isinstance(variables, list) :
+            return f[variables][()]
+
+        else :
+            out = []
+
+            for variable in variables :
+                out.append(f[variable][()])
+
+            return out
 
 
 

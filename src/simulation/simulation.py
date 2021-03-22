@@ -588,6 +588,8 @@ class Simulation :
             f.create_dataset('my_corona_type', data=self.my.corona_type)
 
             f.create_dataset('my_number_of_contacts', data=self.my.number_of_contacts)
+
+            f.create_dataset('my_connections',       data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connections,       pad_value=-1))
             f.create_dataset('my_connection_type',   data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_type,   pad_value=-1))
             f.create_dataset('my_connection_status', data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_status, pad_value=-1))
 

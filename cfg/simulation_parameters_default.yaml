@@ -10,7 +10,7 @@ sigma_beta: 0.0  # Spread in rates, beta
 R_guess: 1  # Set the guess for the reproduction number
 
 # english type corona
-N_init_UK_frac: 0
+N_init_UK_frac: 0.0
 beta_UK_multiplier: 1.7
 outbreak_position_UK: random
 
@@ -32,8 +32,8 @@ label_map: [[Albertslund, Allerød, Ballerup, Bornholm, Brøndby, København, Dr
             [Favrskov, Hedensted, Herning, Holstebro, Horsens, Ikast-Brande, Lemvig, Norddjurs, Odder, Randers, Ringkøbing-Skjern, Samsø, Silkeborg, Skanderborg, Skive, Struer, Syddjurs, Viborg, Aarhus], # Midtjylland
             [Assens, Billund, Esbjerg, Fanø, Fredericia, Faaborg-Midtfyn, Haderslev, Kerteminde, Kolding, Langeland, Middelfart, Nordfyns, Nyborg, Odense, Svendborg, Sønderborg, Tønder, Varde, Vejen, Vejle, Ærø, Aabenraa]]  #  Syddanmark
 label_names: [Sjælland, Hovedstaden, Nordjylland, Midtjylland, Syddanmark]
-label_multiplier: [1, 1, 1, 1, 1]
-label_frac: [1, 1, 1, 1, 1]
+label_multiplier: [1.0, 1.0, 1.0, 1.0, 1.0]
+label_frac: [0.0, 0.0, 0.0, 0.0, 0.0]
 
 day_max: 0 # 5 weeks. Sets the maximum number of days the algorithm runs
 

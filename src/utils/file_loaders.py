@@ -180,7 +180,7 @@ class ABM_simulations :
         """
         d = {}
         for cfg in self.cfgs :
-            d[cfg.hash] = utils.hash_to_filenames(cfg.hash, self.base_dir, self.filetype)
+            d[cfg.hash] = utils.hash_to_filenames(cfg.hash, os.path.join(self.base_dir, 'ABM'), self.filetype)
         return d
 
     def iter_files(self) :
@@ -204,7 +204,6 @@ class ABM_simulations :
 
         cfg = utils.DotDict(cfg)
         cfg_list = utils.query_cfg(cfg)
-
         if not len(cfg_list) == 1 :
             raise AssertionError(
                 f"cfg did not give unique results in the database",
@@ -428,7 +427,7 @@ def load_contact_matrices(scenario = 'reference', N_labels = 1) :
 
     return matrix_work, matrix_other, work_other_ratio, age_groups_work
 
-def load_seasonal_list(scenario=None, offset = 0) :
+def load_seasonal_model(scenario=None, offset = 0) :
 
     if scenario.lower() == 'none' :
         return np.ones(365)
@@ -437,10 +436,10 @@ def load_seasonal_list(scenario=None, offset = 0) :
     base_path = load_yaml('cfg/files.yaml')['seasonalFolder']
 
     # Load data from offset and forward
-    season_effect = pd.read_csv(os.path.join(base_path, scenario + '.csv'), index_col = 0)[offset:]
+    model = np.squeeze(pd.read_csv(os.path.join(base_path, scenario + '.csv'), index_col = 0)[offset:].to_numpy())
 
     # Scale to starting value
-    return season_effect / season_effect[0]
+    return model / model[0]
 
 
 def load_contact_matrix_set(matrix_path) :
@@ -472,7 +471,7 @@ def load_vaccination_schedule(cfg) :
     """
 
     if cfg.Intervention_vaccination_schedule_name == 'None' :
-        return np.zeros( (1, 1, len(cfg.network.work_matrix)), dtype=np.int64), np.zeros( (1, 2), dtype=np.int64)
+        return np.zeros( (1, 1, len(cfg.network.work_matrix)), dtype=np.int64), np.zeros( (1, 2), dtype=np.int32)
 
 
     vaccinations_per_age_group, vaccination_schedule = load_vaccination_schedule_file(scenario = cfg.Intervention_vaccination_schedule_name)

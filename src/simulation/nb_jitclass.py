@@ -312,8 +312,7 @@ spec_g = {
     'N_tot' : nb.uint32,
     'N_states' : nb.uint8,
     'N_infectious_states' : nb.uint8,
-    'total_sum' : nb.float64,
-    '_total_sum_infections' : nb.float64,
+    'total_sum_infections' : nb.float64,
     'total_sum_of_state_changes' : nb.float64,
     'cumulative_sum' : nb.float64,
     'cumulative_sum_of_state_changes' : nb.float64[:],
@@ -321,23 +320,22 @@ spec_g = {
     'SIR_transition_rates' : nb.float64[:],
     'rates' : ListType(nb.float64[ : :1]),  # ListType[array(float64, 1d, C)] (C vs. A)
     'sum_of_rates' : nb.float64[:],
-    'seasonal_effect' : nb.float64[:],
+    'seasonal_model' : nb.float64[:],
     'seasonal_strength' : nb.float64
 }
 
 
 @jitclass(spec_g)
 class Gillespie(object) :
-    def __init__(self, my, N_states, N_infectious_states, seasonal_effect, seasonal_strength) :
+    def __init__(self, my, N_states, N_infectious_states, seasonal_model, seasonal_strength) :
         self.N_states = N_states
         self.N_infectious_states = N_infectious_states
-        self.total_sum = 0.0
-        self._total_sum_infections = 0.0
+        self.total_sum_infections = 0.0
         self.total_sum_of_state_changes = 0.0
         self.cumulative_sum = 0.0
         self.cumulative_sum_of_state_changes = np.zeros(N_states, dtype=np.float64)
         self.cumulative_sum_infection_rates = np.zeros(N_states, dtype=np.float64)
-        self.seasonal_effect = seasonal_effect
+        self.seasonal_model = seasonal_model
         self.seasonal_strength = seasonal_strength
         self._initialize_rates(my)
         self._initialize_SIR_rates(my)
@@ -359,12 +357,12 @@ class Gillespie(object) :
         self.SIR_transition_rates[self.N_infectious_states : 2 * self.N_infectious_states] = my.cfg.lambda_I
 
     def update_rates(self, my, rate, agent) :
-        self._total_sum_infections += rate
+        self.total_sum_infections += rate
         self.sum_of_rates[agent] += rate
         self.cumulative_sum_infection_rates[my.state[agent] :] += rate
 
-    def total_sum_infections(self, day) :
-        return self._total_sum_infections * (1 - self.seasonal_strength * ( 1 - self.seasonal_effect[day]))
+    def seasonality(self, day) :
+        return 1 + (self.seasonal_model[day] - 1) * self.seasonal_strength
 
 #### ##    ## ######## ######## ########  ##     ## ######## ##    ## ######## ####  #######  ##    ##
  ##  ###   ##    ##    ##       ##     ## ##     ## ##       ###   ##    ##     ##  ##     ## ###   ##
@@ -393,7 +391,7 @@ spec_intervention = {
     'types' : nb.uint8[:],
     'started_as' : nb.uint8[:],
     'vaccinations_per_age_group' : nb.int64[:, :, :],
-    'vaccination_schedule' : nb.int64[:, :],
+    'vaccination_schedule' : nb.int32[:, :],
     'work_matrix_restrict' : nb.float64[:, :, :, :],
     'other_matrix_restrict' : nb.float64[:, :, :, :],
     'verbose' : nb.boolean,
@@ -537,4 +535,3 @@ class Intervention(object) :
     @property
     def start_interventions_by_meassured_incidens_rate(self) :
         return self.cfg.threshold_type == 2
-

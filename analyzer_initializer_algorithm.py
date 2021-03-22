@@ -127,6 +127,6 @@ fig.canvas.draw()
 # Adjust the y axes
 for ax in axes :
     ylim = ax.get_ylim()
-    ax.set_ylim(0, .1 * (np.floor(ylim[1]/.1) + 1))
+    ax.set_ylim(0, 0.1 * (np.floor(ylim[1] / 0.1) + 1))
 
 fig.savefig('Figures/contacts_' + '_'.join(Intervention_contact_matrices_name) + '.png')

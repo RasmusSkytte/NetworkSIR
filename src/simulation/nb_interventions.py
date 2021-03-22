@@ -88,7 +88,7 @@ def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=F
 @njit
 def calculate_R_True(my, g, day) :
     lambda_I = my.cfg.lambda_I
-    rate_sum = g.total_sum_infections(day)
+    rate_sum = g.total_sum_infections * g.seasonality(day)
     N_infected = 0
     for agent in range(my.cfg_network.N_tot) :
         if my.agent_is_infectious(agent) :

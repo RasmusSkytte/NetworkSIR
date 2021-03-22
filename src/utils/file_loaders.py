@@ -451,7 +451,7 @@ def load_vaccination_schedule(cfg) :
     """
 
     if cfg.Intervention_vaccination_schedule_name == 'None' :
-        return np.zeros( (1, 1, len(cfg.network.work_matrix)), dtype=np.int64), np.zeros( (1, 2), dtype=np.int64)
+        return np.zeros( (1, 1, len(cfg.network.work_matrix)), dtype=np.int64), np.zeros( (1, 2), dtype=np.int32)
 
 
     vaccinations_per_age_group, vaccination_schedule = load_vaccination_schedule_file(scenario = cfg.Intervention_vaccination_schedule_name)

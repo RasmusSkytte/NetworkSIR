@@ -47,6 +47,8 @@ db.json
 .DS_Store
 ._.DS_Store
 
+*.R
+
 # vim
 *.swp
 *.swo

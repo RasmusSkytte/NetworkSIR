@@ -383,7 +383,7 @@ spec_intervention = {
     "types" : nb.uint8[:],
     "started_as" : nb.uint8[:],
     "vaccinations_per_age_group" : nb.int64[:, :, :],
-    "vaccination_schedule" : nb.int64[:, :],
+    "vaccination_schedule" : nb.int32[:, :],
     "work_matrix_restrict" : nb.float64[:, :, :, :],
     "other_matrix_restrict" : nb.float64[:, :, :, :],
     "verbose" : nb.boolean,

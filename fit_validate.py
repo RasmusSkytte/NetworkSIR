@@ -311,23 +311,41 @@ for subset in subsets :
     values_c = values_c[idx_c, :]
     values_t = values_t[idx_t, :]
 
-    test_per_kommune   = np.zeros((len(values_t), N_kommuner))
-    cases_per_kommune  = np.zeros((len(values_c), N_kommuner))
+    tests_per_kommune = np.zeros((len(values_t), N_kommuner))
+    cases_per_kommune = np.zeros((len(values_c), N_kommuner))
 
     # Match the columns indicies
     i_out_c = kommune_dict['name_to_id'][names_c]
     i_out_t = kommune_dict['name_to_id'][names_t]
 
     cases_per_kommune[:, i_out_c] = values_c
-    test_per_kommune[:,  i_out_t] = values_t
+    tests_per_kommune[:, i_out_t] = values_t
 
-    # Divide and correct for nans
-    with np.errstate(divide="ignore", invalid="ignore") :
-        incidence_per_kommune = cases_per_kommune / test_per_kommune ** beta
-        incidence_per_kommune[test_per_kommune == 0] = 0
+    tests_per_day = np.sum(tests_per_kommune, axis=1)
 
-    print([labels for labels in cfg.label_map])
-    x = x
+    tests_per_kommune_adjusted = tests_per_kommune * ref_tests / np.repeat(tests_per_day.reshape(-1, 1), tests_per_kommune.shape[1], axis=1)
+
+
+    cases_per_kommune           = pd.DataFrame(data=cases_per_kommune,          columns=kommune_dict['id_to_name'], index=intersection)
+    tests_per_kommune           = pd.DataFrame(data=tests_per_kommune,          columns=kommune_dict['id_to_name'], index=intersection)
+    tests_per_kommune_adjusted  = pd.DataFrame(data=tests_per_kommune_adjusted, columns=kommune_dict['id_to_name'], index=intersection)
+
+    cases_per_label = []
+    tests_per_label = []
+    tests_per_label_adjusted = []
+
+    cols = cases_per_kommune.columns
+    for lmap in cfg['label_map'] :
+        cases_per_label.append(np.sum(cases_per_kommune[lmap], axis=1).to_numpy())
+        tests_per_label.append(np.sum(tests_per_kommune[lmap], axis=1).to_numpy())
+        tests_per_label_adjusted.append(np.sum(tests_per_kommune_adjusted[lmap], axis=1).to_numpy())
+        cols = cols.drop(lmap)
+
+    cases_per_label          = np.array([np.sum(cases_per_kommune[cols],          axis=1).to_numpy()] + cases_per_label)
+    tests_per_label          = np.array([np.sum(tests_per_kommune[cols],          axis=1).to_numpy()] + tests_per_label)
+    tests_per_label_adjusted = np.array([np.sum(tests_per_kommune_adjusted[cols], axis=1).to_numpy()] + tests_per_label_adjusted)
+
+    incidence_per_label = cases_per_label * (tests_per_label_adjusted / tests_per_label) ** beta
 
     # Load tests per region
     t, positive_per_region = load_infected_per_category(beta, category='Region')
@@ -342,6 +360,11 @@ for subset in subsets :
             break
 
         axes4[i].scatter(t, positive_per_region[:, i], color='k', s=10, zorder=100)
+
+
+        t2 = intersection
+
+        axes4[i].scatter(t2, incidence_per_label[i, :], color='b', s=10, zorder=100)
 
         axes4[i].set_ylim(0, 500)
 

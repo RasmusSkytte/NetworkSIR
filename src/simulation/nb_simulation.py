@@ -726,7 +726,7 @@ def run_simulation(
                 # Print current progress
                 if verbose :
                     print("--- day : ", day, " ---")
-                    print("n_infected : ", np.round(np.sum(where_infections_happened_counter)))
+                    print("n_infected : ", np.round(my.cfg.N_init + np.sum(where_infections_happened_counter)))
                     print("R_true : ", np.round(intervention.R_true_list[-1], 3))
                     print("freedom_impact : ", np.round(intervention.freedom_impact_list[-1], 3))
                     print("R_true_list_brit : ", np.round(intervention.R_true_list_brit[-1], 3))

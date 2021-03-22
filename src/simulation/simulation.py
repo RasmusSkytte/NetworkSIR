@@ -394,17 +394,16 @@ class Simulation :
             N_kommune[N_inds] += N_counts
             R_kommune[R_inds] += R_counts
 
-
             initialization_subgroups = []
 
             # Loop over kommuner
             for kommune_id, N, R in zip(kommune_ids, N_kommune, R_kommune) :
 
-                agents_in_kommune = np.array([agent for agent in possible_agents if self.my.kommune[agent] == kommune_id])
-
                 # Check if any are to be infectd
                 if N == 0 and R == 0 :
                     continue
+
+                agents_in_kommune = np.array([agent for agent in possible_agents if self.my.kommune[agent] == kommune_id])
 
                 # Check if kommune is valid
                 if len(agents_in_kommune) == 0:

@@ -85,7 +85,7 @@ days_looking_back: 7 # When looking for local outbreaks, how many days are we lo
 
 # What fraction of the agegroups gets testet?
 #                      0-9, 10-19, 20-29, 30-39, 40-49, 50-59, 60-69,   70+
-testing_penetration: [0.45,  0.45,  0.45,  0.45,  0.50,  0.70,  0.75,  0.75]
+testing_penetration: [0.50,  0.50,  0.48,  0.48,  0.50,  0.60,  0.75,  0.80]
 
 
 # Reductions.

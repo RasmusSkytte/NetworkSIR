@@ -1,132 +1,49 @@
-import numpy as np
-
-import matplotlib.pyplot as plt
-from matplotlib.ticker import PercentFormatter
-
-import h5py
-
-from src.utils      import utils
-from src.utils      import file_loaders
-from src.analysis   import plotters
-from src.simulation import simulation
+from contexttimer import Timer
 
 from tqdm import tqdm
 
+import datetime
 
-# This script simulates an infection outbreak starting from a single individual and compares with the initialization algorithm
+from src.utils      import utils
+from src.simulation import simulation
+from src.utils      import file_loaders
 
-
-# 1) Define network to generate
-f = 0.01
-verbose = True
-
-
-Intervention_contact_matrices_name = ['ned2021jan', 'fase3_S3_0A_1']
+from src.analysis.helpers  import *
+from src.analysis.plotters import *
 
 
-# 2) Generate networks
-simulation.run_simulations({'N_tot' : int(5_800_000 * f), 'day_max' : 0, 'initial_infection_distribution' : 'random', 'Intervention_contact_matrices_name' : [[m] for m in Intervention_contact_matrices_name]}, num_cores_max=1, verbose=verbose)
+# This runs simulations with specified percentage effects of the seasonality model
+params, start_date = utils.load_params("cfg/analyzers/initializer.yaml")
 
-# 3) Plot the contact distribution
-data = file_loaders.ABM_simulations(subset={'day_max' : 0})
-
-def contact_counter(connection_type, connection_status, types=[0, 1, 2]) :
-
-    contact_counts = np.zeros(len(connection_type))
-
-    for i, (agent_contacts, agent_contact_status) in enumerate(zip(connection_type, connection_status)) :
-        contact_counts[i] = np.sum(np.logical_and(np.isin(agent_contacts, types), np.array(agent_contact_status) == True))
-
-    return contact_counts
-
-# Prepare figure
-plotters.set_rc_params()
-fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 8))
-axes = axes.flatten()
-
-filters = [[0,1,2], [0], [1], [2]]
-titles  = ['All', 'Home', 'Work', 'Other']
-
-# Prepare summery output
-N_contacts = np.zeros((len(Intervention_contact_matrices_name)+1, len(filters)), dtype=int)
+if utils.is_local_computer():
+    f = 0.01
+    n_steps = 1
+    num_cores_max = 1
+    N_runs = 1
+else :
+    f = 0.5
+    n_steps = 3
+    num_cores_max = 5
+    N_runs = 1
 
 
-for k, (network_filename, cfg) in enumerate(tqdm(
-    zip(data.iter_network_files(), data.iter_cfgs()),
-    desc='Analyzing number of contacts',
-    total=len(data))) :
-
-    # Get the distribution in the restricted network
-    connection_type, connection_status = plotters._load_data_from_network_file(network_filename, ['my_connection_type', 'my_connection_status'], cfg=cfg)
-
-    for i, (types, title) in enumerate(zip(filters, titles)) :
-
-        number_of_contacts = contact_counter(connection_type, connection_status, types=types)
-
-        N_contacts[k, i] = np.sum(number_of_contacts)
-
-        x_min = -0.5
-        x_max = 10 * (np.floor(np.max(number_of_contacts) / 10) + 1) + 0.5
-
-        x_range = (x_min, x_max)
-        N_bins = int(x_max - x_min)
-
-        kwargs = {"bins": N_bins, "range": x_range, "histtype": "step"}
-
-        # Plot the distribution of contacts
-        axes[i].hist(number_of_contacts, weights=np.ones_like(number_of_contacts) / cfg.network.N_tot, color=plt.cm.tab10(k), **kwargs)
+if num_cores_max == 1 :
+    verbose = True
+else :
+    verbose = False
 
 
-# Add the reference
-
-# Get distribution in the initial network
-hash_initial_network = utils.cfg_to_hash(cfg.network, exclude_ID=False)
-initial_network_filename = f'Initialized_networks/{hash_initial_network}.hdf5'
-
-with h5py.File(initial_network_filename, 'r') as f :
-    cfg.pop('hash')
-    my_hdf5ready = file_loaders.load_jitclass_to_dict(f['my'])
-    my = file_loaders.load_My_from_dict(my_hdf5ready, cfg.deepcopy())
-
-    for i, (types, title) in enumerate(zip(filters, titles)) :
-
-        number_of_contacts  = contact_counter(my.connection_type, my.connection_status, types=types)
-
-        N_contacts[-1, i] = np.sum(number_of_contacts)
-
-        x_min = -0.5
-        x_max = 10 * (np.floor(np.max(number_of_contacts) / 10) + 1) + 0.5
-
-        x_range = (x_min, x_max)
-        N_bins = int(x_max - x_min)
-
-        kwargs = {"bins": N_bins, "range": x_range, "histtype": "step"}
-
-        axes[i].hist(number_of_contacts,  weights=np.ones_like(number_of_contacts)  / cfg.network.N_tot, color='k', **kwargs)
-
-        # Adjust axes
-        axes[i].yaxis.set_major_formatter(PercentFormatter(xmax=1))
-        axes[i].set(xlim=x_range)
-        axes[i].set_title(title)
-
-        if i % 2 == 0 :
-            axes[i].set_ylabel('Counts')
+# Scale the population
+params["N_tot"]  = int(params["N_tot"]  * f)
+params["R_init"] = int(params["R_init"] * f)
 
 
-names = Intervention_contact_matrices_name + [cfg.network.contact_matrices_name]
-axes[1].legend(names, fontsize = 18)
+N_files_total = 0
+if __name__ == "__main__":
+    with Timer() as t:
 
-for i in [0, 2, 3] :
-    axes[i].legend([f'N : {n:,}'.replace(',','.') for n in N_contacts[:, i]], fontsize = 18)
+        N_files_total +=  simulation.run_simulations(params, N_runs=N_runs, num_cores_max=num_cores_max, verbose=verbose)
 
+    print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
+    print("Finished simulating!")
 
-plt.tight_layout()
-
-fig.canvas.draw()
-
-# Adjust the y axes
-for ax in axes :
-    ylim = ax.get_ylim()
-    ax.set_ylim(0, 0.1 * (np.floor(ylim[1] / 0.1) + 1))
-
-fig.savefig('Figures/contacts_' + '_'.join(Intervention_contact_matrices_name) + '.png')

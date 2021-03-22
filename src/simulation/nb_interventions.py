@@ -74,7 +74,7 @@ def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=F
                     # pick agent if it is susceptible (in S state)
                     if my.agent_is_susceptible(agent) :
                         # "vaccinate agent"
-                        if np.random.rand() < my.cfg.Intervention_vaccination_efficacies[i-1] :
+                        if np.random.rand() < my.cfg.Intervention_vaccination_efficacies[i] :
                             multiply_incoming_rates(my, g, agent, np.array([0.0, 0.0, 0.0]))  # Reduce rates to zero
                             my.vaccination_type[agent] = i
 
@@ -86,9 +86,9 @@ def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=F
 
 
 @njit
-def calculate_R_True(my, g) :
+def calculate_R_True(my, g, day) :
     lambda_I = my.cfg.lambda_I
-    rate_sum = g.total_sum_infections
+    rate_sum = g.total_sum_infections * g.seasonality(day)
     N_infected = 0
     for agent in range(my.cfg_network.N_tot) :
         if my.agent_is_infectious(agent) :
@@ -466,6 +466,9 @@ def remove_and_reduce_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
 @njit
 def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label) :
+
+    if my.number_of_contacts[agent] == 0 :
+        return
 
     # Extract the contact matrices
     if n == 0 :

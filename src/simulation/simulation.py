@@ -278,18 +278,16 @@ class Simulation :
         if self.cfg.labels.lower() == "kommune" :
             labels = self.my.kommune
 
-        elif self.cfg.labels.lower() == "custom" :
-            labels_raw = self.my.kommune
-            labels = np.zeros(np.shape(labels_raw))
-
-            for new_label, label_group in enumerate(self.cfg['label_map']) :
-                labels[np.isin(labels_raw, self.kommune_dict['name_to_id'][label_group])] = new_label + 1
 
         elif self.cfg.labels.lower() == "none" :
             labels = np.zeros(np.shape(self.my.kommune))
 
         else :
-            raise ValueError(f'Label name: {self.cfg.labels.lower()} not known')
+            labels_raw = self.my.kommune
+            labels = np.zeros(np.shape(labels_raw))
+
+            for new_label, label_group in enumerate(self.cfg['label_map']) :
+                labels[np.isin(labels_raw, self.kommune_dict['name_to_id'][label_group])] = new_label + 1
 
 
         if verbose_interventions is None :
@@ -314,7 +312,7 @@ class Simulation :
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
 
-
+        # Rescale the restriction matrices
         wm = np.array(work_matrix_restrict)
         om = np.array(other_matrix_restrict)
 
@@ -325,6 +323,7 @@ class Simulation :
 
         # Store the labels in my
         self.my.initialize_labels(labels)
+
 
         self.intervention = nb_jitclass.Intervention(
             self.my.cfg,
@@ -357,7 +356,10 @@ class Simulation :
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
-        self.g = nb_jitclass.Gillespie(self.my, self.N_states, self.N_infectious_states)
+        # Load the seasonal data
+        seasonal_model = file_loaders.load_seasonal_model(scenario=self.cfg.seasonal_list_name, offset=self.cfg.start_date_offset)
+
+        self.g = nb_jitclass.Gillespie(self.my, self.N_states, self.N_infectious_states, seasonal_model, self.cfg.seasonal_strength)
 
         # Find the possible agents
         possible_agents = nb_simulation.find_possible_agents(self.my, self.initial_ages_exposed, self.agents_in_age_group)

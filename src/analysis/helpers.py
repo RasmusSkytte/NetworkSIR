@@ -119,7 +119,6 @@ def load_from_file(filename, start_date) :
 def parse_time_ranges(start_date, end_date) :
 
     t_day = pd.date_range(start=start_date, end=end_date, freq="D")
-    t_day = t_day[:-1]
 
     weeks =  [w for w in pd.unique(t_day.isocalendar().week) if np.sum(t_day.isocalendar().week == w) == 7]
     t_week = pd.to_datetime([date for date, dayofweek, week in zip(t_day, t_day.dayofweek, t_day.isocalendar().week) if (dayofweek == 6 and week in weeks)])
@@ -184,14 +183,14 @@ def load_infected_per_category(beta, category='AgeGr') :
 
     raw_data = pd.read_csv(file_loaders.load_yaml("cfg/files.yaml")["RegionData"], sep="\t")
 
-    tests_per_age_group = pd.pivot_table(raw_data, values=['test'], index=['PrDate'], columns=[category],  aggfunc=np.sum).to_numpy().astype(float)
-    tests_per_day = np.sum(tests_per_age_group, axis = 1)
+    tests_per_category = pd.pivot_table(raw_data, values=['test'], index=['PrDate'], columns=[category],  aggfunc=np.sum).to_numpy().astype(float)
+    tests_per_day = np.sum(tests_per_category, axis = 1)
 
     # Adjust to ref_tests level
-    tests_per_age_group_adjusted = tests_per_age_group * ref_tests / np.repeat(tests_per_day.reshape(-1, 1), tests_per_age_group.shape[1], axis=1)
+    tests_per_category_adjusted = tests_per_category * ref_tests / np.repeat(tests_per_day.reshape(-1, 1), tests_per_category.shape[1], axis=1)
 
     data = pd.pivot_table(raw_data, values=['pos'], index=['PrDate'], columns=[category],  aggfunc=np.sum)
-    positive_per_age_group = data.to_numpy().astype(float)
-    positive_per_age_group *= (tests_per_age_group_adjusted / tests_per_age_group)**beta
+    positive_per_category = data.to_numpy().astype(float)
+    positive_per_category *= (tests_per_category_adjusted / tests_per_category) ** beta
 
-    return pd.to_datetime(data.index), positive_per_age_group
+    return pd.to_datetime(data.index), positive_per_category

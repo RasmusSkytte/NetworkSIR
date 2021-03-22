@@ -26,7 +26,7 @@ lambda_I: 1.0  # I->R, Lambda(from I states)
 make_random_initial_infections: True # Infections around a single agent
 weighted_random_initial_infections: False # Infections weighted by the number of contacts
 initialize_at_kommune_level: False # Initiate infections at kommune basis
-labels: custom  #none, kommune, custom (needs a label_map)
+labels: region  #none, kommune, custom (needs a label_map)
 label_map: [[Albertslund, Allerød, Ballerup, Bornholm, Brøndby, København, Dragør, Egedal, Fredensborg, Frederiksberg, Frederikssund, Furesø, Gentofte, Gladsaxe, Glostrup, Gribskov, Halsnæs, Helsingør, Herlev, Hillerød, Hvidovre, Høje-Taastrup, Hørsholm, Ishøj, Lyngby-Taarbæk, Rudersdal, Rødovre, Tårnby, Vallensbæk], #  Hovedstaden
             [Aalborg, Brønderslev, Frederikshavn, Hjørring, Jammerbugt, Læsø, Mariagerfjord, Morsø, Rebild, Thisted, Vesthimmerlands], # Nordjylland
             [Favrskov, Hedensted, Herning, Holstebro, Horsens, Ikast-Brande, Lemvig, Norddjurs, Odder, Randers, Ringkøbing-Skjern, Samsø, Silkeborg, Skanderborg, Skive, Struer, Syddjurs, Viborg, Aarhus], # Midtjylland
@@ -102,3 +102,7 @@ Intervention_contact_matrices_name : [reference]
 Intervention_vaccination_schedule_name : None
 Intervention_vaccination_effect_delays : [0]
 Intervention_vaccination_efficacies : [0]
+
+# Season related parameters
+seasonal_list_name : None
+seasonal_strength : 0

@@ -43,6 +43,9 @@ db.json
 *.ipynb
 .ipynb_checkpoints/
 
+# R files
+*.R
+
 # Mac OS-specific storage files
 .DS_Store
 ._.DS_Store

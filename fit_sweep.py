@@ -7,7 +7,7 @@ from tqdm import tqdm
 from contexttimer import Timer
 
 
-params, start_date = utils.load_params("cfg/simulation_parameters_fit_2021_fase2.yaml")
+params, start_date = utils.load_params("cfg/simulation_parameters_season.yaml")
 
 if utils.is_local_computer():
     f = 0.01
@@ -61,7 +61,7 @@ fraction, fraction_sigma, t_fraction = load_b117_fraction()
 for subset in [{'Intervention_contact_matrices_name' : params['Intervention_contact_matrices_name'][0]}] :
     if __name__ == '__main__':
         # Load the ABM simulations
-        abm_files = file_loaders.ABM_simulations(base_dir='Output/ABM', subset=subset, verbose=True)
+        abm_files = file_loaders.ABM_simulations(subset=subset, verbose=True)
 
         if len(abm_files.cfgs) == 0 :
             raise ValueError('No files found')
@@ -82,12 +82,10 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
                 # Load
                 I_tot_scaled, f, _, _, _, _= load_from_file(filename)
 
-
                 start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
                 end_date   = start_date + datetime.timedelta(days=cfg.day_max)
 
                 t_tests, t_f = parse_time_ranges(start_date, end_date)
-
 
                 # Evaluate
                 tmp_ll_s = compute_loglikelihood((I_tot_scaled, t_tests), (logK, logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))

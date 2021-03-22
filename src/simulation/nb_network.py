@@ -476,9 +476,10 @@ def find_two_age_groups(N_ages, matrix) :
         for j in range(N_ages) :
             a += matrix[i, j]
             if a > ra :
-                age1, age2 = i, j
-                return age1, age2
-    raise AssertionError("find_two_age_groups couldn't find two age groups")
+                return i, j
+
+    # Sometimes rounding errors means ra > sum(matrix)
+    return i, j
 
 
 @njit

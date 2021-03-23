@@ -775,10 +775,14 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                     )
 
     elif intervention.start_interventions_by_day :
+
         if day in list(intervention.cfg.restriction_thresholds) :
+
             for i, intervention_date in enumerate(intervention.cfg.restriction_thresholds) :
                 if day == intervention_date :
+
                     if i % 2 == 0 :
+
                         # just looping over all labels. intervention type is not necesary with intervention by day
                         for ith_label, intervention_type in enumerate(intervention.types) :
 
@@ -811,7 +815,6 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
 
                             # if matrix restriction
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3 :
-
                                 if verbose :
                                     if intervention.N_labels > 1 :
                                         print('Intervention type : matrix restriction, name: ', intervention.cfg.Intervention_contact_matrices_name[int(i/2)] + '_label_' + str(ith_label) )
@@ -877,7 +880,7 @@ def test_tagged_agents(my, g, intervention, day, click) :
 @njit
 def apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose) :
 
-    if intervention.apply_interventions_on_label and day >= 0 :
+    if intervention.apply_interventions_on_label :
         apply_interventions_on_label(my, g, intervention, day, click, verbose)
 
     if intervention.apply_random_testing :

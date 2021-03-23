@@ -24,9 +24,6 @@ from functools import partial
 
 from tqdm import tqdm
 from p_tqdm import p_umap, p_uimap
-import geopandas as gpd
-from shapely.geometry import Point, Polygon
-from shapely.geometry import mapping as _polygon_to_array
 
 check_distributions = False
 
@@ -46,6 +43,7 @@ from src.utils import file_loaders
 from src.simulation import nb_simulation
 from src.simulation import nb_jitclass
 from src.simulation import nb_network
+from src.simulation import nb_interventions
 from src.simulation import nb_helpers
 
 hdf5_kwargs = dict(track_order=True)
@@ -270,7 +268,22 @@ class Simulation :
             self._load_initialized_network(filename)
 
 
-    def intialize_interventions(self, verbose_interventions=None) :
+    def initialize_gillespie(self) :
+
+        if self.verbose :
+            print("\nINITIALING GILLESPIE")
+
+        self.N_states = 9  # number of states
+        self.N_infectious_states = 4  # This means the 5'th state
+
+        # Load the seasonal data
+        seasonal_model = file_loaders.load_seasonal_model(scenario=self.cfg.seasonal_list_name, offset=self.cfg.start_date_offset)
+
+        self.g = nb_jitclass.Gillespie(self.my, self.N_states, self.N_infectious_states, seasonal_model, self.cfg.seasonal_strength)
+
+
+
+    def initialize_interventions(self, verbose_interventions=None) :
 
         if self.verbose :
             print("\nINITIALING INTERVENTIONS")
@@ -336,6 +349,16 @@ class Simulation :
             verbose=verbose_interventions)
 
 
+        # Check for day 0 matrix restrictions
+        if self.intervention.start_interventions_by_day and self.intervention.apply_interventions_on_label :
+            nb_interventions.apply_interventions_on_label(self.my, self.g, self.intervention, 0, 0, self.verbose)
+
+            # Adjust restriction_thresholds so intervetion is not applied twice
+            for i, day in enumerate(self.intervention.cfg.restriction_thresholds) :
+                if day == 0 :
+                    self.intervention.cfg.restriction_thresholds[i] = -1
+
+
     def initialize_states(self) :
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
@@ -343,9 +366,6 @@ class Simulation :
             print("\nINITIAL INFECTIONS")
 
         np.random.seed(utils.hash_to_seed(self.hash))
-
-        self.N_states = 9  # number of states
-        self.N_infectious_states = 4  # This means the 5'th state
 
         self.nts = 0.1  # Time step (0.1 - ten times a day)
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
@@ -355,11 +375,6 @@ class Simulation :
         self.stratified_vaccination_counts = np.zeros(self.N_ages, dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
-
-        # Load the seasonal data
-        seasonal_model = file_loaders.load_seasonal_model(scenario=self.cfg.seasonal_list_name, offset=self.cfg.start_date_offset)
-
-        self.g = nb_jitclass.Gillespie(self.my, self.N_states, self.N_infectious_states, seasonal_model, self.cfg.seasonal_strength)
 
         # Find the possible agents
         possible_agents = nb_simulation.find_possible_agents(self.my, self.initial_ages_exposed, self.agents_in_age_group)
@@ -644,7 +659,9 @@ def run_single_simulation(
         if only_initialize_network :
             return None
 
-        simulation.intialize_interventions()
+        simulation.initialize_gillespie()
+
+        simulation.initialize_interventions()
 
         simulation.initialize_states()
 

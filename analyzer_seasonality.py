@@ -13,16 +13,14 @@ from src.analysis.plotters import *
 
 
 # This runs simulations with specified percentage effects of the seasonality model
-params, start_date = utils.load_params("cfg/analyzer_seasonality.yaml")
+params, start_date = utils.load_params("cfg/analyzers/seasonality.yaml")
 
 if utils.is_local_computer():
-    f = 0.1
-    n_steps = 1
+    f = 0.5
     num_cores_max = 1
-    N_runs = 3
+    N_runs = 1
 else :
     f = 0.5
-    n_steps = 3
     num_cores_max = 5
     N_runs = 1
 
@@ -39,14 +37,14 @@ params["N_init"] = int(params["N_init"] * f)
 params["R_init"] = int(params["R_init"] * f)
 
 
-N_files_total = 0
-if __name__ == "__main__":
-    with Timer() as t:
+#N_files_total = 0
+#if __name__ == "__main__":
+    #with Timer() as t:
 
-        N_files_total +=  simulation.run_simulations(params, N_runs=N_runs, num_cores_max=num_cores_max, verbose=verbose)
+     #   N_files_total +=  simulation.run_simulations(params, N_runs=N_runs, num_cores_max=num_cores_max, verbose=verbose)
 
-    print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
-    print("Finished simulating!")
+    #print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
+    #print("Finished simulating!")
 
 
 # Load the simulations
@@ -76,7 +74,12 @@ fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(12, 12))
 axes = axes.flatten()
 
 print('Plotting the individual ABM simulations. Please wait', flush=True)
+labels = []
+handles = []
+sort_index = []
 for cfg in tqdm(data.iter_cfgs(), total=len(data.cfgs)) :
+
+    I = np.argmax(cfg.seasonal_strength == np.array(params['seasonal_strength']))
 
     for filename in data.cfg_to_filenames(cfg) :
 
@@ -84,10 +87,18 @@ for cfg in tqdm(data.iter_cfgs(), total=len(data.cfgs)) :
         total_tests, f, _, _, _, _ = load_from_file(filename, start_date)
 
         # Create the plots
-        I = np.argmax(cfg.seasonal_strength == np.array(params['seasonal_strength']))
-        plot_simulation_cases_and_variant_fraction(total_tests, f, t_day, t_week, axes, color=plt.cm.tab10(I))
+        h = plot_simulation_cases_and_variant_fraction(total_tests, f, t_day, t_week, axes, color=plt.cm.tab10(I), zorder=I)
 
+    sort_index.append(I)
+    handles.append(h[0])
+    labels.append(f'{cfg.seasonal_strength * 100:.0f}%')
 
+print(sort_index)
+
+handles = [h for _, h in sorted(zip(sort_index, handles))]
+labels  = [l for _, l in sorted(zip(sort_index, labels))]
+
+axes[0].legend(handles, labels)
 
 
 # Plot the covid index
@@ -107,7 +118,7 @@ axes[1].errorbar(t_fraction, fraction, yerr=fraction_sigma, fmt='s', lw=2)
 # Get restriction_thresholds from a cfg
 restriction_thresholds = data.cfgs[0].restriction_thresholds
 
-axes[0].set_ylim(0, 4000)
+axes[0].set_ylim(0, 10_000)
 axes[0].set_ylabel('Daglige positive')
 
 

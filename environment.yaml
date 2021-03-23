@@ -9,6 +9,7 @@ dependencies:
   - scipy
   - pandas
   - matplotlib
+  - networkx
   # - seaborn
   # - iminuit
   # - statsmodels

@@ -2054,7 +2054,7 @@ def load_params(filename) :
 
         restriction_dates = [date for date in params["restriction_thresholds"][0]]
 
-        date_1 = start_date + datetime.timedelta(days=1)
+        date_1 = start_date
         date_2 = restriction_dates[0]
 
         intervals = []
@@ -2066,7 +2066,7 @@ def load_params(filename) :
                 date_2 = restriction_dates[i+1]
 
     else :
-        intervals = [1, (params["restriction_thresholds"] - start_date).days]
+        intervals = [0, (params["restriction_thresholds"] - start_date).days]
 
     params["restriction_thresholds"] =  [intervals]
 

@@ -364,6 +364,17 @@ class Gillespie(object) :
     def seasonality(self, day) :
         return 1 + (self.seasonal_model[day] - 1) * self.seasonal_strength
 
+
+
+
+
+
+
+
+
+
+
+
 #### ##    ## ######## ######## ########  ##     ## ######## ##    ## ######## ####  #######  ##    ##
  ##  ###   ##    ##    ##       ##     ## ##     ## ##       ###   ##    ##     ##  ##     ## ###   ##
  ##  ####  ##    ##    ##       ##     ## ##     ## ##       ####  ##    ##     ##  ##     ## ####  ##
@@ -476,6 +487,7 @@ class Intervention(object) :
         self.other_matrix_restrict      = other_matrix_restrict
 
         self.verbose = verbose
+
 
     def _initialize_labels(self, labels) :
         unique, counts = utils.numba_unique_with_counts(labels)

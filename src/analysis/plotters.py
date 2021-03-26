@@ -11,11 +11,11 @@ import matplotlib.dates  as mdates
 
 from src.utils import utils
 
-def plot_simulation_cases_and_variant_fraction(total_tests, f, t_day, t_week, axes, **kwargs) :
+def plot_simulation_cases_and_variant_fraction(total_tests, f, t_day, t_week, axes, color='k') :
 
     # Create the plots
-    tmp_handles_0 = axes[0].plot(t_day[:len(total_tests)],  total_tests, lw=4, **kwargs)[0]
-    tmp_handles_1 = axes[1].plot(t_week[:len(f)],           f,           lw=4, **kwargs)[0]
+    tmp_handles_0 = axes[0].plot(t_day[:len(total_tests)],  total_tests, lw=4, c=color)[0]
+    tmp_handles_1 = axes[1].plot(t_week[:len(f)],           f,           lw=4, c=color)[0]
 
     return [tmp_handles_0, tmp_handles_1]
 
@@ -90,3 +90,23 @@ def set_rc_params(dpi=300):
     mpl.rc('axes', edgecolor='k', linewidth=2)
 
 set_rc_params()
+
+
+def _load_data_from_network_file(filename, variables, cfg=None) :
+
+    if cfg is None :
+        cfg = utils.read_cfg_from_hdf5_file(filename)
+
+
+    with h5py.File(filename, "r") as f:
+
+        if not isinstance(variables, list) :
+            return f[variables][()]
+
+        else :
+            out = []
+
+            for variable in variables :
+                out.append(f[variable][()])
+
+            return out

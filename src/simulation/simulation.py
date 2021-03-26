@@ -43,6 +43,7 @@ from src.utils import file_loaders
 from src.simulation import nb_simulation
 from src.simulation import nb_jitclass
 from src.simulation import nb_network
+from src.simulation import nb_initialize
 from src.simulation import nb_interventions
 from src.simulation import nb_helpers
 
@@ -377,7 +378,7 @@ class Simulation :
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
 
         # Find the possible agents
-        possible_agents = nb_simulation.find_possible_agents(self.my, self.initial_ages_exposed, self.agents_in_age_group)
+        possible_agents = nb_initialize.find_possible_agents(self.my, self.initial_ages_exposed, self.agents_in_age_group)
 
         # Load the age distribution for infected
         age_distribution_infected, age_distribution_immunized = file_loaders.load_infection_age_distributions(self.cfg.initial_infection_distribution, self.N_ages)
@@ -472,7 +473,7 @@ class Simulation :
             agents_in_subgroup, N_subgroup, R_subgroup, prior_infected_subgroup, prior_immunized_subgroup, subgroup_UK_frac = subgroup
 
             # TODO: Move loop inside initialize_states()
-            nb_simulation.initialize_states(
+            nb_initialize.initialize_states(
                 self.my,
                 self.g,
                 self.intervention,

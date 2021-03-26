@@ -12,8 +12,8 @@ params, start_date = utils.load_params("cfg/simulation_parameters_season.yaml")
 if utils.is_local_computer():
     f = 0.01
     n_steps = 1
-    num_cores_max = 3
-    N_runs = 3
+    num_cores_max = 1
+    N_runs = 1
 else :
     f = 0.5
     n_steps = 3
@@ -79,13 +79,11 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
 
             for filename in abm_files.cfg_to_filenames(cfg) :
 
-                # Load
-                I_tot_scaled, f, _, _, _, _= load_from_file(filename, start_date)
-
                 start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
                 end_date   = start_date + datetime.timedelta(days=cfg.day_max)
 
-                t_tests, t_f = parse_time_ranges(start_date, end_date)
+                # Load
+                (t_tests, t_f), (I_tot_scaled, f, _, _, _, _) = load_from_file(filename, start_date, end_date)
 
                 # Evaluate
                 tmp_ll_s = compute_loglikelihood((I_tot_scaled, t_tests), (logK, logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))

@@ -33,14 +33,12 @@ def aggregate_array(arr, chunk_size=10) :
         return out_arr
 
 
-def load_from_file(filename, start_date) :
+def load_from_file(filename, start_date, end_date) :
 
     cfg = utils.read_cfg_from_hdf5_file(filename)
 
     # Load the csv summery file
     df = file_loaders.pandas_load_file(filename)
-
-
 
 
     # Find all columns with "T_"
@@ -100,30 +98,32 @@ def load_from_file(filename, start_date) :
 
     # Get weekly values
     # Remove days if not starting on a monday
-    if start_date.weekday() > 0 :
-        I = 7-start_date.weekday()
+    if start_date.weekday() > 1 :
+        I = 7 - start_date.weekday()
     else :
         I = 0
 
     T_total_week = aggregate_array(T_total[I:], chunk_size=7)
     T_uk_week    = aggregate_array(T_uk[I:],    chunk_size=7)
 
+    # Remove days if last week is not full
+    if len(T_total[I:]) % 7 > 0 :
+        T_total_week = T_total_week[:-1]
+        T_uk_week    = T_uk_week[:-1]
+
     # Get the fraction of UK variants
     with np.errstate(divide='ignore', invalid='ignore'):
         f = T_uk_week / T_total_week
         f[np.isnan(f)] = -1
 
-    return T_total, f, T_age_groups, T_variants, T_regions, V_age_groups
+    # Prepare the time series
+    start_week = start_date + datetime.timedelta(days=I)
 
+    t_day  = pd.date_range(start=start_date, periods=len(T_total),   freq="D")
+    t_week = pd.date_range(start=start_week, periods=len(T_uk_week), freq="W-SUN")
 
-def parse_time_ranges(start_date, end_date) :
+    return (t_day, t_week), (T_total, f, T_age_groups, T_variants, T_regions, V_age_groups)
 
-    t_day = pd.date_range(start=start_date, end=end_date, freq="D")
-
-    weeks =  [w for w in pd.unique(t_day.isocalendar().week) if np.sum(t_day.isocalendar().week == w) == 7]
-    t_week = pd.to_datetime([date for date, dayofweek, week in zip(t_day, t_day.dayofweek, t_day.isocalendar().week) if (dayofweek == 6 and week in weeks)])
-
-    return t_day, t_week
 
 
 def compute_loglikelihood(input_data, validation_data, transformation_function = lambda x : x) :

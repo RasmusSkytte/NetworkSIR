@@ -489,7 +489,7 @@ def load_vaccination_schedule(cfg) :
         # Determine the timing of effective vaccines
         vaccination_schedule[i] = np.array([0, (vaccination_schedule[i][-1] - vaccination_schedule[i][0]).days]) + cfg.Intervention_vaccination_effect_delays[i] - cfg.start_date_offset
 
-    return np.array(vaccinations_per_age_group), np.array(vaccination_schedule)
+    return np.array(vaccinations_per_age_group), np.array(vaccination_schedule, dtype=np.int32)
 
 
 def load_vaccination_schedule_file(scenario = "reference") :

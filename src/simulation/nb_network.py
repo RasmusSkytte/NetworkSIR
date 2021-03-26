@@ -308,6 +308,7 @@ def place_and_connect_families(
 
     return mu_counter, counter_ages, agents_in_age_group
 
+
 @njit
 def place_and_connect_families_kommune_specific(
     my, people_in_household, age_distribution_per_people_in_household, coordinates_raw, kommune_ids, N_ages, verbose=False) :
@@ -536,7 +537,7 @@ def connect_work_and_others(
                 print("Connected ", round(progress * 100), r"% of work and others")
 
 
-#@njit
+@njit
 def generate_one_household(people_in_household_sogn, agent, agent0, do_continue, N_tot, my, age_distribution_per_people_in_household, counter_ages, agents_in_age_group, coordinates, mu_counter, people_index_to_value, house_sizes, kommune):
     N_people_in_house_index = utils.rand_choice_nb(people_in_household_sogn)
     N_people_in_house = people_index_to_value[N_people_in_house_index]

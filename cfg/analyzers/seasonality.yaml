@@ -2,7 +2,7 @@ N_tot: 5_800_000
 rho: 0.1
 
 N_init: 6000
-beta: 0.0325
+beta: 0.03
 
 R_guess: 0.75
 

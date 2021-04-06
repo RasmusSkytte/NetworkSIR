@@ -179,6 +179,7 @@ class Simulation :
         self.agents_in_age_group = agents_in_age_group
 
     def _save_initialized_network(self, filename) :
+
         if self.verbose :
             print(f"Saving initialized network to {filename}", flush=True)
         file_loaders.make_sure_folder_exist(filename)

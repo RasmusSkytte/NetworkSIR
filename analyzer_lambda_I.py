@@ -26,8 +26,8 @@ else :
 
 cfgs_all = []
 
-filenames = ["cfg/simulation_parameters_lambda_I.yaml",
-             "cfg/simulation_parameters_lambda_I_restrictions.yaml"]
+filenames = ["cfg/analyzers/lambda_I.yaml",
+             "cfg/analyzers/lambda_I_restrictions.yaml"]
 
 for filename in filenames :
     params, start_date = utils.load_params(filename)
@@ -208,3 +208,6 @@ if __name__ == "__main__":
 
 print(f"\n{N_files:,} files were generated, total duration {utils.format_time(t.elapsed)}")
 print("Finished simulating!")
+
+
+

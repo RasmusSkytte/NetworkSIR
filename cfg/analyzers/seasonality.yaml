@@ -1,0 +1,45 @@
+N_tot: 5_800_000
+rho: 0.1
+
+N_init: 6000
+beta: 0.0325
+
+R_guess: 0.75
+
+# english type corona
+N_init_UK_frac: 1.0
+beta_UK_multiplier: 1.7
+
+R_init : 5_800_000 * 0.065
+
+initialize_at_kommune_level: True
+initial_infection_distribution : 2020-12-31
+weighted_random_initial_infections: False
+
+lambda_E: 4 / 2.5
+lambda_I: 4 / 4.5 # Higher due to isolation
+
+start_date : 2021-01-01
+end_date : 2021-05-01
+
+
+
+contact_matrices_name: basis  # Target activity
+
+Intervention_contact_matrices_name : [[ned2021jan, fase3_S3_0A_1]]
+restriction_thresholds: [[2021-02-08, 2021-03-01]]  # Opening date for fase 1
+threshold_interventions_to_apply: [[3, 3]]
+
+#label_names: [Sjælland, Hovedstaden, Nordjylland, Midtjylland, Syddanmark]
+label_multiplier: [[1.0, 1.0, 1.0, 1.0, 1.0]]
+label_frac: [[0.014, 0.01, 0.026, 0.029, 0.047]]
+
+
+start_date_offset: 2020-12-28 # Start date for vaccinations
+intervention_removal_delay_in_clicks: 0
+
+
+
+# Season related parameters
+seasonal_list_name : reference
+seasonal_strength : [0.0, 0.25, 0.5, 0.75, 1.0]

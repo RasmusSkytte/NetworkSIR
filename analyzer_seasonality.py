@@ -13,7 +13,7 @@ from src.analysis.plotters import *
 
 
 # This runs simulations with specified percentage effects of the seasonality model
-params, start_date = utils.load_params("cfg/analyzer_seasonality.yaml")
+params, start_date = utils.load_params("cfg/analyzers/seasonality.yaml")
 
 if utils.is_local_computer():
     f = 0.1

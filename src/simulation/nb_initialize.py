@@ -383,91 +383,67 @@ def initialize_states_iteratively(
     # 1.3) While new agents are chosen, iterate deeper
 
 
+    # Allocate agent list
+    agents = List()
+    order  = List()
+
+    # 1) While N < N_init + R_init, choose new cluster from prior
+    while len(agents) < N_init + R_init :
+
+        cluster = List()
+        flags  = List()
+        k = 0
+
+        # 1.1) Choose random agent
+        agent = choose_initial_agents(my, possible_agents, 1, prior_infected)
+
+        # Check they have not been selected before
+        while my.agent_is_infectious[agent] :
+            agent = choose_initial_agents(my, possible_agents, 1, prior_infected)
+
+        # Store agent
+        cluster_next = List([agent])
+        flags_next = List([k])
+
+        # Iterate deeper
+        while len(cluster_next) > 0 :
+
+            # Add the chosen agents
+            cluster.extend(subset_next)
+            flags.extend(flags_next)
+            k += 1
+
+            # Iterate deeper
+            subset_next, flags_next = choose_neighbours_to_infect(my, g, subset_next, k, agents)
+
+
+        # Add the chosen agents
+        agents.extend(cluster)
+        order.extend(flags)
 
 
 
-    if N_init > 0 :
 
-        agents = choose_initial_agents(my, possible_agents, N_init, prior_infected)
+@njit
+def choose_neighbours_to_infect(my, g, subset_current, flag, agents) :
 
-        #  Make initial infections
-        for agent in agents :
+    subset_next = List()
+    flags_next  = List()
 
-            # Choose corona type
-            if np.random.rand() < subgroup_UK_frac * my.cfg.N_init_UK_frac :
-                my.corona_type[agent] = 1
-                rel_beta = my.cfg.beta_UK_multiplier
-            else :
-                rel_beta = 1
+    for agent in subset_current :
 
-            #weights = calc_E_I_distribution_linear(my.cfg.R_guess * rel_beta)
-            weights = calc_E_I_distribution(my, my.cfg.R_guess * rel_beta)
-            states = np.arange(g.N_states - 1, dtype=np.int8)
-            new_state = nb_random_choice(states, weights, verbose=verbose)[0]  # E1-E4 or I1-I4, uniformly distributed
-            my.state[agent] = new_state
+        # Get their neighbours (cpnnected and not chosen already)
+        contacts = [contact for ith_contact, contact in enumerate(my.connections[agent]) if my.agent_is_connected[agent][ith_contact] and contact not in agents]
 
-            agents_in_state[new_state].append(np.uint32(agent))
-            state_total_counts[new_state] += 1
+        # 1.2) Choose number of neighbours. Binomial distribution with p_i = beta * N * lambda_I / N_infectious_states
+        p = my.cfg.beta * my.cfg.lambdaI / g.N_infectious_states
+        k = np.random.binomial(len(contacts), p)
 
-            g.total_sum_of_state_changes += g.SIR_transition_rates[new_state]
-            g.cumulative_sum_of_state_changes[new_state :] += g.SIR_transition_rates[new_state]
+        if k > 0 :
+            subset_next.extend(nb_random_choice(contacts, np.ones_like(contacts), size=k))
+            flags_next.extend([flag] * k)
 
-            if intervention.apply_interventions and intervention.apply_symptom_testing :
-                for i in range(new_state) :
-                    apply_symptom_testing(my, intervention, agent, i, 0)
-
-
-            # Moves into a infectious State
-            if my.agent_is_infectious(agent) :
-                for ith_contact, contact in enumerate(my.connections[agent]) :
-                    # update rates if contact is susceptible
-                    if my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact) :
-
-                        # Strain specific multiplier
-                        if my.corona_type[agent] == 1 :
-                            g.rates[agent][ith_contact] *= my.cfg.beta_UK_multiplier
-
-                        # Set the rates
-                        rate = g.rates[agent][ith_contact]
-                        g.update_rates(my, +rate, agent)
-
-                # Update the counters
-                stratified_infection_counts[my.label[agent]][my.corona_type[agent]][my.age[agent]] += 1
-
-            # Make sure agent can not be re-infected
-            update_infection_list_for_newly_infected_agent(my, g, agent)
-
-
-    R_state = g.N_states - 1
-
-    if R_init > 0 :
-
-        agents = choose_initial_agents(my, possible_agents, R_init, prior_immunized)
-
-        #  Make initial immunizations
-        for agent in agents :
-
-            # If infected, do not immunize # TODO: Discuss if this is the best way to immunize agents
-            if my.state[agent] >= 0 :
-                continue
-
-            # Update the state
-            my.state[agent] = R_state
-
-            if np.random.rand() < subgroup_UK_frac * my.cfg.N_init_UK_frac :
-                my.corona_type[agent] = 1
-
-            agents_in_state[R_state].append(np.uint32(agent))
-
-            state_total_counts[R_state] += 1
-
-            g.total_sum_of_state_changes += g.SIR_transition_rates[R_state]
-            g.cumulative_sum_of_state_changes[R_state :] += g.SIR_transition_rates[R_state]
-
-            # Disable incomming rates
-            update_infection_list_for_newly_infected_agent(my, g, agent)
-
-
+    return subset_next, flags_next
 
 @njit
 def update_infection_list_for_newly_infected_agent(my, g, agent) :

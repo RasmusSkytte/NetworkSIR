@@ -16,10 +16,10 @@ from src.analysis.plotters import *
 params, start_date = utils.load_params("cfg/analyzers/seasonality.yaml")
 
 if utils.is_local_computer():
-    f = 0.1
+    f = 0.2
     n_steps = 1
-    num_cores_max = 1
-    N_runs = 3
+    num_cores_max = 3
+    N_runs = 7
 else :
     f = 0.1
     n_steps = 1
@@ -107,7 +107,7 @@ axes[1].errorbar(t_fraction, fraction, yerr=fraction_sigma, fmt='s', lw=2)
 # Get restriction_thresholds from a cfg
 restriction_thresholds = data.cfgs[0].restriction_thresholds
 
-axes[0].set_ylim(0, 4000)
+axes[0].set_ylim(0, 20000)
 axes[0].set_ylabel('Daglige positive')
 
 

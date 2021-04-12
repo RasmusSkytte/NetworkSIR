@@ -31,7 +31,10 @@ from scipy.special import erf
 from sklearn.model_selection import ParameterSampler
 
 import awkward1 as ak
-import dict_hash
+#import dict_hash
+from typing import Dict, Any
+import hashlib
+import json
 
 from attrdict import AttrDict
 
@@ -64,7 +67,19 @@ def sha256(d) :
             d[key] = list(val)
         if isinstance(val, dict) :
             d[key] = sha256(val)
-    return dict_hash.sha256(d)
+    return dict_hash(d)
+
+
+
+# https://www.doc.ic.ac.uk/~nuric/coding/how-to-hash-a-dictionary-in-python.html
+def dict_hash(dictionary: Dict[str, Any]) -> str:
+    """MD5 hash of a dictionary."""
+    dhash = hashlib.sha256()
+    # We need to sort arguments so {'a': 1, 'b': 2} is
+    # the same as {'b': 2, 'a': 1}
+    encoded = json.dumps(dictionary, sort_keys=True).encode()
+    dhash.update(encoded)
+    return dhash.hexdigest()
 
 
 def _is_ipython() :

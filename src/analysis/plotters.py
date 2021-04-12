@@ -10,13 +10,12 @@ import matplotlib.pyplot as plt
 import matplotlib.dates  as mdates
 
 from src.utils import utils
-from src.utils import file_loaders
 
-def plot_simulation_cases_and_variant_fraction(total_tests, f, t_day, t_week, axes) :
+def plot_simulation_cases_and_variant_fraction(total_tests, f, t_day, t_week, axes, color='k') :
 
     # Create the plots
-    tmp_handles_0 = axes[0].plot(t_day,  total_tests, lw=4, c='k')[0]
-    tmp_handles_1 = axes[1].plot(t_week, f,           lw=4, c='k')[0]
+    tmp_handles_0 = axes[0].plot(t_day[:len(total_tests)],  total_tests, lw=4, c=color)[0]
+    tmp_handles_1 = axes[1].plot(t_week[:len(f)],           f,           lw=4, c=color)[0]
 
     return [tmp_handles_0, tmp_handles_1]
 

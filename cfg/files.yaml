@@ -1,11 +1,17 @@
+# Distributions
 PeopleInHousehold: Data/population_information/household_dist.csv
 AgeDistribution: Data/population_information/age_dist.csv
 PeopleInHouseholdSogn: Data/population_information/sogne_hustande.xlsx
 wgsDistribution: Data/wgs_data/2021_03_04.csv
 
+# Dynamical effects
 ageCasesFolder: Data/age_cases
 municipalityCasesFolder: Data/municipality_cases
+municipalityTestsFolder: Data/municipality_tests
 contactMatrixFolder: Data/contact_matrices
+seasonalFolder: Data/seasonal_effects
 
+# Validation data
 RegionData: Data/region_data/allCases_hosp_2021-03-10.txt
 CovidIndex: Data/covid_index_2021.feather
+

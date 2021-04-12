@@ -31,8 +31,8 @@ import geopandas as gpd
 ##    ##  ##  ##     ## ##     ## ##       ##     ##    ##     ##  ##     ## ##   ### ##    ##
  ######  #### ##     ##  #######  ######## ##     ##    ##    ####  #######  ##    ##  ######
 
-def get_all_ABM_filenames(base_dir="Output/ABM", filetype="hdf5") :
-    "get all ABM result files with filetype {filetype}"
+def get_all_filenames(base_dir="Output/ABM", filetype="hdf5") :
+    "get all result files with filetype {filetype}"
     files = path(base_dir).rglob(f"*.{filetype}")
     # files = sorted(files, )
     return sorted(
@@ -131,18 +131,20 @@ def get_cfgs(all_folders) :
 
 
 class ABM_simulations :
-    def __init__(self, base_dir="Output/ABM", filetype="hdf5", subset=None, verbose=False) :
+    def __init__(self, base_dir='Output', filetype='hdf5', subset=None, verbose=False) :
         self.base_dir = utils.path(base_dir)
         self.filetype = filetype
         self.subset = subset
         self.verbose = verbose
+
         if verbose :
-            print("Loading ABM_simulations \n", flush=True)
+            print('Loading ABM_simulations \n', flush=True)
 
         if self.subset is None:
-            self.all_filenames = get_all_ABM_filenames(base_dir, filetype)
-            self.all_folders   = get_all_ABM_folders(self.all_filenames)
-            self.cfgs          = get_cfgs(self.all_folders)
+            self.filenames   = get_all_filenames(os.path.join(base_dir, 'ABM'), filetype)
+            self.networks    = get_all_filenames(os.path.join(base_dir, 'network'), filetype)
+            self.all_folders = get_all_ABM_folders(self.all_filenames)
+            self.cfgs        = get_cfgs(self.all_folders)
 
         else :
             # Steps:
@@ -158,12 +160,14 @@ class ABM_simulations :
 
             cfgs = db.search(query)
 
-            self.all_filenames = []
+            self.filenames = []
+            self.networks = []
 
             for hash_ in [cfg["hash"] for cfg in cfgs] :
-                self.all_filenames.extend(utils.hash_to_filenames(hash_))
+                self.filenames.extend(utils.hash_to_filenames(hash_, base_dir=os.path.join(base_dir, 'ABM')))
+                self.networks.extend( utils.hash_to_filenames(hash_, base_dir=os.path.join(base_dir, 'network')))
 
-            self.all_folders   = get_all_ABM_folders(self.all_filenames)
+            self.all_folders   = get_all_ABM_folders(self.filenames)
             self.cfgs          = get_cfgs(self.all_folders)
 
 
@@ -176,11 +180,15 @@ class ABM_simulations :
         """
         d = {}
         for cfg in self.cfgs :
-            d[cfg.hash] = utils.hash_to_filenames(cfg.hash, self.base_dir, self.filetype)
+            d[cfg.hash] = utils.hash_to_filenames(cfg.hash, os.path.join(self.base_dir, 'ABM'), self.filetype)
         return d
 
-    def iter_all_files(self) :
-        for filename in self.all_filenames :
+    def iter_files(self) :
+        for filename in self.filenames :
+            yield filename
+
+    def iter_network_files(self) :
+        for filename in self.networks :
             yield filename
 
     def iter_folders(self) :
@@ -196,7 +204,6 @@ class ABM_simulations :
 
         cfg = utils.DotDict(cfg)
         cfg_list = utils.query_cfg(cfg)
-
         if not len(cfg_list) == 1 :
             raise AssertionError(
                 f"cfg did not give unique results in the database",
@@ -217,7 +224,7 @@ class ABM_simulations :
     #     #     return self.all_files[key]
 
     def __len__(self) :
-        return len(self.all_filenames)
+        return len(self.filenames)
 
     def __repr__(self) :
         return (
@@ -225,7 +232,6 @@ class ABM_simulations :
             + f"Contains {len(self)} files with "
             + f"{len(self.cfgs)} different simulation parameters."
         )
-
 
 
 
@@ -421,6 +427,20 @@ def load_contact_matrices(scenario = 'reference', N_labels = 1) :
 
     return matrix_work, matrix_other, work_other_ratio, age_groups_work
 
+def load_seasonal_model(scenario=None, offset = 0) :
+
+    if scenario.lower() == 'none' :
+        return np.ones(365)
+
+    # Load season data 2020-12-28 - 2021-12-15
+    base_path = load_yaml('cfg/files.yaml')['seasonalFolder']
+
+    # Load data from offset and forward
+    model = np.squeeze(pd.read_csv(os.path.join(base_path, scenario + '.csv'), index_col = 0)[offset:].to_numpy())
+
+    # Scale to starting value
+    return model / model[0]
+
 
 def load_contact_matrix_set(matrix_path) :
 
@@ -451,7 +471,7 @@ def load_vaccination_schedule(cfg) :
     """
 
     if cfg.Intervention_vaccination_schedule_name == 'None' :
-        return np.zeros( (1, 1, len(cfg.network.work_matrix)), dtype=np.int64), np.zeros( (1, 2), dtype=np.int64)
+        return np.zeros( (1, 1, len(cfg.network.work_matrix)), dtype=np.int64), np.zeros( (1, 2), dtype=np.int32)
 
 
     vaccinations_per_age_group, vaccination_schedule = load_vaccination_schedule_file(scenario = cfg.Intervention_vaccination_schedule_name)
@@ -467,9 +487,9 @@ def load_vaccination_schedule(cfg) :
         np.multiply(vaccinations_per_age_group[i], cfg.network.N_tot / 5_800_000, out=vaccinations_per_age_group[i], casting='unsafe')
 
         # Determine the timing of effective vaccines
-        vaccination_schedule[i] = cfg.start_date_offset + np.array([0, (vaccination_schedule[i][-1] - vaccination_schedule[i][0]).days]) + cfg.Intervention_vaccination_effect_delays[i]
+        vaccination_schedule[i] = np.array([0, (vaccination_schedule[i][-1] - vaccination_schedule[i][0]).days]) + cfg.Intervention_vaccination_effect_delays[i] - cfg.start_date_offset
 
-    return np.array(vaccinations_per_age_group), np.array(vaccination_schedule)
+    return np.array(vaccinations_per_age_group), np.array(vaccination_schedule, dtype=np.int32)
 
 
 def load_vaccination_schedule_file(scenario = "reference") :
@@ -525,8 +545,13 @@ def load_vaccination_schedule_file(scenario = "reference") :
  ######   ######  ####    ########  ##     ##    ##    ##     ##
 
 
-def load_municipality_data(zfile) :
+def load_municipality_test_data(zfile) :
+    return pd.read_csv(zfile.open('Municipality_tested_persons_time_series.csv'), sep=';', index_col=0)
+
+
+def load_municipality_case_data(zfile) :
     return pd.read_csv(zfile.open('Municipality_cases_time_series.csv'), sep=';', index_col=0)
+
 
 def load_age_data(zfile) :
     df = pd.read_csv(zfile.open('Cases_by_age.csv'), usecols=['Aldersgruppe', 'Antal_bekræftede_COVID-19'], dtype={'Aldersgruppe' : str, 'Antal_bekræftede_COVID-19' : str}, sep=';', index_col=0)
@@ -556,7 +581,13 @@ def SSI_data_missing(filename) :
         return False
 
 
-def download_SSI_data(date=None, download_municipality=True, path_municipality=None, download_age=True, path_age=None) :
+def download_SSI_data(date=None,
+                      download_municipality_tests=True,
+                      path_municipality_tests=None,
+                      download_municipality_cases=True,
+                      path_municipality_cases=None,
+                      download_age=True,
+                      path_age=None) :
     url = 'https://covid19.ssi.dk/overvagningsdata/download-fil-med-overvaagningdata'
 
     with urllib.request.urlopen(url) as response :
@@ -564,7 +595,7 @@ def download_SSI_data(date=None, download_municipality=True, path_municipality=N
 
     date_SSI = datetime.datetime.strptime(date, '%Y_%m_%d').strftime('%d%m%Y')
 
-    s = re.search(date_SSI, html, re.IGNORECASE)
+    s = re.search(f'rapport-{date_SSI}', html, re.IGNORECASE)
     if s is None :
         raise ValueError(f'No data found for date: {date}')
 
@@ -575,9 +606,13 @@ def download_SSI_data(date=None, download_municipality=True, path_municipality=N
 
     with ZipFile(BytesIO(urllib.request.urlopen(data_url).read())) as zfile :
 
-        if download_municipality :
-            df = load_municipality_data(zfile)
-            save_dataframe(df, path_municipality, filename)
+        if download_municipality_tests :
+            df = load_municipality_test_data(zfile)
+            save_dataframe(df, path_municipality_tests, filename)
+
+        if download_municipality_cases :
+            df = load_municipality_case_data(zfile)
+            save_dataframe(df, path_municipality_cases, filename)
 
         if download_age :
             df = load_age_data(zfile)
@@ -591,30 +626,35 @@ def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False)
 
     filename = date + '.csv'
 
-    filename_municipality = os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'], filename)
-    filename_age          = os.path.join(load_yaml('cfg/files.yaml')['ageCasesFolder'], filename)
+    f_municipality_tests = os.path.join(load_yaml('cfg/files.yaml')['municipalityTestsFolder'], filename)
+    f_municipality_cases = os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'], filename)
+    f_age                = os.path.join(load_yaml('cfg/files.yaml')['ageCasesFolder'], filename)
 
-    download_municipality = SSI_data_missing(filename_municipality)
-    download_age          = SSI_data_missing(filename_age)
+    download_municipality_tests = SSI_data_missing(f_municipality_tests)
+    download_municipality_cases = SSI_data_missing(f_municipality_cases)
+    download_age                = SSI_data_missing(f_age)
 
 
-    if download_municipality or download_age:
+    if download_municipality_tests or download_municipality_cases or download_age:
 
         if verbose:
             print("Downloading new data")
 
         download_SSI_data(date=date,
-                          download_municipality=download_municipality,
-                          path_municipality=os.path.dirname(filename_municipality),
+                          download_municipality_tests=download_municipality_tests,
+                          path_municipality_tests=os.path.dirname(f_municipality_tests),
+                          download_municipality_cases=download_municipality_cases,
+                          path_municipality_cases=os.path.dirname(f_municipality_cases),
                           download_age=download_age,
-                          path_age=os.path.dirname(filename_age))
+                          path_age=os.path.dirname(f_age))
 
     if return_data :
         # Load the dataframes
-        df_municipality = pd.read_csv(filename_municipality, index_col=0)
-        df_age          = pd.read_csv(filename_age,          index_col=0)
+        df_municipality_tests = pd.read_csv(f_municipality_tests, index_col=0)
+        df_municipality_cases = pd.read_csv(f_municipality_cases, index_col=0)
+        df_age                = pd.read_csv(f_age,                index_col=0)
 
-        return df_municipality, df_age
+        return df_municipality_cases, df_municipality_tests, df_age
 
     if return_name :
         return date
@@ -637,8 +677,8 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
         date_delayed = datetime.datetime.strptime(date_current, '%Y_%m_%d') - datetime.timedelta(days=7)
         date_delayed = date_delayed.strftime('%Y_%m_%d')
 
-        _, df_current = get_SSI_data(date=date_current, return_data=True)
-        _, df_delayed = get_SSI_data(date=date_delayed, return_data=True)
+        _, _, df_current = get_SSI_data(date=date_current, return_data=True)
+        _, _, df_delayed = get_SSI_data(date=date_delayed, return_data=True)
 
         age_distribution_current_raw = df_current.to_numpy().flatten()
         age_distribution_delayed_raw = df_delayed.to_numpy().flatten()
@@ -660,7 +700,7 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
     return age_distribution_infected, age_distribution_immunized
 
 
-def load_kommune_infection_distribution(initial_distribution_file, kommune_dict) :
+def load_kommune_infection_distribution(initial_distribution_file, kommune_dict, beta = 0.55) :
 
     N_kommuner = np.max(kommune_dict['name_to_id']) + 1
 
@@ -674,23 +714,50 @@ def load_kommune_infection_distribution(initial_distribution_file, kommune_dict)
     else :
 
         if initial_distribution_file.lower() == 'newest' :
-            df, _ = get_SSI_data(date='newest', return_data=True)
+            df_cases, df_tests, _ = get_SSI_data(date='newest', return_data=True)
         else :
-            df = pd.read_csv(os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'], initial_distribution_file + '.csv'), index_col=0)
+            df_cases = pd.read_csv(os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'], initial_distribution_file + '.csv'), index_col=0)
+            df_tests = pd.read_csv(os.path.join(load_yaml('cfg/files.yaml')['municipalityTestsFolder'], initial_distribution_file + '.csv'), index_col=0)
 
-        df = df.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA'])
-        names =  df.columns
-        values = df.to_numpy()
+        df_cases = df_cases.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA'])
+        df_tests = df_tests.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA', 'Christiansø'])
 
-        # Match the indicies
-        i_out = kommune_dict['name_to_id'][names]
+        names_c  = df_cases.columns
+        values_c = df_cases.to_numpy()
+
+        names_t  = df_tests.columns
+        values_t = df_tests.to_numpy()
+
+        # Must have same dates in both datasets
+        intersection = df_cases.index.intersection(df_tests.index)
+        idx_c = np.isin(df_cases.index, intersection)
+        idx_t = np.isin(df_tests.index, intersection)
+
+        values_c = values_c[idx_c, :]
+        values_t = values_t[idx_t, :]
+
+        test_per_kommune   = np.zeros((len(values_t), N_kommuner))
+        cases_per_kommune  = np.zeros((len(values_c), N_kommuner))
+
+
+        # Match the columns indicies
+        i_out_c = kommune_dict['name_to_id'][names_c]
+        i_out_t = kommune_dict['name_to_id'][names_t]
+
+        cases_per_kommune[:, i_out_c] = values_c
+        test_per_kommune[:,  i_out_t] = values_t
+
+        # Divide and correct for nans
+        with np.errstate(divide="ignore", invalid="ignore") :
+            incidence_per_kommune = cases_per_kommune / test_per_kommune ** beta
+            incidence_per_kommune[test_per_kommune == 0] = 0
 
         # Swap arrays for the last 7 days
-        I = len(df.index) - 7
+        I = len(df_cases.index) - 7
 
         # Fill the arrays
-        immunized_per_kommune[i_out] += np.sum(values[:I, :], axis=0)
-        infected_per_kommune[i_out]  += np.sum(values[I:, :], axis=0)
+        immunized_per_kommune += np.sum(incidence_per_kommune[:I, :], axis=0)
+        infected_per_kommune  += np.sum(incidence_per_kommune[I:, :], axis=0)
 
     return infected_per_kommune, immunized_per_kommune
 

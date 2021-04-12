@@ -13,18 +13,18 @@ from src.analysis.plotters import *
 
 
 # This runs simulations with specified percentage effects of the seasonality model
-params, start_date = utils.load_params("cfg/analyzers/seasonality.yaml")
+params, start_date = utils.load_params("cfg/analyzers/population_density.yaml")
 
 if utils.is_local_computer():
-    f = 0.5
+    f = 0.1
     n_steps = 1
     num_cores_max = 1
-    N_runs = 3
+    N_runs = 1
 else :
     f = 0.5
-    n_steps = 1
-    num_cores_max = 15
-    N_runs = 3
+    n_steps = 3
+    num_cores_max = 5
+    N_runs = 1
 
 
 if num_cores_max == 1 :
@@ -47,6 +47,9 @@ if __name__ == "__main__":
 
     print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
     print("Finished simulating!")
+
+
+
 
 
 # Load the simulations

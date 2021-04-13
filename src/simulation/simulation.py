@@ -744,9 +744,7 @@ def run_simulations(
     if num_cores == 1 :
         for cfg in tqdm(cfgs) :
             cfg_out = run_single_simulation(cfg, save_initial_network=True, verbose=verbose, **kwargs)
-            print("debug 0")
             update_database(db_cfg, q, cfg_out)
-            print("debug 1")
 
     else :
         # First generate the networks

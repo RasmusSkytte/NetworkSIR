@@ -1,5 +1,5 @@
 N_tot: 5_800_000
-rho: 0.1
+rho: [0.2, 0.1, 0.05, 0.025, 0.0125]
 
 N_init: 6000
 beta: 0.03
@@ -7,7 +7,7 @@ beta: 0.03
 R_guess: 0.75
 
 # english type corona
-N_init_UK_frac: 0.0
+N_init_UK_frac: 1.0
 beta_UK_multiplier: 1.55
 
 R_init : 5_800_000 * 0
@@ -23,6 +23,10 @@ start_date : 2021-01-01
 end_date : 2021-03-01
 
 
+labels: kommune
+label_map: [[[None]]]
+label_multiplier : [[1.0]]
+label_frac : [[1.0]]
 
 contact_matrices_name: basis  # Target activity
 

@@ -1,3 +1,4 @@
+from logging import warning
 import numpy as np
 import pandas as pd
 
@@ -8,7 +9,7 @@ from numba.core.errors import (
     NumbaPendingDeprecationWarning, # TODO : Delete line
 )
 
-
+import warnings
 
 from pathlib import Path
 import os
@@ -291,6 +292,17 @@ class Simulation :
                 labels[np.isin(labels_raw, self.kommune_dict['name_to_id'][label_group])] = new_label + 1
 
 
+        # Set labels for each label if scalar is given
+        if len(self.cfg.label_multiplier) == 1 :
+            self.cfg.label_multiplier = np.full(np.max(labels) + 1, fill_value=self.cfg.label_multiplier, dtype=np.float32)
+            self.my.cfg.label_multiplier = self.cfg.label_multiplier
+
+        # Set label_frac for each label if scalar is given
+        if len(self.cfg.label_frac) == 1 :
+            self.cfg.label_frac = np.full(np.max(labels) + 1, fill_value=self.cfg.label_frac, dtype=np.float32)
+            self.my.cfg.label_frac = self.cfg.label_frac
+
+
         if verbose_interventions is None :
             verbose_interventions = self.verbose
 
@@ -569,6 +581,11 @@ class Simulation :
             self.df.to_csv(filename_csv, index=False)
 
         if save_hdf5 :
+
+            if self.cfg.labels == 'kommune' :
+                warnings.warn("Cannot save hd5f when labels == 'kommune'")
+                return
+
             filename_hdf5 = self._get_filename(name='ABM', filetype='hdf5')
             file_loaders.make_sure_folder_exist(filename_hdf5)
             with h5py.File(filename_hdf5, 'w', **hdf5_kwargs) as f :  #
@@ -586,6 +603,7 @@ class Simulation :
 
         with h5py.File(filename_hdf5, 'w', **hdf5_kwargs) as f :  #
             f.create_dataset('my_state', data=self.my_state)
+            f.create_dataset('my_label', data=self.my.label)
             f.create_dataset('my_corona_type', data=self.my.corona_type)
 
             f.create_dataset('my_number_of_contacts', data=self.my.number_of_contacts)
@@ -599,7 +617,7 @@ class Simulation :
             f.create_dataset("R_true", data=self.intervention.R_true_list)
             f.create_dataset("freedom_impact", data=self.intervention.freedom_impact_list)
             f.create_dataset("R_true_brit", data=self.intervention.R_true_list_brit)
-            f.create_dataset("df", data=utils.dataframe_to_hdf5_format(self.df))
+            #f.create_dataset("df", data=utils.dataframe_to_hdf5_format(self.df))
             # f.create_dataset(
             #     "df_coordinates",
             #     data=utils.dataframe_to_hdf5_format(self.df_coordinates, cols_to_str="kommune"),
@@ -726,7 +744,9 @@ def run_simulations(
     if num_cores == 1 :
         for cfg in tqdm(cfgs) :
             cfg_out = run_single_simulation(cfg, save_initial_network=True, verbose=verbose, **kwargs)
+            print("debug 0")
             update_database(db_cfg, q, cfg_out)
+            print("debug 1")
 
     else :
         # First generate the networks

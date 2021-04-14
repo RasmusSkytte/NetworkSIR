@@ -45,13 +45,15 @@ def add_daily_events(
     for _ in range(int(N_events)) :
 
         # Choose event type
+        event_type = 0
         event_beta_scaling = my.cfg.event_beta_scaling
         if np.random.rand() < my.cfg.outdoor_indoor_event_ratio :
+            event_type = 1
             event_beta_scaling *= my.cfg.outdoor_beta_scaling
 
         # Choose event size and duration
-        event_size = int(-np.log(np.random.rand()) * my.cfg.event_size_mean)
-        event_size = min(event_size, event_size_max)
+        event_size = int(-np.log(np.random.rand()) * my.cfg.event_size_mean[event_type])
+        event_size = min(event_size, event_size_max[event_type])
 
         event_duration = -np.log(np.random.rand()) * 2 / 24  # event duration in days (average 2 hours)
 

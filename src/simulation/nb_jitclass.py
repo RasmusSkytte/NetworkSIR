@@ -46,8 +46,8 @@ spec_cfg = {
     'start_date_offset' : nb.int16,
     # events
     'N_events' : nb.uint16,
-    'event_size_max' : nb.uint16,
-    'event_size_mean' : nb.float32,
+    'event_size_max' : ListType(nb.uint16),
+    'event_size_mean' : ListType(nb.float32),
     'event_beta_scaling' : nb.float32,
     'event_weekend_multiplier' : nb.float32,
     'event_rho' : nb.float32,
@@ -113,8 +113,8 @@ class Config(object) :
 
         # events
         self.N_events = 0
-        self.event_size_max = 0
-        self.event_size_mean = 50
+        self.event_size_max = [0, 0]
+        self.event_size_mean = [50, 50]
         self.event_beta_scaling = 10
         self.event_weekend_multiplier = 1.0
         self.event_rho = 0.1

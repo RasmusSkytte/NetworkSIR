@@ -310,11 +310,11 @@ def load_sogn_to_kommune_idx(filename="Data/population_information/sogn_to_kommu
     return np.loadtxt(filename).astype(int)
 
 
-def parse_household_data_sogn(filename, kommune_dict=None) :
+def parse_household_data_sogn(filename) :
 
     df = pd.read_excel(filename, skiprows=3, engine='openpyxl')
     df = df.set_index(df.columns[0])
-    df=df.fillna(0)
+    df = df.fillna(0)
     df = df.rename({"6+":6},axis='columns')
     return df
 

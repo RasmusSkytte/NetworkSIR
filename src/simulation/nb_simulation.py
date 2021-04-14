@@ -748,6 +748,7 @@ def run_simulation(
                         day,
                         agents_in_state,
                         state_total_counts,
+                        stratified_infection_counts,
                         where_infections_happened_counter)
 
 

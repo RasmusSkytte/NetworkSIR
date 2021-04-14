@@ -78,13 +78,16 @@ class Simulation :
 
     def _place_and_connect_families_sogne_specific(self):
 
-        sogne, name_to_idx_sogn, idx_to_name_sogn = file_loaders.load_sogne_shapefiles(self.verbose)
-
-        kommuner, name_to_idx, idx_to_name = file_loaders.load_kommune_shapefiles(self.verbose)
-        household_size_distribution_sogn, age_distribution_in_households = file_loaders.load_household_data_sogn(name_to_idx)
-        people_in_sogn = np.array(utils.people_per_sogn(household_size_distribution_sogn))
+        # Load sogn and kommune information
+        sogne, _, _ = file_loaders.load_sogne_shapefiles(self.verbose)
+        _, name_to_idx, _ = file_loaders.load_kommune_shapefiles(self.verbose)
         sogn_to_kommune_idx = file_loaders.load_sogn_to_kommune_idx()
 
+        # Load demographic information
+        household_size_distribution_sogn, age_distribution_in_households = file_loaders.load_household_data_sogn(name_to_idx)
+        people_in_sogn = np.array(utils.people_per_sogn(household_size_distribution_sogn))
+
+        # Place agents
         N_tot = self.my.cfg_network.N_tot
 
         all_indices = np.arange(N_tot, dtype=np.uint32)
@@ -104,16 +107,18 @@ class Simulation :
         while do_continue :
 
             agent0 = agent
-            house_index = all_indices[agent]
-            rand_choice = nb_helpers.rand_choice_nb(people_in_sogn)
 
-            sogn = household_size_distribution_sogn.iloc[rand_choice].name
-            coordinates = utils.generate_coordinate(sogn, sogne)
+            # Choose location
+            sogn_idx  = nb_helpers.rand_choice_nb(people_in_sogn)
+            sogn_kode = household_size_distribution_sogn.iloc[sogn_idx].name
+
+            kommune_idx = sogn_to_kommune_idx[sogn_idx]
+
+            coordinates = utils.generate_coordinate(sogn_kode, sogne)
             coordinates = (coordinates.x, coordinates.y)
-            kommune_id = int(sogn_to_kommune_idx[rand_choice])
 
             #Draw size of household form distribution
-            people_in_household_sogn = np.array(household_size_distribution_sogn.loc[sogn].iloc[:6])
+            people_in_household_sogn = np.array(household_size_distribution_sogn.loc[sogn_idx].iloc[:6])
 
 
             agent, do_continue, mu_counter = nb_network.generate_one_household(people_in_household_sogn,
@@ -129,8 +134,8 @@ class Simulation :
                                                                     mu_counter,
                                                                     people_index_to_value,
                                                                     house_sizes,
-                                                                    kommune_id
-                                                                    )
+                                                                    sogn_idx,
+                                                                    kommune_idx)
 
         agents_in_age_group = utils.nested_lists_to_list_of_array(agents_in_age_group)
 

@@ -307,7 +307,7 @@ def parse_household_data(filename, kommune_dict=None) :
 
 def load_sogn_to_kommune_idx(filename="Data/population_information/sogn_to_kommune.csv"):
     # list of the n-th sogn in sogne_household_file to kommune idx
-    return np.loadtxt(filename)
+    return np.loadtxt(filename).astype(int)
 
 
 def parse_household_data_sogn(filename, kommune_dict=None) :

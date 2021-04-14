@@ -216,7 +216,7 @@ spec_my = {
     'infection_weight' : nb.float64[:],
     'number_of_contacts' : nb.uint16[:],
     'state' : nb.int8[:],
-    'kommune' : nb.uint8[:],
+    'sogn' : nb.uint8[:],
     'label' : nb.uint8[:],
     'infectious_states' : ListType(nb.int64),
     'corona_type' : nb.uint8[:],
@@ -244,7 +244,7 @@ class My(object) :
         self.infection_weight = np.ones(N_tot, dtype=np.float64)
         self.number_of_contacts = np.zeros(N_tot, dtype=nb.uint16)
         self.state = np.full(N_tot, fill_value=-1, dtype=np.int8)
-        self.kommune = np.zeros(N_tot, dtype=np.uint8)
+        self.sogn = np.zeros(N_tot, dtype=np.uint8)
         self.infectious_states = List([4, 5, 6, 7])
         self.corona_type = np.zeros(N_tot, dtype=np.uint8)
         self.vaccination_type = np.zeros(N_tot, dtype=np.uint8)
@@ -401,7 +401,7 @@ spec_intervention = {
 @jitclass(spec_intervention)
 class Intervention(object) :
     """
-    - N_labels : Number of labels. "Label" here can refer to either tent or kommune.
+    - N_labels : Number of labels. "Label" here can be sogn, kommune, landsdel, region or Danmark.
     - label_counter : count how many agent belong to a particular label
 
     - day_found_infected : -1 if not infected, otherwise the day of infection

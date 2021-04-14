@@ -44,6 +44,11 @@ def add_daily_events(
 
     for _ in range(int(N_events)) :
 
+        # Choose event type
+        event_beta_scaling = my.cfg.event_beta_scaling
+        if np.random.rand() < my.cfg.outdoor_indoor_event_ratio :
+            event_beta_scaling *= my.cfg.outdoor_beta_scaling
+
         # Choose event size and duration
         event_size = int(-np.log(np.random.rand()) * my.cfg.event_size_mean)
         event_size = min(event_size, event_size_max)
@@ -56,7 +61,7 @@ def add_daily_events(
         agents_in_this_event = List()
         while len(agents_in_this_event) < event_size :
             guest = np.random.randint(N_tot)
-            rho_tmp = 0.5
+            rho_tmp = my.cfg.event_rho
             epsilon_rho_tmp = 4 / 100
             if my.dist_accepted(event_id, guest, rho_tmp) or np.random.rand() < epsilon_rho_tmp :
                 agents_in_this_event.append(np.uint32(guest))
@@ -72,7 +77,7 @@ def add_daily_events(
 
                         # How long did they interact at the event?
                         time = np.random.uniform(0, event_duration)
-                        probability = my.infection_weight[agent] * time * my.cfg.event_beta_scaling
+                        probability = my.infection_weight[agent] * time * event_beta_scaling
 
                         # Infect
                         if np.random.rand() < probability :

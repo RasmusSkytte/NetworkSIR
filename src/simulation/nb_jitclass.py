@@ -50,6 +50,11 @@ spec_cfg = {
     'event_size_mean' : nb.float32,
     'event_beta_scaling' : nb.float32,
     'event_weekend_multiplier' : nb.float32,
+    'event_rho' : nb.float32,
+    'event_epsilon_rho' : nb.float32,
+    'outdoor_indoor_event_ratio' : nb.float32,
+    'outdoor_beta_scaling' : nb.float32,
+
     # lockdown-related / interventions
     'do_interventions' : nb.boolean,
     'threshold_type' : nb.int8, # which thing set off restrictions : 0 : certain date. 1 : 'real' incidens rate 2 : measured incidens rate
@@ -112,6 +117,11 @@ class Config(object) :
         self.event_size_mean = 50
         self.event_beta_scaling = 10
         self.event_weekend_multiplier = 1.0
+        self.event_rho = 0.1
+        self.event_epsilon_rho = 0.04
+        self.outdoor_indoor_event_ratio = 0.5
+        self.outdoor_beta_scaling = 1
+
         # Interventions / Lockdown
         self.do_interventions = True
 

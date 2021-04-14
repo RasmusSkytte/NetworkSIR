@@ -87,6 +87,13 @@ class Simulation :
         household_size_distribution_sogn, age_distribution_in_households = file_loaders.load_household_data_sogn(name_to_idx)
         people_in_sogn = np.array(utils.people_per_sogn(household_size_distribution_sogn))
 
+        # Create map for the outdated sogne
+        sogn_code = household_size_distribution_sogn.index.values
+        sogne_map = pd.Series(data = sogn_code, name='sogne_translator')
+        sogne_translator = pd.Series({7247:9323, 7247:9323, 7636:9195, 8885:9196, 7249:9315, 8744:9317, 7615:9318, 7250:9315, 7625:9194, 8654:9320, 9271:9196, 7643:9319, 7447:9311, 7616:9318, 8141:9316, 8164:9193, 8306:9191, 7240:9183, 8688:9198, 8846:9314, 7618:9318, 7902:9188, 7365:9322, 8884:9196, 7252:9312, 7619:9321, 7025:9190, 8320:9187, 9227:9197, 7398:9186, 7244:9183, 7329:9324, 7241:9183, 7397:9186, 8743:9317, 7637:9195, 7302:9189, 7612:9318, 8321:9187, 7647:9319, 8623:9215, 8687:9198, 7030:9190, 7366:9322, 7328:9324, 7638:9195, 7242:9183, 8322:9232, 7293:9192, 8163:9193, 8831:9199, 7331:9324, 8830:9199, 9064:9197, 9261:9188, 8845:9314, 7301:9189, 8923:9313, 7617:9318, 7243:9183, 8924:9313, 7624:9194, 7292:9192, 7251:9312, 8307:9191, 8653:9320, 9086:9316, 7621:9194, 7620:9321, 7248:9323, 9245:9315, 8620:9214, 7282:9292})
+        sogne_map = sogne_map.replace(sogne_translator)
+
+
         # Place agents
         N_tot = self.my.cfg_network.N_tot
 
@@ -100,7 +107,6 @@ class Simulation :
         agents_in_age_group = utils.initialize_nested_lists(self.N_ages, dtype=np.uint32)
         house_sizes = np.zeros(len(people_index_to_value), dtype=np.int64)
 
-
         mu_counter = 0
         agent = 0
         do_continue = True
@@ -110,14 +116,13 @@ class Simulation :
 
             # Choose location
             sogn_idx  = nb_helpers.rand_choice_nb(people_in_sogn)
-            sogn_kode = household_size_distribution_sogn.iloc[sogn_idx].name
 
             kommune_idx = sogn_to_kommune_idx[sogn_idx]
 
-            coordinates = utils.generate_coordinate(sogn_kode, sogne)
+            coordinates = utils.generate_coordinate(sogne_map[sogn_idx], sogne)
             coordinates = (coordinates.x, coordinates.y)
 
-            #Draw size of household form distribution
+            # Draw size of household form distribution
             people_in_household_sogn = np.array(household_size_distribution_sogn.loc[sogn_idx].iloc[:6])
 
 
@@ -134,7 +139,7 @@ class Simulation :
                                                                     mu_counter,
                                                                     people_index_to_value,
                                                                     house_sizes,
-                                                                    sogn_idx,
+                                                                    sogne_map[sogn_idx],
                                                                     kommune_idx)
 
         agents_in_age_group = utils.nested_lists_to_list_of_array(agents_in_age_group)
@@ -280,14 +285,22 @@ class Simulation :
     def intialize_interventions(self, verbose_interventions=None) :
 
         if self.verbose :
-            print("\nINITIALING INTERVENTIONS")
+            print('\nINITIALING INTERVENTIONS')
 
-        if self.cfg.labels.lower() == "kommune" :
-            labels = self.my.kommune
+        if self.cfg.labels.lower() == 'sogn' :
+            labels = self.my.sogn
 
+        elif self.cfg.labels.lower() == 'kommune' :
+            labels = self.label_map['kommune'][self.my.sogn]
 
-        elif self.cfg.labels.lower() == "none" :
-            labels = np.zeros(np.shape(self.my.kommune))
+        elif self.cfg.labels.lower() == 'landsdel' :
+            labels = self.label_map['landsdel'][self.my.sogn]
+
+        elif self.cfg.labels.lower() == 'region' :
+            labels = self.label_map['region'][self.my.sogn]
+
+        elif self.cfg.labels.lower() == 'country' :
+            labels = self.label_map['region'][self.my.sogn]
 
         else :
             labels_raw = self.my.kommune
@@ -358,7 +371,7 @@ class Simulation :
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
         if self.verbose :
-            print("\nINITIAL INFECTIONS")
+            print('\nINITIAL INFECTIONS')
 
         np.random.seed(utils.hash_to_seed(self.hash))
 

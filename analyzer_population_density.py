@@ -57,7 +57,8 @@ if __name__ == "__main__":
     print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
     print("Finished simulating!")
 
-
+if not utils.is_local_computer():
+    return
 
 
 # Load the simulations

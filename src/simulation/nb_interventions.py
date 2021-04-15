@@ -816,9 +816,9 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
 
                             if verbose :
                                 if intervention.N_labels > 1 :
-                                    print('Intervention type : matrix restriction, name: ', intervention.cfg.Intervention_contact_matrices_name[k] + '_label_' + str(ith_label) )
+                                    print('Intervention type : matrix restriction, name:', intervention.cfg.Intervention_contact_matrices_name[k] + '_label_' + str(ith_label) )
                                 else :
-                                    print('Intervention type : matrix restriction, name: ', intervention.cfg.Intervention_contact_matrices_name[k])
+                                    print('Intervention type : matrix restriction, name:', intervention.cfg.Intervention_contact_matrices_name[k])
 
                             matrix_restriction_on_label(
                                 my,
@@ -835,7 +835,9 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                             k = np.sum(intervention.cfg.threshold_interventions_to_apply[:i] == 4)
 
                             if verbose :
-                                print('Intervention type : event restriction, name: ')
+                                print('Intervention type : event restriction:', intervention.cfg.event_size_max[k])
+
+                            intervention.event_size_max = intervention.cfg.event_size_max[k]
 
                         # Remove restrictions
                         elif intervention.cfg.threshold_interventions_to_apply[i] in [-1, -2, -3] :

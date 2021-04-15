@@ -46,7 +46,7 @@ spec_cfg = {
     'start_date_offset' : nb.int16,
     # events
     'N_events' : nb.uint16,
-    'event_size_max' : nb.uint32[:],
+    'event_size_max' : nb.uint32[:, :],
     'event_size_mean' : nb.float32[:],
     'event_beta_scaling' : nb.float32,
     'event_weekend_multiplier' : nb.float32,
@@ -113,8 +113,8 @@ class Config(object) :
 
         # events
         self.N_events = 0
-        self.event_size_max = np.array([50, 50], dtype=np.uint32)
-        self.event_size_mean = np.array([50, 50], dtype=np.float32)
+        self.event_size_max = np.array([[50, 50]], dtype=np.uint32)
+        self.event_size_mean = np.array([50, 50],  dtype=np.float32)
         self.event_beta_scaling = 10
         self.event_weekend_multiplier = 1.0
         self.event_rho = 0.1
@@ -404,6 +404,7 @@ spec_intervention = {
     "vaccination_schedule" : nb.int32[:, :],
     "work_matrix_restrict" : nb.float64[:, :, :, :],
     "other_matrix_restrict" : nb.float64[:, :, :, :],
+    'event_size_max' : nb.uint32[:],
     "verbose" : nb.boolean,
 }
 
@@ -484,7 +485,7 @@ class Intervention(object) :
         self.vaccination_schedule       = vaccination_schedule
         self.work_matrix_restrict       = work_matrix_restrict
         self.other_matrix_restrict      = other_matrix_restrict
-
+        self.event_size_max             = self.cfg.event_size_max[0]
         self.verbose = verbose
 
     def _initialize_labels(self, labels) :

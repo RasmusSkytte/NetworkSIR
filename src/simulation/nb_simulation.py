@@ -745,6 +745,7 @@ def run_simulation(
                     add_daily_events(
                         my,
                         g,
+                        intervention,
                         day,
                         agents_in_state,
                         state_total_counts,

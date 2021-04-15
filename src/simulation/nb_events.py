@@ -18,6 +18,7 @@ import src.simulation.nb_simulation as nb_simulation
 def add_daily_events(
     my,
     g,
+    intervention,
     day,
     agents_in_state,
     state_total_counts,
@@ -25,7 +26,7 @@ def add_daily_events(
     where_infections_happened_counter) :
 
     N_tot = my.cfg_network.N_tot
-    event_size_max = my.cfg.event_size_max
+    event_size_max = intervention.event_size_max
 
     # if no max, set it to N_tot
     for i in range(len(event_size_max)) :
@@ -53,7 +54,7 @@ def add_daily_events(
 
         # Choose event size and duration
         event_size = int(-np.log(np.random.rand()) * my.cfg.event_size_mean[event_type])
-        event_size = min(event_size, my.cfg.event_size_max[event_type])
+        event_size = min(event_size, event_size_max[event_type])
 
         event_duration = -np.log(np.random.rand()) * 2 / 24  # event duration in days (average 2 hours)
 
@@ -79,7 +80,12 @@ def add_daily_events(
 
                         # How long did they interact at the event?
                         time = np.random.uniform(0, event_duration)
-                        probability = my.infection_weight[agent] * time * event_beta_scaling
+
+                        infection_weight = my.infection_weight[agent]
+                        if my.corona_type[agent] == 1 :
+                            infection_weight *= my.cfg.beta_UK_multiplier
+
+                        probability = infection_weight * time * event_beta_scaling
 
                         # Infect
                         if np.random.rand() < probability :

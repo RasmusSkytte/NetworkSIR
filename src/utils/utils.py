@@ -44,7 +44,7 @@ from src.simulation import nb_jitclass
 from decimal import Decimal
 
 
-from range_key_dict import RangeKeyDict  # pip install range-key-dict
+from range_key_dict import RangeKeyDict
 from itertools import product
 from functools import reduce
 from operator import iand
@@ -52,8 +52,7 @@ from operator import iand
 from sympy.parsing.sympy_parser import parse_expr
 
 import geopandas as gpd
-from shapely.geometry import Point, Polygon
-from shapely.geometry import mapping as _polygon_to_array
+from shapely.geometry import Point
 
 
 def sha256(d) :

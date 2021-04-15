@@ -123,7 +123,7 @@ class Simulation :
             coordinates = (coordinates.x, coordinates.y)
 
             # Draw size of household form distribution
-            people_in_household_sogn = np.array(household_size_distribution_sogn.iloc[sogn_idx].iloc[:6])
+            people_in_household_sogn = np.array(household_size_distribution_sogn.loc[sogn_idx].iloc[:6])
 
 
             agent, do_continue, mu_counter = nb_network.generate_one_household(people_in_household_sogn,
@@ -287,14 +287,20 @@ class Simulation :
         if self.verbose :
             print('\nINITIALING INTERVENTIONS')
 
-        # Load the label map
-        self.label_map = pd.read_csv('Data/label_map.csv')
-
         if self.cfg.labels.lower() == 'sogn' :
             labels = self.my.sogn
 
         elif self.cfg.labels.lower() == 'kommune' :
-            labels = self.label_map['kommune_idx'][self.my.sogn]
+            labels = self.label_map['kommune'][self.my.sogn]
+
+        elif self.cfg.labels.lower() == 'landsdel' :
+            labels = self.label_map['landsdel'][self.my.sogn]
+
+        elif self.cfg.labels.lower() == 'region' :
+            labels = self.label_map['region'][self.my.sogn]
+
+        elif self.cfg.labels.lower() == 'country' :
+            labels = self.label_map['region'][self.my.sogn]
 
         elif self.cfg.labels.lower() == 'landsdel' :
             labels = self.label_map['landsdel_idx'][self.my.sogn]

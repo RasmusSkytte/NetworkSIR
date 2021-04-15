@@ -2037,41 +2037,35 @@ def load_params(filename) :
     params = params.to_dict()
 
     # Parse inputs
-    params["R_init"]   = parse_parameter(params["R_init"])
-    params["lambda_E"] = parse_parameter(params["lambda_E"])
-    params["lambda_I"] = parse_parameter(params["lambda_I"], rounding=5)
+    params['R_init']   = parse_parameter(params['R_init'])
+    params['lambda_E'] = parse_parameter(params['lambda_E'])
+    params['lambda_I'] = parse_parameter(params['lambda_I'], rounding=5)
 
-    start_date = params["start_date"]
-    params.pop("start_date")
+    start_date = params['start_date']
+    params.pop('start_date')
 
-    end_date = params["end_date"]
-    params.pop("end_date")
+    end_date = params['end_date']
+    params.pop('end_date')
 
-    params["day_max"] = (end_date - start_date).days
-    params["start_date_offset"] = (start_date - params["start_date_offset"]).days
+    params['day_max'] = (end_date - start_date).days
+    params['start_date_offset'] = (start_date - params['start_date_offset']).days
 
-    if isinstance(params["restriction_thresholds"], list) :
+    if isinstance(params['restriction_thresholds'], list) :
 
-        restriction_dates = [date for date in params["restriction_thresholds"][0]]
+        restriction_dates = [date for date in params['restriction_thresholds'][0]]
 
-        date_1 = start_date + datetime.timedelta(days=1)
-        date_2 = restriction_dates[0]
-
-        intervals = []
-        for i in range(len(restriction_dates)) :
-            intervals.extend([ (date_1 - start_date).days, (date_2 - start_date).days])
-
-            if i < len(restriction_dates) - 1 :
-                date_1 = restriction_dates[i]
-                date_2 = restriction_dates[i+1]
+        dates = [0]
+        for i in range(1, len(restriction_dates)) :
+            date = restriction_dates[i]
+            dates.append((date - start_date).days)
 
     else :
-        intervals = [1, (params["restriction_thresholds"] - start_date).days]
+        dates = [(params['restriction_thresholds'] - start_date).days]
 
-    params["restriction_thresholds"] =  [intervals]
+    params['restriction_thresholds'] =  [dates]
 
-    if "initial_infection_distribution" in params.keys() and isinstance(params["initial_infection_distribution"], datetime.date) :
-        params["initial_infection_distribution"] = params["initial_infection_distribution"].strftime('%Y_%m_%d')
+    if 'initial_infection_distribution' in params.keys() and isinstance(params['initial_infection_distribution'], datetime.date) :
+        params['initial_infection_distribution'] = params['initial_infection_distribution'].strftime('%Y_%m_%d')
 
     return params, start_date
 

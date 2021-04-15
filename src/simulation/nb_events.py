@@ -28,8 +28,9 @@ def add_daily_events(
     event_size_max = my.cfg.event_size_max
 
     # if no max, set it to N_tot
-    if event_size_max == 0 :
-        event_size_max = N_tot
+    for i in range(len(event_size_max)) :
+        if event_size_max[i] == 0 :
+            event_size_max[i] = N_tot
 
     # Determine the number of events
     N_events = my.cfg.N_events
@@ -37,7 +38,6 @@ def add_daily_events(
     # if weekend increase number of events
     if (day % 7) == 0 or (day % 7) == 1 :
         N_events *= my.cfg.event_weekend_multiplier
-
 
     # Find all agents getting infected
     agents_getting_infected_at_any_event = List()
@@ -53,7 +53,7 @@ def add_daily_events(
 
         # Choose event size and duration
         event_size = int(-np.log(np.random.rand()) * my.cfg.event_size_mean[event_type])
-        event_size = min(event_size, event_size_max[event_type])
+        event_size = min(event_size, my.cfg.event_size_max[event_type])
 
         event_duration = -np.log(np.random.rand()) * 2 / 24  # event duration in days (average 2 hours)
 
@@ -64,7 +64,7 @@ def add_daily_events(
         while len(agents_in_this_event) < event_size :
             guest = np.random.randint(N_tot)
             rho_tmp = my.cfg.event_rho
-            epsilon_rho_tmp = 4 / 100
+            epsilon_rho_tmp = my.cfg.event_epsilon_rho
             if my.dist_accepted(event_id, guest, rho_tmp) or np.random.rand() < epsilon_rho_tmp :
                 agents_in_this_event.append(np.uint32(guest))
 

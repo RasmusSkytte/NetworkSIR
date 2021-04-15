@@ -26,7 +26,7 @@ lambda_I: 1.0  # I->R, Lambda(from I states)
 make_random_initial_infections: True # Infections around a single agent
 weighted_random_initial_infections: False # Infections weighted by the number of contacts
 initialize_at_kommune_level: False # Initiate infections at kommune basis
-labels: region  #none, kommune, custom (needs a label_map)
+labels: custom  #none, kommune, custom (needs a label_map)
 label_map: [[Albertslund, Allerød, Ballerup, Bornholm, Brøndby, København, Dragør, Egedal, Fredensborg, Frederiksberg, Frederikssund, Furesø, Gentofte, Gladsaxe, Glostrup, Gribskov, Halsnæs, Helsingør, Herlev, Hillerød, Hvidovre, Høje-Taastrup, Hørsholm, Ishøj, Lyngby-Taarbæk, Rudersdal, Rødovre, Tårnby, Vallensbæk], #  Hovedstaden
             [Aalborg, Brønderslev, Frederikshavn, Hjørring, Jammerbugt, Læsø, Mariagerfjord, Morsø, Rebild, Thisted, Vesthimmerlands], # Nordjylland
             [Favrskov, Hedensted, Herning, Holstebro, Horsens, Ikast-Brande, Lemvig, Norddjurs, Odder, Randers, Ringkøbing-Skjern, Samsø, Silkeborg, Skanderborg, Skive, Struer, Syddjurs, Viborg, Aarhus], # Midtjylland
@@ -47,7 +47,7 @@ do_interventions: True
 # [[kind of interventions], [start, stop intervention 0],[start, stop intervention 1] etc ]
 restriction_thresholds: [1, 39]
 
-threshold_type: 0
+threshold_types: [0]
   # 0: Specific dates
   # 1: Real incidence rate
   # 2: Measured incidence rate
@@ -57,6 +57,7 @@ threshold_interventions_to_apply: [3]
   # 1: lockdown (cut some contacts and reduce the rest)
   # 2: Masking (reduce some contacts)
   # 3: Matrix based (used loaded contact matrices)
+  # 4: Events (change the allowed event sizes)
 
 continuous_interventions_to_apply: [1, 2, 3, 4, 5]
     # 0: Do nothing
@@ -67,7 +68,7 @@ continuous_interventions_to_apply: [1, 2, 3, 4, 5]
     # 5: vaccinations
 
 
-daily_tests: 100_000 # Daily tests for the full population
+daily_tests: 160_000 # Daily tests for the full population
 
 test_delay_in_clicks: [0, 0, 10] #clicks until test. [symptoms, random_test, tracing]
 results_delay_in_clicks: [10, 10, 5] #clicks from test until results. [symptoms, random_test, tracing]

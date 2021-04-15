@@ -202,10 +202,6 @@ class Simulation :
         # kommune_dict
         self.kommune_dict['id_to_name'].to_hdf(filename, key='id_to_name')
         self.kommune_dict['name_to_id'].to_hdf(filename, key='name_to_id')
-        #f.create_dataset("kommune_dict_keys",   data=list(self.kommune_dict.keys()))
-        #print(list(self.kommune_dict))
-        #print(type(list(self.kommune_dict.values())[0]))
-        #f.create_dataset("kommune_dict_values", data=list(self.kommune_dict.values()))
 
 
     def _load_initialized_network(self, filename) :
@@ -288,7 +284,7 @@ class Simulation :
             labels = np.zeros(np.shape(labels_raw))
 
             for new_label, label_group in enumerate(self.cfg['label_map']) :
-                labels[np.isin(labels_raw, self.kommune_dict['name_to_id'][label_group])] = new_label + 1
+                labels[np.isin(labels_raw, self.kommune_dict['name_to_id'][label_group])] = new_label
 
 
         if verbose_interventions is None :
@@ -319,8 +315,8 @@ class Simulation :
 
         for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
             for l in range(len(np.unique(labels))) :
-                wm[s,l,:,:] *= self.cfg.label_multiplier[l]
-                om[s,l,:,:] *= self.cfg.label_multiplier[l]
+                wm[s, l, :, :] *= self.cfg.label_multiplier[l]
+                om[s, l, :, :] *= self.cfg.label_multiplier[l]
 
         # Store the labels in my
         self.my.initialize_labels(labels)
@@ -594,16 +590,13 @@ class Simulation :
 
             f.create_dataset('day_found_infected', data=self.intervention.day_found_infected)
             f.create_dataset('coordinates', data=self.my.coordinates)
-            # import ast; ast.literal_eval(str(cfg))
+
             f.create_dataset("cfg_str", data=str(self.cfg))
             f.create_dataset("R_true", data=self.intervention.R_true_list)
             f.create_dataset("freedom_impact", data=self.intervention.freedom_impact_list)
             f.create_dataset("R_true_brit", data=self.intervention.R_true_list_brit)
             f.create_dataset("df", data=utils.dataframe_to_hdf5_format(self.df))
-            # f.create_dataset(
-            #     "df_coordinates",
-            #     data=utils.dataframe_to_hdf5_format(self.df_coordinates, cols_to_str="kommune"),
-            # )
+
 
             if time_elapsed :
                 f.create_dataset("time_elapsed", data=time_elapsed)

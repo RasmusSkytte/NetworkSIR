@@ -7,12 +7,12 @@ from tqdm import tqdm
 from contexttimer import Timer
 
 
-params, start_date = utils.load_params("cfg/simulation_parameters_season.yaml")
+params, start_date = utils.load_params("cfg/simulation_parameters_gatherings.yaml")
 
 if utils.is_local_computer():
-    f = 0.01
+    f = 0.1
     n_steps = 1
-    num_cores_max = 3
+    num_cores_max = 1
     N_runs = 3
 else :
     f = 0.5
@@ -158,6 +158,5 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
 
         print("--- Maximum likelihood value locations ---")
         terminal_printer("beta* :      ", betas,          cfg_best.beta                 , lls)
-        #terminal_printer("rel_beta* :  ", rel_betas,      cfg_best.beta_UK_multiplier   , lls)
         terminal_printer("N_init* :    ", N_init,         cfg_best.N_init               , lls)
         terminal_printer("N_UK_frac* : ", N_init_UK_frac, cfg_best.N_init_UK_frac       , lls)

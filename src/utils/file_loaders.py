@@ -520,6 +520,10 @@ def load_vaccination_schedule_file(scenario = "reference") :
         # Increment
         i += 1
 
+    # Check if any schedule was loaded
+    if len(vaccine_counts) == 0 :
+        raise ValueError(f'No vaccine schedule found that matches: {scenario}')
+
     # Normalize the contact matrices after this ratio has been determined
     return vaccine_counts, schedule
 

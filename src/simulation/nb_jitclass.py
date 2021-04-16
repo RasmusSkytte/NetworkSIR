@@ -46,15 +46,20 @@ spec_cfg = {
     'start_date_offset' : nb.int16,
     # events
     'N_events' : nb.uint16,
-    'event_size_max' : nb.uint16,
-    'event_size_mean' : nb.float32,
+    'event_size_max' : nb.uint32[:, :],
+    'event_size_mean' : nb.float32[:],
     'event_beta_scaling' : nb.float32,
     'event_weekend_multiplier' : nb.float32,
+    'event_rho' : nb.float32,
+    'event_epsilon_rho' : nb.float32,
+    'outdoor_indoor_event_ratio' : nb.float32,
+    'outdoor_beta_scaling' : nb.float32,
+
     # lockdown-related / interventions
     'do_interventions' : nb.boolean,
-    'threshold_type' : nb.int8, # which thing set off restrictions : 0 : certain date. 1 : 'real' incidens rate 2 : measured incidens rate
+    'threshold_types' : nb.int8[:], # which thing set off restrictions : 0 : certain date. 1 : 'real' incidens rate 2 : measured incidens rate
     'restriction_thresholds' : nb.int16[:], # len == 2*nr of different thresholds, on the form [start stop start stop etc.]
-    'threshold_interventions_to_apply' : ListType(nb.int64),
+    'threshold_interventions_to_apply' : nb.int8[:],
     'list_of_threshold_interventions_effects' : nb.float64[:, :, :],
     'continuous_interventions_to_apply' : ListType(nb.int64),
     'daily_tests' : nb.uint16,
@@ -109,10 +114,15 @@ class Config(object) :
 
         # events
         self.N_events = 0
-        self.event_size_max = 0
-        self.event_size_mean = 50
+        self.event_size_max = np.array([[50, 50]], dtype=np.uint32)
+        self.event_size_mean = np.array([50, 50],  dtype=np.float32)
         self.event_beta_scaling = 10
         self.event_weekend_multiplier = 1.0
+        self.event_rho = 0.1
+        self.event_epsilon_rho = 0.04
+        self.outdoor_indoor_event_ratio = 0.5
+        self.outdoor_beta_scaling = 1
+
         # Interventions / Lockdown
         self.do_interventions = True
 
@@ -395,6 +405,7 @@ spec_intervention = {
     "vaccination_schedule" : nb.int32[:, :],
     "work_matrix_restrict" : nb.float64[:, :, :, :],
     "other_matrix_restrict" : nb.float64[:, :, :, :],
+    'event_size_max' : nb.uint32[:],
     "verbose" : nb.boolean,
 }
 
@@ -486,7 +497,7 @@ class Intervention(object) :
         self.vaccination_schedule       = vaccination_schedule
         self.work_matrix_restrict       = work_matrix_restrict
         self.other_matrix_restrict      = other_matrix_restrict
-
+        self.event_size_max             = self.cfg.event_size_max[0]
         self.verbose = verbose
 
     def agent_not_found_positive(self, agent) :
@@ -533,12 +544,12 @@ class Intervention(object) :
 
     @property
     def start_interventions_by_day(self) :
-        return self.cfg.threshold_type == 0
+        return 0 in self.cfg.threshold_types
 
     @property
     def start_interventions_by_real_incidens_rate(self) :
-        return self.cfg.threshold_type == 1
+        return 1 in self.cfg.threshold_types
 
     @property
     def start_interventions_by_meassured_incidens_rate(self) :
-        return self.cfg.threshold_type == 2
+        return 2 in self.cfg.threshold_types

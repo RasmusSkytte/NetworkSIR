@@ -14,11 +14,11 @@ from src.analysis.helpers  import *
 from src.analysis.plotters import *
 
 # Define the subset to plot on
-subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan']} ]
+subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan', 'fase3/S3_0A_1', 'fase3/S3_0A_2', 'fase3/S3_0A_3']} ]
 
 
 for subset in subsets :
-    fig_name = Path('Figures/' + subset['Intervention_contact_matrices_name'][-1] + '.png')
+    fig_name = Path('Figures/' + subset['Intervention_contact_matrices_name'][-1].replace('/','_') + '.png')
 
     # Number of plots to keep
     N = 25
@@ -83,12 +83,12 @@ for subset in subsets :
         h  = plot_simulation_cases_and_variant_fraction(total_tests, f, t_day, t_week, axes1)
         h2 = plot_simulation_growth_rates(tests_by_variant, t_day, axes2)
         h3 = plot_simulation_category(tests_per_age_group, t_day, axes3)
-        h4 = plot_simulation_category(tests_by_region, t_day, axes4)
+        #h4 = plot_simulation_category(tests_by_region, t_day, axes4)
         h5 = plot_simulation_category(vaccinations_by_age_group, t_day, axes5)
 
         h.extend(h2)
         h.extend(h3)
-        h.extend(h4)
+        #h.extend(h4)
         h.extend(h5)
 
         # Evaluate
@@ -219,6 +219,14 @@ for subset in subsets :
 
         axes2[i].tick_params(axis='x', labelsize=24)
         axes2[i].tick_params(axis='y', labelsize=24)
+
+        # Add the dates of restrictions
+        for day in restiction_days :
+            restiction_date = start_date + datetime.timedelta(days=day)
+            for ax, lim in zip(axes1, ylims) :
+                ax.plot([restiction_date, restiction_date], lim, '--', color='k', linewidth=2)
+
+
 
 
     fig2.savefig(os.path.splitext(fig_name)[0] + '_growth_rates.png')

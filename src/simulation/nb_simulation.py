@@ -747,9 +747,11 @@ def run_simulation(
                     add_daily_events(
                         my,
                         g,
+                        intervention,
                         day,
                         agents_in_state,
                         state_total_counts,
+                        stratified_infection_counts,
                         where_infections_happened_counter)
 
 

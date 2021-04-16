@@ -33,9 +33,10 @@ for filename in filenames :
     params, start_date = utils.load_params(filename)
 
     # Scale the population
-    params["N_tot"]  = int(params["N_tot"]  * f)
-    params["N_init"] = int(params["N_init"] * f)
-    params["R_init"] = int(params["R_init"] * f)
+    params["N_tot"]    = int(params["N_tot"]  * f)
+    params["N_init"]   = int(params["N_init"] * f)
+    params["R_init"]   = int(params["R_init"] * f)
+    params["N_events"] = int(params["N_events"] * f)
 
 
     # Store the variables we loop over

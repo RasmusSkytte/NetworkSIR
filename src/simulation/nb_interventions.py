@@ -782,7 +782,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                         verbose=verbose
                     )
 
-    elif intervention.start_interventions_by_day :
+    if intervention.start_interventions_by_day :
         if day in list(intervention.cfg.restriction_thresholds) :
             for i, intervention_date in enumerate(intervention.cfg.restriction_thresholds) :
                 if day == intervention_date :
@@ -791,7 +791,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                         for ith_label, _ in enumerate(intervention.types) :
 
                             # if lockdown
-                            if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 1 :
+                            if intervention.cfg.threshold_interventions_to_apply[i] == 1 :
 
                                 if verbose :
                                     print('Intervention type : lockdown')
@@ -801,11 +801,11 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                                     g,
                                     intervention,
                                     label=ith_label,
-                                    rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[int(i/2)]
+                                    rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[i]
                                 )
 
                             # if masking
-                            if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 2 :
+                            elif intervention.cfg.threshold_interventions_to_apply[i] == 2 :
                                 if verbose :
                                     print('Intervention type : masks')
 
@@ -814,41 +814,49 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                                     g,
                                     intervention,
                                     label=ith_label,
-                                    rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[int(i/2)]
+                                    rate_reduction=intervention.cfg.list_of_threshold_interventions_effects[i]
                                 )
 
                             # if matrix restriction
-                            if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3 :
+                            elif intervention.cfg.threshold_interventions_to_apply[i] == 3 :
 
                                 if ith_label > intervention.N_matrix_labels :
                                     break
 
+                                k = np.sum(intervention.cfg.threshold_interventions_to_apply[:i] == 3)
+
                                 if verbose :
-                                    if intervention.N_matrix_labels > 1 :
-                                        print('Intervention type : matrix restriction, name: ', intervention.cfg.Intervention_contact_matrices_name[int(i/2)] + '_label_' + str(ith_label) )
+                                    if intervention.N_labels > 1 :
+                                        print('Intervention type : matrix restriction, name:', intervention.cfg.Intervention_contact_matrices_name[k] + '_label_' + str(ith_label) )
                                     else :
-                                        print('Intervention type : matrix restriction, name: ', intervention.cfg.Intervention_contact_matrices_name[int(i/2)])
+                                        print('Intervention type : matrix restriction, name:', intervention.cfg.Intervention_contact_matrices_name[k])
 
                                 matrix_restriction_on_label(
                                     my,
                                     g,
                                     intervention,
                                     ith_label,
-                                    int(i/2),
+                                    k,
                                     verbose=verbose
                                 )
 
-                    else :
-                        for ith_label, intervention_type in enumerate(intervention.types) :
+                            # if event restrictions
+                            elif intervention.cfg.threshold_interventions_to_apply[k] == 4 :
 
-                            # Matrix restrictions are not removed # TODO: Remove if no restrictions follow
-                            if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3 :
-                                continue
+                                k = np.sum(intervention.cfg.threshold_interventions_to_apply[:i] == 4)
 
-                            if verbose :
-                                print('Intervention removed')
+                                if verbose :
+                                    print('Intervention type : event restriction:', intervention.cfg.event_size_max[k])
 
-                            remove_intervention_at_label(my, g, intervention, ith_label)
+                                intervention.event_size_max = intervention.cfg.event_size_max[k]
+
+                            # Remove restrictions
+                            elif intervention.cfg.threshold_interventions_to_apply[i] in [-1, -2, -3] :
+
+                                if verbose :
+                                    print('Intervention removed')
+
+                                remove_intervention_at_label(my, g, intervention, ith_label)
 
 
 @njit

@@ -335,8 +335,8 @@ class Simulation :
 
         for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
             for l in range(len(np.unique(N_matrix_labels))) :
-                wm[s,l,:,:] *= self.cfg.matrix_label_multiplier[l]
-                om[s,l,:,:] *= self.cfg.matrix_label_multiplier[l]
+                wm[s, l, :, :] *= self.cfg.matrix_label_multiplier[l]
+                om[s, l, :, :] *= self.cfg.matrix_label_multiplier[l]
 
 
         # Convert maps to numba dicts

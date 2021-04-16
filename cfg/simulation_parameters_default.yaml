@@ -26,10 +26,14 @@ lambda_I: 1.0  # I->R, Lambda(from I states)
 make_random_initial_infections: True # Infections around a single agent
 weighted_random_initial_infections: False # Infections weighted by the number of contacts
 initialize_at_kommune_level: False # Initiate infections at kommune basis
-incidence_labels: kommune  #land, region, landsdel, kommune, sogne
-matrix_labels: region  #land, region, landsdel, kommune, sogne
-matrix_label_multiplier: [1, 1, 1, 1, 1]   # Regionsniveau
-matrix_label_frac: [1, 1, 1, 1, 1]         # Regionsniveau
+
+# Set label information:
+# land, region, landsdel, kommune, sogne
+stratified_labels: region  # Output granularity
+incidence_labels:  kommune  # Incidence restriction granularity
+matrix_labels:     landsdel    # Matrix restriction granularity
+matrix_label_multiplier: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  # Landsdelniveau
+matrix_label_frac:       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  # Landsdelniveau
 
 day_max: 0 # 5 weeks. Sets the maximum number of days the algorithm runs
 

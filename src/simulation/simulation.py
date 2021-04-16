@@ -1,13 +1,9 @@
-from logging import warning
 import numpy as np
 import pandas as pd
+import numba as nb
 
-from numba.typed import List
-from numba.core.errors import (
-    NumbaTypeSafetyWarning,
-    NumbaExperimentalFeatureWarning,
-    NumbaPendingDeprecationWarning, # TODO : Delete line
-)
+from numba.typed import Dict
+from numba.core.errors import NumbaTypeSafetyWarning, NumbaExperimentalFeatureWarning
 
 import warnings
 
@@ -69,10 +65,11 @@ class Simulation :
 
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
+        # Set up the maps
         self.raw_label_map = pd.read_csv('Data/label_map.csv')
         self.label_map = {'kommune_to_kommune_idx' : pd.Series(data=self.raw_label_map['kommune_idx'].drop_duplicates().values, index=self.raw_label_map['kommune'].drop_duplicates().values),
                           'sogn_to_sogn_idx' :       pd.Series(data=self.raw_label_map.index,                                   index=self.raw_label_map['sogn']),
-                          'sogn_to_kommune_idx' :    pd.Series(data=self.raw_label_map['kommune_idx'].values,                          index=self.raw_label_map['sogn'])}
+                          'sogn_to_kommune_idx' :    pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map['sogn'])}
 
         if self.cfg.version == 1 :
             if self.cfg.do_interventions :
@@ -271,39 +268,44 @@ class Simulation :
         # TODO
 
 
-    def intialize_interventions(self, verbose_interventions=None) :
+    def initialize_maps(self) :
 
-        if self.verbose :
-            print('\nINITIALING INTERVENTIONS')
-
-
-        # Map matrix restrictions
-        if self.cfg.matrix_labels.lower() == 'sogn' :
-            matrix_labels_map = {zip(self.my.sogn, self.my.sogn)}
+        # Map stratifications
+        if self.cfg.stratified_labels.lower() == 'sogn' :
+            self.stratified_label_map = dict(zip(self.my.sogn, self.my.sogn))
         else :
-            lm = self.raw_label_map[self.cfg.matrix_labels.lower() + '_idx']
-            matrix_labels = {zip(self.my.sogn, lm[self.my.sogn].values)}
+            lm = self.raw_label_map[self.cfg.stratified_labels.lower() + '_idx']
+            self.stratified_label_map = dict(zip(self.my.sogn, lm[self.my.sogn].values))
+
+        # Convert map to numba dict
+        self.numba_stratified_label_map = Dict.empty(key_type=nb.uint8, value_type=nb.uint8)
+        for key, val in self.stratified_label_map.items() :
+            self.numba_stratified_label_map[np.uint8(key)] = np.uint8(val)
 
 
         # Map incidence restrictions
         if self.cfg.incidence_labels.lower() == 'sogn' :
-            incidence_labels = self.my.sogn
+            self.incidence_label_map = dict(zip(self.my.sogn, self.my.sogn))
         else :
             lm = self.raw_label_map[self.cfg.incidence_labels.lower() + '_idx']
-            incidence_labels = lm[self.my.sogn].values
+            self.incidence_label_map = dict(zip(self.my.sogn, lm[self.my.sogn].values))
 
 
+        # Map matrix restrictions
+        if self.cfg.matrix_labels.lower() == 'sogn' :
+            self.matrix_label_map = dict(zip(self.my.sogn, self.my.sogn))
+        else :
+            lm = self.raw_label_map[self.cfg.matrix_labels.lower() + '_idx']
+            self.matrix_label_map = dict(zip(self.my.sogn, lm[self.my.sogn].values))
 
-        # Set labels for each label if scalar is given
-        if len(self.cfg.matrix_label_multiplier) == 1 :
-            self.cfg.matrix_label_multiplier = np.full(np.max(matrix_labels), fill_value=self.cfg.matrix_label_multiplier, dtype=np.float32)
-            self.my.cfg.matrix_label_multiplier = self.cfg.matrix_label_multiplier
 
-        # Set label_frac for each label if scalar is given
-        if len(self.cfg.matrix_label_frac) == 1 :
-            self.cfg.matrix_label_frac = np.full(np.max(matrix_labels), fill_value=self.cfg.matrix_label_frac, dtype=np.float32)
-            self.my.cfg.matrix_label_frac = self.cfg.matrix_label_frac
+    def initialize_interventions(self, verbose_interventions=None) :
 
+        if self.verbose :
+            print('\nINITIALING INTERVENTIONS')
+
+        N_matrix_labels = len(set(self.matrix_label_map.values()))
+        N_incidence_labels = len(set(self.incidence_label_map.values()))
 
         if verbose_interventions is None :
             verbose_interventions = self.verbose
@@ -318,11 +320,11 @@ class Simulation :
         other_matrix_restrict = []
 
         for scenario in self.cfg.Intervention_contact_matrices_name :
-            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=len(np.unique(matrix_labels)))
+            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=N_matrix_labels)
 
             # Check the loaded contact matrices have the right size
-            if not len(tmp_other_matrix_restrict) == len(np.unique(matrix_labels)) :
-                raise ValueError(f'Number of labels ({len(np.unique(matrix_labels))}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for scenario: {scenario} and label: {self.cfg.labels}')
+            if not len(tmp_other_matrix_restrict) == N_matrix_labels :
+                raise ValueError(f'Number of labels ({N_matrix_labels}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for scenario: {scenario} and label: {self.cfg.labels}')
 
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
@@ -332,21 +334,32 @@ class Simulation :
         om = np.array(other_matrix_restrict)
 
         for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
-            for l in range(len(np.unique(matrix_labels))) :
+            for l in range(len(np.unique(N_matrix_labels))) :
                 wm[s,l,:,:] *= self.cfg.matrix_label_multiplier[l]
                 om[s,l,:,:] *= self.cfg.matrix_label_multiplier[l]
 
 
+        # Convert maps to numba dicts
+        numba_matrix_label_map = Dict.empty(key_type=nb.uint8, value_type=nb.uint8)
+        for key, val in self.matrix_label_map.items() :
+            numba_matrix_label_map[np.uint8(key)] = np.uint8(val)
+
+        numba_incidence_label_map = Dict.empty(key_type=nb.uint8, value_type=nb.uint8)
+        for key, val in self.incidence_label_map.items() :
+            numba_incidence_label_map[np.uint8(key)] = np.uint8(val)
+
         self.intervention = nb_jitclass.Intervention(
             self.my.cfg,
             self.my.cfg_network,
-            matrix_label_map = matrix_labels_map,
-            incidence_label_map = incidence_labels_map,
+            incidence_label_map = numba_incidence_label_map,
+            N_incidence_labels = N_incidence_labels,
+            matrix_label_map = numba_matrix_label_map,
+            N_matrix_labels = N_matrix_labels,
             vaccinations_per_age_group = vaccinations_per_age_group,
             vaccination_schedule = vaccination_schedule,
             work_matrix_restrict = wm,
             other_matrix_restrict = om,
-            verbose=verbose_interventions)
+            verbose = verbose_interventions)
 
 
     def initialize_states(self) :
@@ -364,7 +377,7 @@ class Simulation :
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
         self.state_total_counts            = np.zeros(self.N_states, dtype=np.uint32)
-        self.stratified_infection_counts   = np.zeros((self.intervention.N_labels, 2, self.N_ages), dtype=np.uint32)
+        self.stratified_infection_counts   = np.zeros((len(set(self.stratified_label_map.values())), 2, self.N_ages), dtype=np.uint32)
         self.stratified_vaccination_counts = np.zeros(self.N_ages, dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
@@ -443,7 +456,7 @@ class Simulation :
                 prior_infected  /= prior_infected.sum()
                 prior_immunized /= prior_immunized.sum()
 
-                kommune_UK_frac = self.my.cfg.label_frac[self.my.label[agents_in_kommune[0]]]
+                kommune_UK_frac = self.my.cfg.matrix_label_frac[self.my.label[agents_in_kommune[0]]]
 
                 initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized, kommune_UK_frac))
 
@@ -461,7 +474,7 @@ class Simulation :
             prior_infected  /= prior_infected.sum()
             prior_immunized /= prior_immunized.sum()
 
-            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, self.my.cfg.label_frac[0])]
+            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, self.my.cfg.matrix_label_frac[0])]
 
 
         # Loop over subgroups and initialize
@@ -476,6 +489,7 @@ class Simulation :
                 self.intervention,
                 self.state_total_counts,
                 self.stratified_infection_counts,
+                self.numba_stratified_label_map,
                 self.agents_in_state,
                 subgroup_UK_frac,
                 agents_in_subgroup,
@@ -538,6 +552,7 @@ class Simulation :
             self.intervention,
             self.state_total_counts,
             self.stratified_infection_counts,
+            self.numba_stratified_label_map,
             self.stratified_vaccination_counts,
             self.agents_in_state,
             self.nts,
@@ -582,10 +597,6 @@ class Simulation :
 
         if save_hdf5 :
 
-            if self.cfg.labels == 'kommune' :
-                warnings.warn("Cannot save hd5f when labels == 'kommune'")
-                return
-
             filename_hdf5 = self._get_filename(name='ABM', filetype='hdf5')
             file_loaders.make_sure_folder_exist(filename_hdf5)
             with h5py.File(filename_hdf5, 'w', **hdf5_kwargs) as f :  #
@@ -603,7 +614,6 @@ class Simulation :
 
         with h5py.File(filename_hdf5, 'w', **hdf5_kwargs) as f :  #
             f.create_dataset('my_state', data=self.my_state)
-            f.create_dataset('my_label', data=self.my.label)
             f.create_dataset('my_corona_type', data=self.my.corona_type)
 
             f.create_dataset('my_number_of_contacts', data=self.my.number_of_contacts)
@@ -656,7 +666,9 @@ def run_single_simulation(
         if only_initialize_network :
             return None
 
-        simulation.intialize_interventions()
+        simulation.initialize_maps()
+
+        simulation.initialize_interventions()
 
         simulation.initialize_states()
 

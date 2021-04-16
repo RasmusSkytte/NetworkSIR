@@ -28,9 +28,9 @@ def calculate_contact_distribution(my, contact_type) :
 
 @njit
 def calculate_contact_distribution_label(my, intervention):
-    label_contacts = np.zeros(intervention.N_labels)
-    label_people = np.zeros(intervention.N_labels)
-    label_infected = np.zeros(intervention.N_labels)
+    label_contacts = np.zeros(intervention.N_incidence_labels)
+    label_people = np.zeros(intervention.N_incidence_labels)
+    label_infected = np.zeros(intervention.N_incidence_labels)
     for agent in range(my.cfg_network.N_tot) :
         label = my.label[agent]
 
@@ -153,7 +153,7 @@ def check_if_label_needs_intervention(
 
     for agent, day_found in enumerate(intervention.day_found_infected) :
         if day_found > max(0, day - intervention.cfg.days_looking_back) :
-            infected_per_label[my.label[agent]] += 1
+            infected_per_label[intervention.incidence_label_map[my.sogn[agent]]] += 1
 
 
     it = enumerate(
@@ -299,7 +299,7 @@ def multiply_incoming_rates(my, g, agent, rate_multiplication) :
 @njit
 def remove_intervention_at_label(my, g, intervention, ith_label) :
     for agent in range(my.cfg_network.N_tot) :
-        if my.label[agent] == ith_label and my.restricted_status[agent] == 1 : #TODO: Only if not tested positive
+        if intervention.incidence_label_map[my.sogn[agent]] == ith_label and my.restricted_status[agent] == 1 : #TODO: Only if not tested positive
             reset_rates_of_agent(my, g, agent, intervention)
             my.restricted_status[agent] = 0
 
@@ -307,10 +307,10 @@ def remove_intervention_at_label(my, g, intervention, ith_label) :
 @njit
 def check_if_intervention_on_labels_can_be_removed(my, g, intervention, day, click,  threshold_info) :
 
-    infected_per_label = np.zeros(intervention.N_labels, dtype=np.int32)
+    infected_per_label = np.zeros(intervention.N_incidence_labels, dtype=np.int32)
     for agent, day_found in enumerate(intervention.day_found_infected) :
         if day_found > day - intervention.cfg.days_looking_back :
-            infected_per_label[my.label[agent]] += 1
+            infected_per_label[intervention.incidence_label_map[my.sogn[agent]]] += 1
 
     it = enumerate(
         zip(
@@ -591,7 +591,7 @@ def lockdown_on_label(my, g, intervention, label, rate_reduction) :
     # ie : [[0,0.8,0.8],[0,0.8,0.8]] means that 80% of your contacts on job and other is set to 0, and the remaining 20% is reduced by 80%.
     # loop over all agents
     for agent in range(my.cfg_network.N_tot) :
-        if my.label[agent] == label :
+        if intervention.incidence_label_map[my.sogn[agent]] == label :
             my.restricted_status[agent] = 1
             remove_and_reduce_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
@@ -603,7 +603,7 @@ def masking_on_label(my, g, intervention, label, rate_reduction) :
     # ie : [[0,0.2,0.2],[0,0.8,0.8]] means that your wear mask when around 20% of job and other contacts, and your rates to those is reduced by 80%
     # loop over all agents
     for agent in range(my.cfg_network.N_tot) :
-        if my.label[agent] == label :
+        if intervention.incidence_label_map[my.sogn[agent]] == label :
             my.restricted_status[agent] = 1
             reduce_frac_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
@@ -623,7 +623,7 @@ def matrix_restriction_on_label(my, g, intervention, label, n, verbose=False) :
                     prev += 1
 
     for agent in range(my.cfg_network.N_tot) :
-        if my.label[agent] == label :
+        if intervention.matrix_label_map[my.sogn[agent]] == label :
             my.restricted_status[agent] = 1
             remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label)
 
@@ -715,6 +715,10 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
         check_if_intervention_on_labels_can_be_removed(my, g, intervention, day, click, threshold_info)
 
         for ith_label, clicks_when_restriction_stops in enumerate(intervention.clicks_when_restriction_stops) :
+
+            if ith_label > intervention.N_incidence_labels :
+                break
+
             if clicks_when_restriction_stops == click :
                 remove_intervention_at_label(my, g, intervention, ith_label)
                 intervention.clicks_when_restriction_stops[ith_label] = -1
@@ -737,6 +741,10 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
 
 
         for ith_label, intervention_type in enumerate(intervention.types) :
+
+            if ith_label > intervention.N_incidence_labels :
+                break
+
             if intervention_type in intervention.cfg.threshold_interventions_to_apply :
                 intervention_has_not_been_applied = intervention.started_as[ith_label] == 0
 
@@ -780,7 +788,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                 if day == intervention_date :
                     if i % 2 == 0 :
                         # just looping over all labels. intervention type is not necesary with intervention by day
-                        for ith_label, intervention_type in enumerate(intervention.types) :
+                        for ith_label, _ in enumerate(intervention.types) :
 
                             # if lockdown
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 1 :
@@ -812,8 +820,11 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                             # if matrix restriction
                             if intervention.cfg.threshold_interventions_to_apply[int(i/2)] == 3 :
 
+                                if ith_label > intervention.N_matrix_labels :
+                                    break
+
                                 if verbose :
-                                    if intervention.N_labels > 1 :
+                                    if intervention.N_matrix_labels > 1 :
                                         print('Intervention type : matrix restriction, name: ', intervention.cfg.Intervention_contact_matrices_name[int(i/2)] + '_label_' + str(ith_label) )
                                     else :
                                         print('Intervention type : matrix restriction, name: ', intervention.cfg.Intervention_contact_matrices_name[int(i/2)])

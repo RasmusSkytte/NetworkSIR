@@ -40,9 +40,6 @@ def load_from_file(filename, start_date) :
     # Load the csv summery file
     df = file_loaders.pandas_load_file(filename)
 
-
-
-
     # Find all columns with "T_"
     test_cols = [col for col in df.columns if 'T_l' in col]
 

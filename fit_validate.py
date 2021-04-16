@@ -14,7 +14,7 @@ from src.analysis.helpers  import *
 from src.analysis.plotters import *
 
 # Define the subset to plot on
-subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan', 'fase3_S3_0A_1']} ]
+subsets = [ {'Intervention_contact_matrices_name' : ['ned2021jan']} ]
 
 
 for subset in subsets :
@@ -283,14 +283,16 @@ for subset in subsets :
 
     filename = f'Initialized_networks/{utils.cfg_to_hash(cfg.network, exclude_ID=False)}.hdf5'
 
-    kommune_dict = {'id_to_name' : pd.read_hdf(filename, 'id_to_name'),
-                    'name_to_id' : pd.read_hdf(filename, 'name_to_id')}
+    raw_label_map = pd.read_csv('Data/label_map.csv')
+    label_map = {'kommune_to_kommune_idx' : pd.Series(data=raw_label_map['kommune_idx'].values, index=raw_label_map['kommune'].values).drop_duplicates(),
+                 'kommune_idx_to_kommune' : pd.Series(index=raw_label_map['kommune_idx'].values, data=raw_label_map['kommune'].values).drop_duplicates(),
+                 'region_idx_to_kommune'  : pd.Series(data=raw_label_map['kommune'].values, index=raw_label_map['region_idx'].values).drop_duplicates(),
+                 'region_idx_to_region'   : pd.Series(data=raw_label_map['region'].values, index=raw_label_map['region_idx'].values).drop_duplicates()}
 
-    N_kommuner = np.max(kommune_dict['name_to_id']) + 1
+    N_kommuner = len(label_map['kommune_to_kommune_idx'])
 
     infected_per_kommune  = np.zeros(N_kommuner)
     immunized_per_kommune = np.zeros(N_kommuner)
-
 
     df_cases, df_tests, _ = file_loaders.get_SSI_data(date='2021_03_19', return_data=True)
 
@@ -315,8 +317,8 @@ for subset in subsets :
     cases_per_kommune = np.zeros((len(values_c), N_kommuner))
 
     # Match the columns indicies
-    i_out_c = kommune_dict['name_to_id'][names_c]
-    i_out_t = kommune_dict['name_to_id'][names_t]
+    i_out_c = label_map['kommune_to_kommune_idx'][names_c]
+    i_out_t = label_map['kommune_to_kommune_idx'][names_t]
 
     cases_per_kommune[:, i_out_c] = values_c
     tests_per_kommune[:, i_out_t] = values_t
@@ -325,52 +327,39 @@ for subset in subsets :
 
     tests_per_kommune_adjusted = tests_per_kommune * ref_tests / np.repeat(tests_per_day.reshape(-1, 1), tests_per_kommune.shape[1], axis=1)
 
-
-    cases_per_kommune           = pd.DataFrame(data=cases_per_kommune,          columns=kommune_dict['id_to_name'], index=intersection)
-    tests_per_kommune           = pd.DataFrame(data=tests_per_kommune,          columns=kommune_dict['id_to_name'], index=intersection)
-    tests_per_kommune_adjusted  = pd.DataFrame(data=tests_per_kommune_adjusted, columns=kommune_dict['id_to_name'], index=intersection)
+    cases_per_kommune           = pd.DataFrame(data=cases_per_kommune,          columns=label_map['kommune_idx_to_kommune'], index=intersection)
+    tests_per_kommune           = pd.DataFrame(data=tests_per_kommune,          columns=label_map['kommune_idx_to_kommune'], index=intersection)
+    tests_per_kommune_adjusted  = pd.DataFrame(data=tests_per_kommune_adjusted, columns=label_map['kommune_idx_to_kommune'], index=intersection)
 
     cases_per_label = []
     tests_per_label = []
     tests_per_label_adjusted = []
 
     cols = cases_per_kommune.columns
-    for lmap in cfg['label_map'] :
-        cases_per_label.append(np.sum(cases_per_kommune[lmap], axis=1).to_numpy())
-        tests_per_label.append(np.sum(tests_per_kommune[lmap], axis=1).to_numpy())
-        tests_per_label_adjusted.append(np.sum(tests_per_kommune_adjusted[lmap], axis=1).to_numpy())
-        cols = cols.drop(lmap)
+    for region_idx in label_map['region_idx_to_kommune'].index.unique() :
+        cases_per_label.append(np.sum(cases_per_kommune[label_map['region_idx_to_kommune'][region_idx]], axis=1).to_numpy())
+        tests_per_label.append(np.sum(tests_per_kommune[label_map['region_idx_to_kommune'][region_idx]], axis=1).to_numpy())
+        tests_per_label_adjusted.append(np.sum(tests_per_kommune_adjusted[label_map['region_idx_to_kommune'][region_idx]], axis=1).to_numpy())
 
-    cases_per_label          = np.array([np.sum(cases_per_kommune[cols],          axis=1).to_numpy()] + cases_per_label)
-    tests_per_label          = np.array([np.sum(tests_per_kommune[cols],          axis=1).to_numpy()] + tests_per_label)
-    tests_per_label_adjusted = np.array([np.sum(tests_per_kommune_adjusted[cols], axis=1).to_numpy()] + tests_per_label_adjusted)
+    incidence_per_label = np.array(cases_per_label) * (np.array(tests_per_label_adjusted) / np.array(tests_per_label)) ** beta
+    t = intersection
 
-    incidence_per_label = cases_per_label * (tests_per_label_adjusted / tests_per_label) ** beta
-
-    # Load tests per region
-    t, positive_per_region = load_infected_per_category(beta, category='Region')
-    positive_per_region = positive_per_region[:, [3, 0, 2, 1, 4]]
 
     for i in range(len(axes4)) :
 
         # Delete empty axes
-        if i == len(cfg['label_names']) :
+        if i == len(label_map['region_idx_to_kommune'].index.unique()) :
             for ax in axes4[i:] :
                 ax.remove()
             break
 
-        axes4[i].scatter(t, positive_per_region[:, i], color='k', s=10, zorder=100)
-
-
-        t2 = intersection
-
-        axes4[i].scatter(t2, incidence_per_label[i, :], color='b', s=10, zorder=100)
+        axes4[i].scatter(t, incidence_per_label[i, :], color='k', s=10, zorder=100)
 
         axes4[i].set_ylim(0, 500)
 
         set_date_xaxis(axes4[i], start_date, end_date)
 
-        axes4[i].set_title(cfg['label_names'][i], fontsize=24, pad=5)
+        axes4[i].set_title(label_map['region_idx_to_region'][i], fontsize=24, pad=5)
 
         axes4[i].tick_params(axis='x', labelsize=24)
         axes4[i].tick_params(axis='y', labelsize=24)

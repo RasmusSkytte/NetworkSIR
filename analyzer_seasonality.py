@@ -16,12 +16,12 @@ from src.analysis.plotters import *
 params, start_date = utils.load_params("cfg/analyzers/seasonality.yaml")
 
 if utils.is_local_computer():
-    f = 0.2
+    f = 0.5
     n_steps = 1
     num_cores_max = 3
     N_runs = 7
 else :
-    f = 0.1
+    f = 0.5
     n_steps = 1
     num_cores_max = 15
     N_runs = 3

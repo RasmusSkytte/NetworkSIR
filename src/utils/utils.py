@@ -31,7 +31,10 @@ from scipy.special import erf
 from sklearn.model_selection import ParameterSampler
 
 import awkward1 as ak
-import dict_hash
+#import dict_hash
+from typing import Dict, Any
+import hashlib
+import json
 
 from attrdict import AttrDict
 
@@ -63,7 +66,19 @@ def sha256(d) :
             d[key] = list(val)
         if isinstance(val, dict) :
             d[key] = sha256(val)
-    return dict_hash.sha256(d)
+    return dict_hash(d)
+
+
+
+# https://www.doc.ic.ac.uk/~nuric/coding/how-to-hash-a-dictionary-in-python.html
+def dict_hash(dictionary: Dict[str, Any]) -> str:
+    """MD5 hash of a dictionary."""
+    dhash = hashlib.sha256()
+    # We need to sort arguments so {'a': 1, 'b': 2} is
+    # the same as {'b': 2, 'a': 1}
+    encoded = json.dumps(dictionary, sort_keys=True).encode()
+    dhash.update(encoded)
+    return dhash.hexdigest()
 
 
 def _is_ipython() :
@@ -2094,80 +2109,7 @@ def people_per_sogn(df):
 
 
 def generate_coordinate(sogn, sogne):
-    sogne_translator= {'7247':'9323',
-     '7247':'9323',
-     '7636':'9195',
-     '8885':'9196',
-     '7249':'9315',
-     '8744':'9317',
-     '7615':'9318',
-     '7250':'9315',
-     '7625':'9194',
-     '8654':'9320',
-     '9271':'9196',
-     '7643':'9319',
-     '7447':'9311',
-     '7616':'9318',
-     '8141':'9316',
-     '8164':'9193',
-     '8306':'9191',
-     '7240':'9183',
-     '8688':'9198',
-     '8846':'9314',
-     '7618':'9318',
-     '7902':'9188',
-     '7365':'9322',
-     '8884':'9196',
-     '7252':'9312',
-     '7619':'9321',
-     '7025':'9190',
-     '8320':'9187',
-     '9227':'9197',
-     '7398':'9186',
-     '7244':'9183',
-     '7329':'9324',
-     '7241':'9183',
-     '7397':'9186',
-     '8743':'9317',
-     '7637':'9195',
-     '7302':'9189',
-     '7612':'9318',
-     '8321':'9187',
-     '7647':'9319',
-     '8623':'9215',
-     '8687':'9198',
-     '7030':'9190',
-     '7366':'9322',
-     '7328':'9324',
-     '7638':'9195',
-     '7242':'9183',
-     '8322':'9232',
-     '7293':'9192',
-     '8163':'9193',
-     '8831':'9199',
-     '7331':'9324',
-     '8830':'9199',
-     '9064':'9197',
-     '9261':'9188',
-     '8845':'9314',
-     '7301':'9189',
-     '8923':'9313',
-     '7617':'9318',
-     '7243':'9183',
-     '8924':'9313',
-     '7624':'9194',
-     '7292':'9192',
-     '7251':'9312',
-     '8307':'9191',
-     '8653':'9320',
-     '9086':'9316',
-     '7621':'9194',
-     '7620':'9321',
-     '7248':'9323',
-     '9245':'9315',
-     '8620':'9214',
-     '7282':'9292',
-     }
+
     sogn = str(sogn)
     if sogn in sogne.index:
         if gpd.geodataframe.GeoDataFrame == type(sogne.loc[sogn]):
@@ -2178,13 +2120,6 @@ def generate_coordinate(sogn, sogne):
             return generate_random_point(sogne.loc[sogn]["geometry"])
 
 
-    elif sogne_translator[sogn] in sogne.index:
-        if gpd.geodataframe.GeoDataFrame == type(sogne.loc[sogne_translator[sogn]]):
-            for sogn_poly in pd.DataFrame(sogne.loc[sogne_translator[sogn]]).iterrows():
-                return generate_random_point(sogn_poly[1].loc["geometry"])
-
-        else:
-            return generate_random_point(sogne.loc[sogne_translator[sogn]]["geometry"])
     else: print(sogn + "this sogn does not exist error")
 
 

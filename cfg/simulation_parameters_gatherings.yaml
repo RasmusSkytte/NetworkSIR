@@ -32,24 +32,11 @@ event_size_max: [[[5, 10], [10, 20], [20, 50]]] #max size of events. If 0 => N_t
 restriction_thresholds: [[2021-01-01, 2021-02-08, 2021-04-01, 2021-04-21, 2021-05-01, 2021-05-21]] # S03.A
 threshold_interventions_to_apply: [[3, 3, 3, 4, 3, 4]]
 
-labels: custom  #none, kommune, custom (needs a label_map)
-label_map: [[[Greve, Køge, Lejre, Roskilde, Solrød], # "Østsjælland"
-            [Faxe, Guldborgsund, Holbæk, Kalundborg, Lolland, Næstved, Odsherred, Ringsted, Slagelse, Sorø, Stevns, Vordingborg], # "Vest- og Sydsjælland"
-            [København, Frederiksberg, Dragør, Tårnby], # "Byen København"
-            [Albertslund, Ballerup, Brøndby, Gentofte, Gladsaxe, Glostrup, Herlev, Hvidovre, Høje-Taastrup, Ishøj, Lyngby-Taarbæk, Rødovre, Vallensbæk], # "Københavns omegn"
-            [Allerød, Egedal, Fredensborg, Frederikssund, Furesø, Gribskov, Halsnæs, Helsingør, Hillerød, Hørsholm, Rudersdal], # "Nordsjælland"
-            [Bornholm], # "Bornholm"
-            [Aalborg, Brønderslev, Frederikshavn, Hjørring, Jammerbugt, Læsø, Mariagerfjord, Morsø, Rebild, Thisted, Vesthimmerlands], # "Nordjylland"
-            [Herning, Holstebro, Ikast-Brande, Lemvig, Ringkøbing-Skjern, Skive, Struer, Viborg], # "Vestjylland"
-            [Favrskov, Hedensted, Horsens, Norddjurs, Odder, Randers, Samsø, Silkeborg, Skanderborg, Syddjurs, Aarhus], # "Østjylland"
-            [Assens, Faaborg-Midtfyn, Kerteminde, Langeland, Middelfart, Nordfyns, Nyborg, Odense, Svendborg, Ærø], # "Fyn"
-            [Billund, Esbjerg, Fanø, Fredericia, Haderslev, Kolding, Sønderborg, Tønder, Varde, Vejen, Vejle, Aabenraa]]] #  "Sydjylland"
+stratified_labels: region  # Output granularity
+incidence_labels:  kommune  # Incidence restriction granularity
+matrix_labels:     landsdel   # Matrix restriction granularity
+matrix_label_frac: [[0.014, 0.014,  0.01,  0.01,  0.01,  0.01,  0.026, 0.029, 0.029, 0.047, 0.047]]  # Landsdelniveau
 
-
-label_multiplier: [[  1.0,   1.0,   1.0,   1.0,   1.0,   1.0,    1.0,   1.0,   1.0,   1.0,   1.0]]
-label_frac:  [[0.014, 0.014,  0.01,  0.01,  0.01,  0.01,  0.026, 0.029, 0.029, 0.047, 0.047]]
-
-label_names: [[Østsjælland, Vest- og Sydsjælland, Byen København, Københavns omegn, Nordsjælland, Bornholm, Nordjylland, Vestjylland, Østjylland, Fyn, Sydjylland]]
 
 Intervention_vaccination_schedule_name : 2021_mar_12
 start_date_offset: 2020-12-28 # Start date for vaccinations
@@ -62,8 +49,8 @@ intervention_removal_delay_in_clicks: 0
 
 
 # Event related parameters
-N_events: 200_000 # number of daily events
-event_size_mean: [[5, 10]] # mean size of events (exponential distribution) [indoor, outdoor]
+N_events: 2_000_000 # number of daily events
+event_size_mean: [[20, 50]] # mean size of events (exponential distribution) [indoor, outdoor]
 
 event_beta_scaling: 5 # how much more disease spreads at events (1 = normal, 2 = double of normal)
 event_weekend_multiplier: 2.0 # ratio of how many more events are happening in weekends. 1 = similar, 2 = double
@@ -71,6 +58,6 @@ event_weekend_multiplier: 2.0 # ratio of how many more events are happening in w
 event_rho : 0.5 # Distance factor for events
 event_epsilon_rho : 0.04 # Distance factor for events
 
-outdoor_indoor_event_ratio : 0 #  0: all events are indoor. 1: all events are outdoor
-outdoor_beta_scaling : 1 # Relative beta for outdoor events
+outdoor_indoor_event_ratio : 0.5 #  0: all events are indoor. 1: all events are outdoor
+outdoor_beta_scaling : 0.5 # Relative beta for outdoor events
 

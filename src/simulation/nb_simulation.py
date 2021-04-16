@@ -229,6 +229,7 @@ def initialize_states(
     intervention,
     state_total_counts,
     stratified_infection_counts,
+    stratified_label_map,
     agents_in_state,
     subgroup_UK_frac,
     possible_agents,
@@ -285,7 +286,7 @@ def initialize_states(
                         g.update_rates(my, +rate, agent)
 
                 # Update the counters
-                stratified_infection_counts[my.label[agent]][my.corona_type[agent]][my.age[agent]] += 1
+                stratified_infection_counts[stratified_label_map[my.sogn[agent]]][my.corona_type[agent]][my.age[agent]] += 1
 
             # Make sure agent can not be re-infected
             update_infection_list_for_newly_infected_agent(my, g, agent)
@@ -520,6 +521,7 @@ def run_simulation(
     intervention,
     state_total_counts,
     stratified_infection_counts,
+    stratified_label_map,
     stratified_vaccination_counts,
     agents_in_state,
     nts,
@@ -621,7 +623,7 @@ def run_simulation(
                         g.update_rates(my, +rate, agent)
 
                 # Update the counters
-                stratified_infection_counts[my.label[agent]][my.corona_type[agent]][my.age[agent]] += 1
+                stratified_infection_counts[stratified_label_map[my.sogn[agent]]][my.corona_type[agent]][my.age[agent]] += 1
 
             # If this moves to Recovered state
             if my.state[agent] == g.N_states - 1 :
@@ -632,7 +634,7 @@ def run_simulation(
                         g.update_rates(my, -rate, agent)
 
                 # Update counters
-                stratified_infection_counts[my.label[agent]][my.corona_type[agent]][my.age[agent]] -= 1
+                stratified_infection_counts[stratified_label_map[my.sogn[agent]]][my.corona_type[agent]][my.age[agent]] -= 1
 
         #######/ Here we infect new states
         else :

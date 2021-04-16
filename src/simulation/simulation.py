@@ -1,14 +1,11 @@
 import numpy as np
 import pandas as pd
+import numba as nb
 
-from numba.typed import List
-from numba.core.errors import (
-    NumbaTypeSafetyWarning,
-    NumbaExperimentalFeatureWarning,
-    NumbaPendingDeprecationWarning, # TODO : Delete line
-)
+from numba.typed import Dict
+from numba.core.errors import NumbaTypeSafetyWarning, NumbaExperimentalFeatureWarning
 
-
+import warnings
 
 from pathlib import Path
 import os
@@ -68,22 +65,33 @@ class Simulation :
 
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
+        # Set up the maps
+        self.raw_label_map = pd.read_csv('Data/label_map.csv')
+        self.label_map = {'kommune_to_kommune_idx' : pd.Series(data=self.raw_label_map['kommune_idx'].drop_duplicates().values, index=self.raw_label_map['kommune'].drop_duplicates().values),
+                          'sogn_to_sogn_idx' :       pd.Series(data=self.raw_label_map.index,                                   index=self.raw_label_map['sogn']),
+                          'sogn_to_kommune_idx' :    pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map['sogn'])}
+
         if self.cfg.version == 1 :
             if self.cfg.do_interventions :
                 raise AssertionError("interventions not yet implemented for version 1")
 
-        if self.verbose :
-            print("Importing work and other matrices")
-
     def _place_and_connect_families_sogne_specific(self):
 
-        sogne, name_to_idx_sogn, idx_to_name_sogn = file_loaders.load_sogne_shapefiles(self.verbose)
+        # Load sogn and kommune information
+        sogne, _, _ = file_loaders.load_sogne_shapefiles(self.verbose)
+        _, kommune_name_to_idx, _ = file_loaders.load_kommune_shapefiles(self.verbose)
 
-        kommuner, name_to_idx, idx_to_name = file_loaders.load_kommune_shapefiles(self.verbose)
-        household_size_distribution_sogn, age_distribution_in_households = file_loaders.load_household_data_sogn(name_to_idx)
+        # Load demographic information
+        household_size_distribution_sogn, age_distribution_in_households = file_loaders.load_household_data_sogn(kommune_name_to_idx)
         people_in_sogn = np.array(utils.people_per_sogn(household_size_distribution_sogn))
-        sogn_to_kommune_idx = file_loaders.load_sogn_to_kommune_idx()
 
+        # Create map for the outdated sogne
+        g_sogn_code = household_size_distribution_sogn.index.values
+        sogne_map = pd.Series(data=g_sogn_code, name='sogne_map', index=g_sogn_code)
+        sogne_translator = pd.Series({7247:9323, 7247:9323, 7636:9195, 8885:9196, 7249:9315, 8744:9317, 7615:9318, 7250:9315, 7625:9194, 8654:9320, 9271:9196, 7643:9319, 7447:9311, 7616:9318, 8141:9316, 8164:9193, 8306:9191, 7240:9183, 8688:9198, 8846:9314, 7618:9318, 7902:9188, 7365:9322, 8884:9196, 7252:9312, 7619:9321, 7025:9190, 8320:9187, 9227:9197, 7398:9186, 7244:9183, 7329:9324, 7241:9183, 7397:9186, 8743:9317, 7637:9195, 7302:9189, 7612:9318, 8321:9187, 7647:9319, 8623:9215, 8687:9198, 7030:9190, 7366:9322, 7328:9324, 7638:9195, 7242:9183, 8322:9232, 7293:9192, 8163:9193, 8831:9199, 7331:9324, 8830:9199, 9064:9197, 9261:9188, 8845:9314, 7301:9189, 8923:9313, 7617:9318, 7243:9183, 8924:9313, 7624:9194, 7292:9192, 7251:9312, 8307:9191, 8653:9320, 9086:9316, 7621:9194, 7620:9321, 7248:9323, 9245:9315, 8620:9214, 7282:9292})
+        sogne_map = sogne_map.replace(sogne_translator)
+
+        # Place agents
         N_tot = self.my.cfg_network.N_tot
 
         all_indices = np.arange(N_tot, dtype=np.uint32)
@@ -96,24 +104,25 @@ class Simulation :
         agents_in_age_group = utils.initialize_nested_lists(self.N_ages, dtype=np.uint32)
         house_sizes = np.zeros(len(people_index_to_value), dtype=np.int64)
 
-
         mu_counter = 0
         agent = 0
         do_continue = True
         while do_continue :
 
             agent0 = agent
-            house_index = all_indices[agent]
-            rand_choice = nb_helpers.rand_choice_nb(people_in_sogn)
 
-            sogn = household_size_distribution_sogn.iloc[rand_choice].name
+            # Choose location
+            g_code  = nb_helpers.nb_random_choice(g_sogn_code, prob=people_in_sogn)[0] # Draw random sogn (data has old codes)
+            sogn    = sogne_map[g_code] # Convert to new code
+
+            sogn_idx    = self.label_map['sogn_to_sogn_idx'][sogn]
+            kommune_idx = self.label_map['sogn_to_kommune_idx'][sogn]
+
             coordinates = utils.generate_coordinate(sogn, sogne)
             coordinates = (coordinates.x, coordinates.y)
-            kommune_id = int(sogn_to_kommune_idx[rand_choice])
 
-            #Draw size of household form distribution
-            people_in_household_sogn = np.array(household_size_distribution_sogn.loc[sogn].iloc[:6])
-
+            # Draw size of household form distribution
+            people_in_household_sogn = np.array(household_size_distribution_sogn.loc[g_code].iloc[:6])
 
             agent, do_continue, mu_counter = nb_network.generate_one_household(people_in_household_sogn,
                                                                     agent,
@@ -128,8 +137,8 @@ class Simulation :
                                                                     mu_counter,
                                                                     people_index_to_value,
                                                                     house_sizes,
-                                                                    kommune_id
-                                                                    )
+                                                                    sogn_idx,
+                                                                    kommune_idx)
 
         agents_in_age_group = utils.nested_lists_to_list_of_array(agents_in_age_group)
 
@@ -137,7 +146,7 @@ class Simulation :
             print("House sizes :")
             print(house_sizes)
 
-        return mu_counter, counter_ages, agents_in_age_group, name_to_idx
+        return mu_counter, counter_ages, agents_in_age_group
 
     def _initialize_network(self) :
         """ Initializing the network for the simulation
@@ -156,12 +165,8 @@ class Simulation :
             mu_counter,
             counter_ages,
             agents_in_age_group,
-            kommune_name_to_idx,
-
         ) = self._place_and_connect_families_sogne_specific()
-        names = kommune_name_to_idx.keys()
-        IDs   = kommune_name_to_idx.values()
-        self.kommune_dict = {'id_to_name' : pd.Series(names, index=IDs), 'name_to_id' : pd.Series(IDs, index=names)}
+
 
         if self.verbose :
             print("Connecting work and others, currently slow, please wait")
@@ -199,10 +204,6 @@ class Simulation :
             # cfg
             self._add_cfg_to_hdf5_file(f)
 
-        # kommune_dict
-        self.kommune_dict['id_to_name'].to_hdf(filename, key='id_to_name')
-        self.kommune_dict['name_to_id'].to_hdf(filename, key='name_to_id')
-
 
     def _load_initialized_network(self, filename) :
 
@@ -221,10 +222,6 @@ class Simulation :
 
             # N_ages
             self.N_ages = f["N_ages"][()]
-
-        # kommune_dict
-        self.kommune_dict = {'id_to_name' : pd.read_hdf(filename, 'id_to_name'),
-                             'name_to_id' : pd.read_hdf(filename, 'name_to_id')}
 
 
         # Update connection weights
@@ -267,25 +264,48 @@ class Simulation :
             self._load_initialized_network(filename)
 
 
-    def intialize_interventions(self, verbose_interventions=None) :
+        # Define label maps
+        # TODO
+
+
+    def initialize_maps(self) :
+
+        # Map stratifications
+        if self.cfg.stratified_labels.lower() == 'sogn' :
+            self.stratified_label_map = dict(zip(self.my.sogn, self.my.sogn))
+        else :
+            lm = self.raw_label_map[self.cfg.stratified_labels.lower() + '_idx']
+            self.stratified_label_map = dict(zip(self.my.sogn, lm[self.my.sogn].values))
+
+        # Convert map to numba dict
+        self.numba_stratified_label_map = Dict.empty(key_type=nb.uint8, value_type=nb.uint8)
+        for key, val in self.stratified_label_map.items() :
+            self.numba_stratified_label_map[np.uint8(key)] = np.uint8(val)
+
+
+        # Map incidence restrictions
+        if self.cfg.incidence_labels.lower() == 'sogn' :
+            self.incidence_label_map = dict(zip(self.my.sogn, self.my.sogn))
+        else :
+            lm = self.raw_label_map[self.cfg.incidence_labels.lower() + '_idx']
+            self.incidence_label_map = dict(zip(self.my.sogn, lm[self.my.sogn].values))
+
+
+        # Map matrix restrictions
+        if self.cfg.matrix_labels.lower() == 'sogn' :
+            self.matrix_label_map = dict(zip(self.my.sogn, self.my.sogn))
+        else :
+            lm = self.raw_label_map[self.cfg.matrix_labels.lower() + '_idx']
+            self.matrix_label_map = dict(zip(self.my.sogn, lm[self.my.sogn].values))
+
+
+    def initialize_interventions(self, verbose_interventions=None) :
 
         if self.verbose :
-            print("\nINITIALING INTERVENTIONS")
+            print('\nINITIALING INTERVENTIONS')
 
-        if self.cfg.labels.lower() == "kommune" :
-            labels = self.my.kommune
-
-
-        elif self.cfg.labels.lower() == "none" :
-            labels = np.zeros(np.shape(self.my.kommune))
-
-        else :
-            labels_raw = self.my.kommune
-            labels = np.zeros(np.shape(labels_raw))
-
-            for new_label, label_group in enumerate(self.cfg['label_map']) :
-                labels[np.isin(labels_raw, self.kommune_dict['name_to_id'][label_group])] = new_label
-
+        N_matrix_labels = len(set(self.matrix_label_map.values()))
+        N_incidence_labels = len(set(self.incidence_label_map.values()))
 
         if verbose_interventions is None :
             verbose_interventions = self.verbose
@@ -300,11 +320,11 @@ class Simulation :
         other_matrix_restrict = []
 
         for scenario in self.cfg.Intervention_contact_matrices_name :
-            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=len(np.unique(labels)))
+            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=N_matrix_labels)
 
             # Check the loaded contact matrices have the right size
-            if not len(tmp_other_matrix_restrict) == len(np.unique(labels)) :
-                raise ValueError(f'Number of labels ({len(np.unique(labels))}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for scenario: {scenario} and label: {self.cfg.labels}')
+            if not len(tmp_other_matrix_restrict) == N_matrix_labels :
+                raise ValueError(f'Number of labels ({N_matrix_labels}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for scenario: {scenario} and label: {self.cfg.labels}')
 
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
@@ -314,30 +334,39 @@ class Simulation :
         om = np.array(other_matrix_restrict)
 
         for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
-            for l in range(len(np.unique(labels))) :
-                wm[s, l, :, :] *= self.cfg.label_multiplier[l]
-                om[s, l, :, :] *= self.cfg.label_multiplier[l]
+            for l in range(len(np.unique(N_matrix_labels))) :
+                wm[s, l, :, :] *= self.cfg.matrix_label_multiplier[l]
+                om[s, l, :, :] *= self.cfg.matrix_label_multiplier[l]
 
-        # Store the labels in my
-        self.my.initialize_labels(labels)
 
+        # Convert maps to numba dicts
+        numba_matrix_label_map = Dict.empty(key_type=nb.uint8, value_type=nb.uint8)
+        for key, val in self.matrix_label_map.items() :
+            numba_matrix_label_map[np.uint8(key)] = np.uint8(val)
+
+        numba_incidence_label_map = Dict.empty(key_type=nb.uint8, value_type=nb.uint8)
+        for key, val in self.incidence_label_map.items() :
+            numba_incidence_label_map[np.uint8(key)] = np.uint8(val)
 
         self.intervention = nb_jitclass.Intervention(
             self.my.cfg,
             self.my.cfg_network,
-            labels = labels,
+            incidence_label_map = numba_incidence_label_map,
+            N_incidence_labels = N_incidence_labels,
+            matrix_label_map = numba_matrix_label_map,
+            N_matrix_labels = N_matrix_labels,
             vaccinations_per_age_group = vaccinations_per_age_group,
             vaccination_schedule = vaccination_schedule,
             work_matrix_restrict = wm,
             other_matrix_restrict = om,
-            verbose=verbose_interventions)
+            verbose = verbose_interventions)
 
 
     def initialize_states(self) :
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
         if self.verbose :
-            print("\nINITIAL INFECTIONS")
+            print('\nINITIAL INFECTIONS')
 
         np.random.seed(utils.hash_to_seed(self.hash))
 
@@ -348,7 +377,7 @@ class Simulation :
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
         self.state_total_counts            = np.zeros(self.N_states, dtype=np.uint32)
-        self.stratified_infection_counts   = np.zeros((self.intervention.N_labels, 2, self.N_ages), dtype=np.uint32)
+        self.stratified_infection_counts   = np.zeros((len(set(self.stratified_label_map.values())), 2, self.N_ages), dtype=np.uint32)
         self.stratified_vaccination_counts = np.zeros(self.N_ages, dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
@@ -375,7 +404,7 @@ class Simulation :
         # Set the probability to choose agents
         if self.cfg.initialize_at_kommune_level :
 
-            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.kommune_dict)
+            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.map)
 
             infected_per_kommune  /= infected_per_kommune.sum()
             immunized_per_kommune /= immunized_per_kommune.sum()
@@ -427,7 +456,7 @@ class Simulation :
                 prior_infected  /= prior_infected.sum()
                 prior_immunized /= prior_immunized.sum()
 
-                kommune_UK_frac = self.my.cfg.label_frac[self.my.label[agents_in_kommune[0]]]
+                kommune_UK_frac = self.my.cfg.matrix_label_frac[self.my.label[agents_in_kommune[0]]]
 
                 initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized, kommune_UK_frac))
 
@@ -445,7 +474,7 @@ class Simulation :
             prior_infected  /= prior_infected.sum()
             prior_immunized /= prior_immunized.sum()
 
-            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, self.my.cfg.label_frac[0])]
+            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, self.my.cfg.matrix_label_frac[0])]
 
 
         # Loop over subgroups and initialize
@@ -460,6 +489,7 @@ class Simulation :
                 self.intervention,
                 self.state_total_counts,
                 self.stratified_infection_counts,
+                self.numba_stratified_label_map,
                 self.agents_in_state,
                 subgroup_UK_frac,
                 agents_in_subgroup,
@@ -522,6 +552,7 @@ class Simulation :
             self.intervention,
             self.state_total_counts,
             self.stratified_infection_counts,
+            self.numba_stratified_label_map,
             self.stratified_vaccination_counts,
             self.agents_in_state,
             self.nts,
@@ -565,6 +596,7 @@ class Simulation :
             self.df.to_csv(filename_csv, index=False)
 
         if save_hdf5 :
+
             filename_hdf5 = self._get_filename(name='ABM', filetype='hdf5')
             file_loaders.make_sure_folder_exist(filename_hdf5)
             with h5py.File(filename_hdf5, 'w', **hdf5_kwargs) as f :  #
@@ -595,8 +627,6 @@ class Simulation :
             f.create_dataset("R_true", data=self.intervention.R_true_list)
             f.create_dataset("freedom_impact", data=self.intervention.freedom_impact_list)
             f.create_dataset("R_true_brit", data=self.intervention.R_true_list_brit)
-            f.create_dataset("df", data=utils.dataframe_to_hdf5_format(self.df))
-
 
             if time_elapsed :
                 f.create_dataset("time_elapsed", data=time_elapsed)
@@ -636,7 +666,9 @@ def run_single_simulation(
         if only_initialize_network :
             return None
 
-        simulation.intialize_interventions()
+        simulation.initialize_maps()
+
+        simulation.initialize_interventions()
 
         simulation.initialize_states()
 

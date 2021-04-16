@@ -26,14 +26,14 @@ lambda_I: 1.0  # I->R, Lambda(from I states)
 make_random_initial_infections: True # Infections around a single agent
 weighted_random_initial_infections: False # Infections weighted by the number of contacts
 initialize_at_kommune_level: False # Initiate infections at kommune basis
-labels: custom  #none, kommune, custom (needs a label_map)
-label_map: [[Albertslund, Allerød, Ballerup, Bornholm, Brøndby, København, Dragør, Egedal, Fredensborg, Frederiksberg, Frederikssund, Furesø, Gentofte, Gladsaxe, Glostrup, Gribskov, Halsnæs, Helsingør, Herlev, Hillerød, Hvidovre, Høje-Taastrup, Hørsholm, Ishøj, Lyngby-Taarbæk, Rudersdal, Rødovre, Tårnby, Vallensbæk], #  Hovedstaden
-            [Aalborg, Brønderslev, Frederikshavn, Hjørring, Jammerbugt, Læsø, Mariagerfjord, Morsø, Rebild, Thisted, Vesthimmerlands], # Nordjylland
-            [Favrskov, Hedensted, Herning, Holstebro, Horsens, Ikast-Brande, Lemvig, Norddjurs, Odder, Randers, Ringkøbing-Skjern, Samsø, Silkeborg, Skanderborg, Skive, Struer, Syddjurs, Viborg, Aarhus], # Midtjylland
-            [Assens, Billund, Esbjerg, Fanø, Fredericia, Faaborg-Midtfyn, Haderslev, Kerteminde, Kolding, Langeland, Middelfart, Nordfyns, Nyborg, Odense, Svendborg, Sønderborg, Tønder, Varde, Vejen, Vejle, Ærø, Aabenraa]]  #  Syddanmark
-label_names: [Sjælland, Hovedstaden, Nordjylland, Midtjylland, Syddanmark]
-label_multiplier: [1, 1, 1, 1, 1]
-label_frac: [1, 1, 1, 1, 1]
+
+# Set label information:
+# land, region, landsdel, kommune, sogne
+stratified_labels: region  # Output granularity
+incidence_labels:  kommune  # Incidence restriction granularity
+matrix_labels:     landsdel    # Matrix restriction granularity
+matrix_label_multiplier: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Landsdelniveau
+matrix_label_frac:       [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Landsdelniveau
 
 day_max: 0 # 5 weeks. Sets the maximum number of days the algorithm runs
 

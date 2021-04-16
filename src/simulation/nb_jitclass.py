@@ -2,7 +2,7 @@ import numpy as np
 import numba as nb
 from numba.experimental import jitclass
 from numba.typed import List
-from numba.types import ListType
+from numba.types import ListType, DictType
 
 from src.utils import utils
 
@@ -35,11 +35,11 @@ spec_cfg = {
     'make_random_initial_infections' : nb.boolean,
     'weighted_random_initial_infections' : nb.boolean,
     'initialize_at_kommune_level' : nb.boolean,
-    'labels' : nb.types.unicode_type,
-    'label_map' : ListType(ListType(nb.types.unicode_type)),
-    'label_names' : ListType(nb.types.unicode_type),
-    'label_multiplier' : nb.float32[:],
-    'label_frac' : nb.float32[:],
+    'stratified_labels' : nb.types.unicode_type,
+    'incidence_labels' : nb.types.unicode_type,
+    'matrix_labels' : nb.types.unicode_type,
+    'matrix_label_multiplier' : nb.float32[:],
+    'matrix_label_frac' : nb.float32[:],
     'clustering_connection_retries' : nb.uint32,
     'beta_UK_multiplier' : nb.float32,
     'outbreak_position_UK' : nb.types.unicode_type,
@@ -103,10 +103,11 @@ class Config(object) :
         self.make_random_initial_infections = True
         self.weighted_random_initial_infections = False
         self.initialize_at_kommune_level = False
-        self.labels = 'none'
-        self.label_names = List('Danmark')
-        self.label_multiplier = np.array([1.0], dtype=np.float32)
-        self.label_frac  = np.array([0.0], dtype=np.float32)
+        self.stratified_labels  = 'land'
+        self.incidence_labels   = 'land'
+        self.matrix_labels      = 'land'
+        self.matrix_label_multiplier = np.array([1.0], dtype=np.float32)
+        self.matrix_label_frac  = np.array([0.0], dtype=np.float32)
         self.day_max = 0
         self.clustering_connection_retries = 0
         self.beta_UK_multiplier = 1.0
@@ -226,8 +227,7 @@ spec_my = {
     'infection_weight' : nb.float64[:],
     'number_of_contacts' : nb.uint16[:],
     'state' : nb.int8[:],
-    'kommune' : nb.uint8[:],
-    'label' : nb.uint8[:],
+    'sogn' : nb.uint8[:],
     'infectious_states' : ListType(nb.int64),
     'corona_type' : nb.uint8[:],
     'vaccination_type' : nb.int8[:],
@@ -254,16 +254,13 @@ class My(object) :
         self.infection_weight = np.ones(N_tot, dtype=np.float64)
         self.number_of_contacts = np.zeros(N_tot, dtype=nb.uint16)
         self.state = np.full(N_tot, fill_value=-1, dtype=np.int8)
-        self.kommune = np.zeros(N_tot, dtype=np.uint8)
+        self.sogn = np.zeros(N_tot, dtype=np.uint8)
         self.infectious_states = List([4, 5, 6, 7])
         self.corona_type = np.zeros(N_tot, dtype=np.uint8)
         self.vaccination_type = np.zeros(N_tot, dtype=np.uint8)
         self.restricted_status = np.zeros(N_tot, dtype=np.uint8)
         self.cfg = nb_cfg
         self.cfg_network = nb_cfg_network
-
-    def initialize_labels(self, labels) :
-        self.label = np.asarray(labels, dtype=np.uint8)
 
     def dist(self, agent1, agent2) :
         point1 = self.coordinates[agent1]
@@ -386,7 +383,8 @@ spec_intervention = {
     "cfg" : nb_cfg_type,
     "cfg_network" : nb_cfg_network_type,
     "label_counter" : nb.uint32[:],
-    "N_labels" : nb.uint32,
+    "N_incidence_labels" : nb.uint32,
+    "N_matrix_labels" : nb.uint32,
     "freedom_impact" : nb.float64[:],
     "freedom_impact_list" : ListType(nb.float64),
     "R_true_list" : ListType(nb.float64),
@@ -400,6 +398,9 @@ spec_intervention = {
     "clicks_when_restriction_stops" : nb.int32[:],
     "types" : nb.uint8[:],
     "started_as" : nb.uint8[:],
+    "stratified_label_map" : DictType(nb.uint8, nb.uint8),
+    "matrix_label_map" : DictType(nb.uint8, nb.uint8),
+    "incidence_label_map" : DictType(nb.uint8, nb.uint8),
     "vaccinations_per_age_group" : nb.int64[:, :, :],
     "vaccination_schedule" : nb.int32[:, :],
     "work_matrix_restrict" : nb.float64[:, :, :, :],
@@ -412,7 +413,8 @@ spec_intervention = {
 @jitclass(spec_intervention)
 class Intervention(object) :
     """
-    - N_labels : Number of labels. "Label" here can refer to either tent or kommune.
+    - N_incidence_labels : Number of incidence labels. "Label" here can be sogn, kommune, landsdel, region or land.
+    - N_matrix_labels : Number of matrix labels. "Label" here can be sogn, kommune, landsdel, region or land.
     - label_counter : count how many agent belong to a particular label
 
     - day_found_infected : -1 if not infected, otherwise the day of infection
@@ -455,7 +457,10 @@ class Intervention(object) :
         self,
         nb_cfg,
         nb_cfg_network,
-        labels,
+        incidence_label_map,
+        N_incidence_labels,
+        matrix_label_map,
+        N_matrix_labels,
         vaccinations_per_age_group,
         vaccination_schedule,
         work_matrix_restrict,
@@ -465,7 +470,11 @@ class Intervention(object) :
         self.cfg         = nb_cfg
         self.cfg_network = nb_cfg_network
 
-        self._initialize_labels(labels)
+        self.N_incidence_labels = N_incidence_labels
+        self.N_matrix_labels = N_matrix_labels
+
+        N_labels = max(N_incidence_labels, N_matrix_labels)
+
 
         self.day_found_infected            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.freedom_impact                = np.full(self.cfg_network.N_tot, fill_value=0.0, dtype=np.float64)
@@ -477,9 +486,12 @@ class Intervention(object) :
         self.clicks_when_tested            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_tested_result     = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_isolated          = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.clicks_when_restriction_stops = np.full(self.N_labels, fill_value=-1, dtype=np.int32)
-        self.types = np.zeros(self.N_labels, dtype=np.uint8)
-        self.started_as = np.zeros(self.N_labels, dtype=np.uint8)
+        self.clicks_when_restriction_stops = np.full(N_labels, fill_value=-1, dtype=np.int32)
+        self.types                         = np.zeros(N_labels, dtype=np.uint8)
+        self.started_as                    = np.zeros(N_labels, dtype=np.uint8)
+
+        self.matrix_label_map    = matrix_label_map
+        self.incidence_label_map = incidence_label_map
 
         self.vaccinations_per_age_group = vaccinations_per_age_group
         self.vaccination_schedule       = vaccination_schedule
@@ -487,11 +499,6 @@ class Intervention(object) :
         self.other_matrix_restrict      = other_matrix_restrict
         self.event_size_max             = self.cfg.event_size_max[0]
         self.verbose = verbose
-
-    def _initialize_labels(self, labels) :
-        unique, counts = utils.numba_unique_with_counts(labels)
-        self.label_counter = np.asarray(counts, dtype=np.uint32)
-        self.N_labels = len(unique)
 
     def agent_not_found_positive(self, agent) :
         return self.day_found_infected[agent] == -1

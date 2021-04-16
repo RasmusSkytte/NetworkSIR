@@ -40,9 +40,6 @@ def load_from_file(filename, start_date) :
     # Load the csv summery file
     df = file_loaders.pandas_load_file(filename)
 
-
-
-
     # Find all columns with "T_"
     test_cols = [col for col in df.columns if 'T_l' in col]
 
@@ -86,7 +83,7 @@ def load_from_file(filename, start_date) :
 
     T_age_groups = np.sum(stratified_infections, axis=(1, 2))
 
-    T_regions    = np.sum(stratified_infections, axis=(2, 3))
+    T_labels    = np.sum(stratified_infections, axis=(2, 3))
 
     V_age_groups = stratified_vaccinations
 
@@ -96,7 +93,7 @@ def load_from_file(filename, start_date) :
     T_variants   = T_variants
     T_uk         = T_uk
     T_age_groups = T_age_groups
-    T_regions    = T_regions
+    T_labels    = T_labels
 
     # Get weekly values
     # Remove days if not starting on a monday
@@ -113,7 +110,7 @@ def load_from_file(filename, start_date) :
         f = T_uk_week / T_total_week
         f[np.isnan(f)] = -1
 
-    return T_total, f, T_age_groups, T_variants, T_regions, V_age_groups
+    return T_total, f, T_age_groups, T_variants, T_labels, V_age_groups
 
 
 def parse_time_ranges(start_date, end_date) :

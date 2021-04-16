@@ -62,8 +62,8 @@ intervention_removal_delay_in_clicks: 0
 
 
 # Event related parameters
-N_events: 200_000 # number of daily events
-event_size_mean: [[5, 10]] # mean size of events (exponential distribution) [indoor, outdoor]
+N_events: 2_000_000 # number of daily events
+event_size_mean: [[20, 50]] # mean size of events (exponential distribution) [indoor, outdoor]
 
 event_beta_scaling: 5 # how much more disease spreads at events (1 = normal, 2 = double of normal)
 event_weekend_multiplier: 2.0 # ratio of how many more events are happening in weekends. 1 = similar, 2 = double
@@ -71,6 +71,6 @@ event_weekend_multiplier: 2.0 # ratio of how many more events are happening in w
 event_rho : 0.5 # Distance factor for events
 event_epsilon_rho : 0.04 # Distance factor for events
 
-outdoor_indoor_event_ratio : 0 #  0: all events are indoor. 1: all events are outdoor
-outdoor_beta_scaling : 1 # Relative beta for outdoor events
+outdoor_indoor_event_ratio : 0.5 #  0: all events are indoor. 1: all events are outdoor
+outdoor_beta_scaling : 0.5 # Relative beta for outdoor events
 

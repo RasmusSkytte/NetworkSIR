@@ -548,12 +548,9 @@ def generate_one_household(people_in_household_sogn, agent, agent0, do_continue,
         do_continue = False
 
     # Initilaze the agents and assign them to households
-
     age_dist = age_distribution_per_people_in_household[kommune, N_people_in_house_index, :]
     for _ in range(N_people_in_house) :
-        age_index = utils.rand_choice_nb(
-            age_dist
-        )
+        age_index = utils.rand_choice_nb(age_dist)
 
         #set age for agent
         age = age_index  # just use age index as substitute for age

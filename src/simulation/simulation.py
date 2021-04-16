@@ -69,30 +69,30 @@ class Simulation :
 
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
+        self.raw_label_map = pd.read_csv('Data/label_map.csv')
+        self.label_map = {'kommune_to_kommune_idx' : pd.Series(data=self.raw_label_map['kommune_idx'].drop_duplicates().values, index=self.raw_label_map['kommune'].drop_duplicates().values),
+                          'sogn_to_sogn_idx' :       pd.Series(data=self.raw_label_map.index,                                   index=self.raw_label_map['sogn']),
+                          'sogn_to_kommune_idx' :    pd.Series(data=self.raw_label_map['kommune_idx'].values,                          index=self.raw_label_map['sogn'])}
+
         if self.cfg.version == 1 :
             if self.cfg.do_interventions :
                 raise AssertionError("interventions not yet implemented for version 1")
-
-        if self.verbose :
-            print("Importing work and other matrices")
 
     def _place_and_connect_families_sogne_specific(self):
 
         # Load sogn and kommune information
         sogne, _, _ = file_loaders.load_sogne_shapefiles(self.verbose)
-        _, name_to_idx, _ = file_loaders.load_kommune_shapefiles(self.verbose)
-        sogn_to_kommune_idx = file_loaders.load_sogn_to_kommune_idx()
+        _, kommune_name_to_idx, _ = file_loaders.load_kommune_shapefiles(self.verbose)
 
         # Load demographic information
-        household_size_distribution_sogn, age_distribution_in_households = file_loaders.load_household_data_sogn(name_to_idx)
+        household_size_distribution_sogn, age_distribution_in_households = file_loaders.load_household_data_sogn(kommune_name_to_idx)
         people_in_sogn = np.array(utils.people_per_sogn(household_size_distribution_sogn))
 
         # Create map for the outdated sogne
-        sogn_code = household_size_distribution_sogn.index.values
-        sogne_map = pd.Series(data = sogn_code, name='sogne_translator')
+        g_sogn_code = household_size_distribution_sogn.index.values
+        sogne_map = pd.Series(data=g_sogn_code, name='sogne_map', index=g_sogn_code)
         sogne_translator = pd.Series({7247:9323, 7247:9323, 7636:9195, 8885:9196, 7249:9315, 8744:9317, 7615:9318, 7250:9315, 7625:9194, 8654:9320, 9271:9196, 7643:9319, 7447:9311, 7616:9318, 8141:9316, 8164:9193, 8306:9191, 7240:9183, 8688:9198, 8846:9314, 7618:9318, 7902:9188, 7365:9322, 8884:9196, 7252:9312, 7619:9321, 7025:9190, 8320:9187, 9227:9197, 7398:9186, 7244:9183, 7329:9324, 7241:9183, 7397:9186, 8743:9317, 7637:9195, 7302:9189, 7612:9318, 8321:9187, 7647:9319, 8623:9215, 8687:9198, 7030:9190, 7366:9322, 7328:9324, 7638:9195, 7242:9183, 8322:9232, 7293:9192, 8163:9193, 8831:9199, 7331:9324, 8830:9199, 9064:9197, 9261:9188, 8845:9314, 7301:9189, 8923:9313, 7617:9318, 7243:9183, 8924:9313, 7624:9194, 7292:9192, 7251:9312, 8307:9191, 8653:9320, 9086:9316, 7621:9194, 7620:9321, 7248:9323, 9245:9315, 8620:9214, 7282:9292})
         sogne_map = sogne_map.replace(sogne_translator)
-
 
         # Place agents
         N_tot = self.my.cfg_network.N_tot
@@ -115,16 +115,17 @@ class Simulation :
             agent0 = agent
 
             # Choose location
-            sogn_idx  = nb_helpers.rand_choice_nb(people_in_sogn)
+            g_code  = nb_helpers.nb_random_choice(g_sogn_code, prob=people_in_sogn)[0] # Draw random sogn (data has old codes)
+            sogn    = sogne_map[g_code] # Convert to new code
 
-            kommune_idx = sogn_to_kommune_idx[sogn_idx]
+            sogn_idx    = self.label_map['sogn_to_sogn_idx'][sogn]
+            kommune_idx = self.label_map['sogn_to_kommune_idx'][sogn]
 
-            coordinates = utils.generate_coordinate(sogne_map[sogn_idx], sogne)
+            coordinates = utils.generate_coordinate(sogn, sogne)
             coordinates = (coordinates.x, coordinates.y)
 
             # Draw size of household form distribution
-            people_in_household_sogn = np.array(household_size_distribution_sogn.loc[sogn_idx].iloc[:6])
-
+            people_in_household_sogn = np.array(household_size_distribution_sogn.loc[g_code].iloc[:6])
 
             agent, do_continue, mu_counter = nb_network.generate_one_household(people_in_household_sogn,
                                                                     agent,
@@ -139,7 +140,7 @@ class Simulation :
                                                                     mu_counter,
                                                                     people_index_to_value,
                                                                     house_sizes,
-                                                                    sogne_map[sogn_idx],
+                                                                    sogn_idx,
                                                                     kommune_idx)
 
         agents_in_age_group = utils.nested_lists_to_list_of_array(agents_in_age_group)
@@ -148,7 +149,7 @@ class Simulation :
             print("House sizes :")
             print(house_sizes)
 
-        return mu_counter, counter_ages, agents_in_age_group, name_to_idx
+        return mu_counter, counter_ages, agents_in_age_group
 
     def _initialize_network(self) :
         """ Initializing the network for the simulation
@@ -167,12 +168,8 @@ class Simulation :
             mu_counter,
             counter_ages,
             agents_in_age_group,
-            kommune_name_to_idx,
-
         ) = self._place_and_connect_families_sogne_specific()
-        names = kommune_name_to_idx.keys()
-        IDs   = kommune_name_to_idx.values()
-        self.kommune_dict = {'id_to_name' : pd.Series(names, index=IDs), 'name_to_id' : pd.Series(IDs, index=names)}
+
 
         if self.verbose :
             print("Connecting work and others, currently slow, please wait")
@@ -210,10 +207,6 @@ class Simulation :
             # cfg
             self._add_cfg_to_hdf5_file(f)
 
-        # kommune_dict
-        self.kommune_dict['id_to_name'].to_hdf(filename, key='id_to_name')
-        self.kommune_dict['name_to_id'].to_hdf(filename, key='name_to_id')
-
 
     def _load_initialized_network(self, filename) :
 
@@ -232,10 +225,6 @@ class Simulation :
 
             # N_ages
             self.N_ages = f["N_ages"][()]
-
-        # kommune_dict
-        self.kommune_dict = {'id_to_name' : pd.read_hdf(filename, 'id_to_name'),
-                             'name_to_id' : pd.read_hdf(filename, 'name_to_id')}
 
 
         # Update connection weights
@@ -287,43 +276,33 @@ class Simulation :
         if self.verbose :
             print('\nINITIALING INTERVENTIONS')
 
-        if self.cfg.labels.lower() == 'sogn' :
-            labels = self.my.sogn
 
-        elif self.cfg.labels.lower() == 'kommune' :
-            labels = self.label_map['kommune'][self.my.sogn]
-
-        elif self.cfg.labels.lower() == 'landsdel' :
-            labels = self.label_map['landsdel'][self.my.sogn]
-
-        elif self.cfg.labels.lower() == 'region' :
-            labels = self.label_map['region'][self.my.sogn]
-
-        elif self.cfg.labels.lower() == 'country' :
-            labels = self.label_map['region'][self.my.sogn]
-
-        elif self.cfg.labels.lower() == 'landsdel' :
-            labels = self.label_map['landsdel_idx'][self.my.sogn]
-
-        elif self.cfg.labels.lower() == 'region' :
-            labels = self.label_map['region_idx'][self.my.sogn]
-
-        elif self.cfg.labels.lower() == 'country' :
-            labels = self.label_map['country_idx'][self.my.sogn]
-
+        # Map matrix restrictions
+        if self.cfg.matrix_labels.lower() == 'sogn' :
+            matrix_labels_map = {zip(self.my.sogn, self.my.sogn)}
         else :
-            raise ValueError(f'Label: "{self.cfg.labels}" not recognized')
+            lm = self.raw_label_map[self.cfg.matrix_labels.lower() + '_idx']
+            matrix_labels = {zip(self.my.sogn, lm[self.my.sogn].values)}
+
+
+        # Map incidence restrictions
+        if self.cfg.incidence_labels.lower() == 'sogn' :
+            incidence_labels = self.my.sogn
+        else :
+            lm = self.raw_label_map[self.cfg.incidence_labels.lower() + '_idx']
+            incidence_labels = lm[self.my.sogn].values
+
 
 
         # Set labels for each label if scalar is given
-        if len(self.cfg.label_multiplier) == 1 :
-            self.cfg.label_multiplier = np.full(np.max(labels) + 1, fill_value=self.cfg.label_multiplier, dtype=np.float32)
-            self.my.cfg.label_multiplier = self.cfg.label_multiplier
+        if len(self.cfg.matrix_label_multiplier) == 1 :
+            self.cfg.matrix_label_multiplier = np.full(np.max(matrix_labels), fill_value=self.cfg.matrix_label_multiplier, dtype=np.float32)
+            self.my.cfg.matrix_label_multiplier = self.cfg.matrix_label_multiplier
 
         # Set label_frac for each label if scalar is given
-        if len(self.cfg.label_frac) == 1 :
-            self.cfg.label_frac = np.full(np.max(labels) + 1, fill_value=self.cfg.label_frac, dtype=np.float32)
-            self.my.cfg.label_frac = self.cfg.label_frac
+        if len(self.cfg.matrix_label_frac) == 1 :
+            self.cfg.matrix_label_frac = np.full(np.max(matrix_labels), fill_value=self.cfg.matrix_label_frac, dtype=np.float32)
+            self.my.cfg.matrix_label_frac = self.cfg.matrix_label_frac
 
 
         if verbose_interventions is None :
@@ -339,11 +318,11 @@ class Simulation :
         other_matrix_restrict = []
 
         for scenario in self.cfg.Intervention_contact_matrices_name :
-            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=len(np.unique(labels)))
+            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=len(np.unique(matrix_labels)))
 
             # Check the loaded contact matrices have the right size
-            if not len(tmp_other_matrix_restrict) == len(np.unique(labels)) :
-                raise ValueError(f'Number of labels ({len(np.unique(labels))}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for scenario: {scenario} and label: {self.cfg.labels}')
+            if not len(tmp_other_matrix_restrict) == len(np.unique(matrix_labels)) :
+                raise ValueError(f'Number of labels ({len(np.unique(matrix_labels))}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for scenario: {scenario} and label: {self.cfg.labels}')
 
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
@@ -353,18 +332,16 @@ class Simulation :
         om = np.array(other_matrix_restrict)
 
         for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
-            for l in range(len(np.unique(labels))) :
-                wm[s,l,:,:] *= self.cfg.label_multiplier[l]
-                om[s,l,:,:] *= self.cfg.label_multiplier[l]
-
-        # Store the labels in my
-        self.my.initialize_labels(labels)
+            for l in range(len(np.unique(matrix_labels))) :
+                wm[s,l,:,:] *= self.cfg.matrix_label_multiplier[l]
+                om[s,l,:,:] *= self.cfg.matrix_label_multiplier[l]
 
 
         self.intervention = nb_jitclass.Intervention(
             self.my.cfg,
             self.my.cfg_network,
-            labels = labels,
+            matrix_label_map = matrix_labels_map,
+            incidence_label_map = incidence_labels_map,
             vaccinations_per_age_group = vaccinations_per_age_group,
             vaccination_schedule = vaccination_schedule,
             work_matrix_restrict = wm,
@@ -414,7 +391,7 @@ class Simulation :
         # Set the probability to choose agents
         if self.cfg.initialize_at_kommune_level :
 
-            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.kommune_dict)
+            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.map)
 
             infected_per_kommune  /= infected_per_kommune.sum()
             immunized_per_kommune /= immunized_per_kommune.sum()

@@ -249,17 +249,17 @@ class ABM_simulations :
 ##         #######  ##         #######  ######## ##     ##    ##    ####  #######  ##    ##
 
 
-def parse_age_distribution_data(filename, kommune_dict=None) :
+def parse_age_distribution_data(filename, label_map=None) :
 
     age_dist_raw      = pd.read_csv(filename, index_col=0)
     kommune_names_raw = age_dist_raw.index
     age_dist_raw      = age_dist_raw.to_numpy()
 
-    age_dist = np.zeros( (np.max(kommune_dict['name_to_id']) + 1, age_dist_raw.shape[1], len(eval(age_dist_raw[0, 0]))), dtype=float)
+    age_dist = np.zeros( (np.max(label_map['kommune_to_kommune_idx']) + 1, age_dist_raw.shape[1], len(eval(age_dist_raw[0, 0]))), dtype=float)
 
     for i in range(age_dist_raw.shape[0]) :
 
-        i_out = kommune_dict['name_to_id'][kommune_names_raw[i]]
+        i_out = label_map['kommune_to_kommune_idx'][kommune_names_raw[i]]
 
         for j in range(age_dist_raw.shape[1]) :
             age_dist[i_out, j, :] = eval(age_dist_raw[i, j])
@@ -268,17 +268,17 @@ def parse_age_distribution_data(filename, kommune_dict=None) :
     return age_dist
 
 
-def parse_age_distribution_data_sogn(filename, kommune_dict=None) :
+def parse_age_distribution_data_sogn(filename, label_map=None) :
 
     age_dist_raw      = pd.read_csv(filename, index_col=0)
     kommune_names_raw = age_dist_raw.index
     age_dist_raw      = age_dist_raw.to_numpy()
 
-    age_dist = np.zeros( (len(kommune_dict), age_dist_raw.shape[1], len(eval(age_dist_raw[0, 0]))), dtype=float)
+    age_dist = np.zeros( (len(label_map), age_dist_raw.shape[1], len(eval(age_dist_raw[0, 0]))), dtype=float)
 
     for i in range(age_dist_raw.shape[0]) :
 
-        i_out = kommune_dict[kommune_names_raw[i]]
+        i_out = label_map[kommune_names_raw[i]]
 
         for j in range(age_dist_raw.shape[1]) :
             age_dist[i_out, j, :] = eval(age_dist_raw[i, j])
@@ -287,17 +287,17 @@ def parse_age_distribution_data_sogn(filename, kommune_dict=None) :
     return age_dist
 
 
-def parse_household_data(filename, kommune_dict=None) :
+def parse_household_data(filename, label_map=None) :
 
     household_dist_raw = pd.read_csv(filename, index_col=0)
     kommune_names_raw  = household_dist_raw.index
     household_dist_raw = household_dist_raw.to_numpy()
 
-    household_dist = np.zeros((np.max(kommune_dict['name_to_id']) + 1, household_dist_raw.shape[1]))
+    household_dist = np.zeros((np.max(label_map['kommune_to_kommune_idx']) + 1, household_dist_raw.shape[1]))
 
     for i in range(household_dist_raw.shape[0]) :
 
-        i_out = kommune_dict['name_to_id'][kommune_names_raw[i]]
+        i_out = label_map['kommune_to_kommune_idx'][kommune_names_raw[i]]
 
         for j in range(household_dist_raw.shape[1]) :
             household_dist[i_out, j] = household_dist_raw[i, j] / (j + 1)
@@ -346,27 +346,24 @@ def load_sogne_shapefiles(verbose=False) :
         print(f"Loading {shapefile_size} sogne shape files")
     sogne = gpd.read_file(shp_file[shapefile_size]).to_crs({"proj" : "latlong"})  # convert to lat lon, compared to UTM32_EUREF89
 
+    sogn_code = sogne['SOGNEKODE'].drop_duplicates().values.astype(int)
+    sogn_idx  = np.arange(len(sogn_code))
 
-    sogne_navn, sogne_idx = np.unique(sogne["SOGNEKODE"], return_inverse=True)
-    name_to_idx = dict(zip(sogne_navn, range(len(sogne_navn))))
-    idx_to_name = {v : k for k, v in name_to_idx.items()}
-
-    sogne["idx"] = sogne_idx
     sogne = sogne.set_index(sogne.columns[9])
-    return sogne, name_to_idx, idx_to_name
+    return sogne, sogn_code, sogn_idx
 
-def load_household_data(kommune_dict) :
+def load_household_data(label_map) :
 
-    household_dist = parse_household_data(load_yaml('cfg/files.yaml')['PeopleInHousehold'], kommune_dict=kommune_dict)
-    age_dist = parse_age_distribution_data(load_yaml('cfg/files.yaml')['AgeDistribution'],  kommune_dict=kommune_dict)
+    household_dist = parse_household_data(load_yaml('cfg/files.yaml')['PeopleInHousehold'], label_map=label_map)
+    age_dist = parse_age_distribution_data(load_yaml('cfg/files.yaml')['AgeDistribution'],  label_map=label_map)
 
     return household_dist, age_dist
 
 
-def load_household_data_sogn(kommune_dict) :
+def load_household_data_sogn(label_map) :
 
     household_dist_sogn = parse_household_data_sogn(load_yaml('cfg/files.yaml')['PeopleInHouseholdSogn'])
-    age_dist = parse_age_distribution_data_sogn(load_yaml('cfg/files.yaml')['AgeDistribution'],  kommune_dict=kommune_dict)
+    age_dist = parse_age_distribution_data_sogn(load_yaml('cfg/files.yaml')['AgeDistribution'],  label_map=label_map)
 
     return household_dist_sogn, age_dist
 
@@ -700,9 +697,9 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
     return age_distribution_infected, age_distribution_immunized
 
 
-def load_kommune_infection_distribution(initial_distribution_file, kommune_dict, beta = 0.55) :
+def load_kommune_infection_distribution(initial_distribution_file, label_map, beta = 0.55) :
 
-    N_kommuner = np.max(kommune_dict['name_to_id']) + 1
+    N_kommuner = np.max(label_map['kommune_to_kommune_idx']) + 1
 
     infected_per_kommune  = np.zeros(N_kommuner)
     immunized_per_kommune = np.zeros(N_kommuner)
@@ -741,8 +738,8 @@ def load_kommune_infection_distribution(initial_distribution_file, kommune_dict,
 
 
         # Match the columns indicies
-        i_out_c = kommune_dict['name_to_id'][names_c]
-        i_out_t = kommune_dict['name_to_id'][names_t]
+        i_out_c = label_map['kommune_to_idx'][names_c]
+        i_out_t = label_map['kommune_to_idx'][names_t]
 
         cases_per_kommune[:, i_out_c] = values_c
         test_per_kommune[:,  i_out_t] = values_t

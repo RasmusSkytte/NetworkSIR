@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import numba as nb
 
-from numba.typed import Dict
+from numba.typed import List, Dict
 from numba.core.errors import NumbaTypeSafetyWarning, NumbaExperimentalFeatureWarning
 
 import warnings
@@ -21,9 +21,7 @@ from functools import partial
 
 from tqdm import tqdm
 from p_tqdm import p_umap, p_uimap
-import geopandas as gpd
-from shapely.geometry import Point, Polygon
-from shapely.geometry import mapping as _polygon_to_array
+
 
 check_distributions = False
 
@@ -93,6 +91,10 @@ class Simulation :
         sogne_map = pd.Series(data=g_sogn_code, name='sogne_map', index=g_sogn_code)
         sogne_translator = pd.Series({7247:9323, 7247:9323, 7636:9195, 8885:9196, 7249:9315, 8744:9317, 7615:9318, 7250:9315, 7625:9194, 8654:9320, 9271:9196, 7643:9319, 7447:9311, 7616:9318, 8141:9316, 8164:9193, 8306:9191, 7240:9183, 8688:9198, 8846:9314, 7618:9318, 7902:9188, 7365:9322, 8884:9196, 7252:9312, 7619:9321, 7025:9190, 8320:9187, 9227:9197, 7398:9186, 7244:9183, 7329:9324, 7241:9183, 7397:9186, 8743:9317, 7637:9195, 7302:9189, 7612:9318, 8321:9187, 7647:9319, 8623:9215, 8687:9198, 7030:9190, 7366:9322, 7328:9324, 7638:9195, 7242:9183, 8322:9232, 7293:9192, 8163:9193, 8831:9199, 7331:9324, 8830:9199, 9064:9197, 9261:9188, 8845:9314, 7301:9189, 8923:9313, 7617:9318, 7243:9183, 8924:9313, 7624:9194, 7292:9192, 7251:9312, 8307:9191, 8653:9320, 9086:9316, 7621:9194, 7620:9321, 7248:9323, 9245:9315, 8620:9214, 7282:9292})
         sogne_map = sogne_map.replace(sogne_translator)
+
+        self.N_sogne = len(set(sogne_map.values()))
+        print(self.N_sogne)
+        x = x
 
         # Place agents
         N_tot = self.my.cfg_network.N_tot
@@ -287,12 +289,13 @@ class Simulation :
 
 
         # Map incidence restrictions
-        if self.cfg.incidence_labels.lower() == 'sogn' :
-            self.incidence_label_map = dict(zip(self.my.sogn, self.my.sogn))
-        else :
-            lm = self.raw_label_map[self.cfg.incidence_labels.lower() + '_idx']
-            self.incidence_label_map = dict(zip(self.my.sogn, lm[self.my.sogn].values))
-
+        self.incidence_label_map = []
+        for incidence_label in self.cfg.incidence_labels :
+            if incidence_label.lower() == 'sogn' :
+                self.incidence_label_map.append(dict(zip(self.my.sogn, self.my.sogn)))
+            else :
+                lm = self.raw_label_map[incidence_label.lower() + '_idx']
+                self.incidence_label_map.append(dict(zip(self.my.sogn, lm[self.my.sogn].values)))
 
         # Map matrix restrictions
         if self.cfg.matrix_labels.lower() == 'sogn' :
@@ -307,8 +310,8 @@ class Simulation :
         if self.verbose :
             print('\nINITIALING INTERVENTIONS')
 
-        N_matrix_labels = len(set(self.matrix_label_map.values()))
-        N_incidence_labels = len(set(self.incidence_label_map.values()))
+        N_matrix_labels = len(set(self.raw_label_map[self.cfg.matrix_labels.lower()]))
+        N_incidence_labels = list(map(lambda x : len(set(self.raw_label_map[x.lower()])), self.cfg.incidence_labels))
 
         if verbose_interventions is None :
             verbose_interventions = self.verbose
@@ -343,19 +346,28 @@ class Simulation :
 
 
         # Convert maps to numba dicts
-        numba_matrix_label_map = Dict.empty(key_type=nb.uint8, value_type=nb.uint8)
+        numba_matrix_label_map = Dict.empty(key_type=nb.uint16, value_type=nb.uint16)
         for key, val in self.matrix_label_map.items() :
-            numba_matrix_label_map[np.uint8(key)] = np.uint8(val)
+            numba_matrix_label_map[np.uint16(key)] = np.uint16(val)
 
-        numba_incidence_label_map = Dict.empty(key_type=nb.uint8, value_type=nb.uint8)
-        for key, val in self.incidence_label_map.items() :
-            numba_incidence_label_map[np.uint8(key)] = np.uint8(val)
+        numba_incidence_label_map = List()
+        for ith_map, incidence_lm in enumerate(self.incidence_label_map) :
+            numba_incidence_label_map.append(Dict.empty(key_type=nb.uint16, value_type=nb.uint16))
+            for key, val in incidence_lm.items() :
+                numba_incidence_label_map[ith_map][np.uint16(key)] = np.uint16(val)
+
+        numba_inverse_incidence_label_map = List()
+        for ith_map, incidence_lm in enumerate(self.incidence_label_map) :
+            numba_inverse_incidence_label_map.append(Dict.empty(key_type=nb.uint16, value_type=nb.uint16))
+            for key, val in incidence_lm.items() :
+                numba_inverse_incidence_label_map[ith_map][np.uint16(val)] = np.uint16(key)
+
 
         self.intervention = nb_jitclass.Intervention(
-            self.my.cfg,
-            self.my.cfg_network,
+            self.my,
             incidence_label_map = numba_incidence_label_map,
-            N_incidence_labels = N_incidence_labels,
+            inverse_incidence_label_map = numba_inverse_incidence_label_map,
+            N_incidence_labels = np.array(N_incidence_labels, dtype=np.uint16),
             matrix_label_map = numba_matrix_label_map,
             N_matrix_labels = N_matrix_labels,
             vaccinations_per_age_group = vaccinations_per_age_group,

@@ -36,7 +36,8 @@ spec_cfg = {
     'weighted_random_initial_infections' : nb.boolean,
     'initialize_at_kommune_level' : nb.boolean,
     'stratified_labels' : nb.types.unicode_type,
-    'incidence_labels' : nb.types.unicode_type,
+    'incidence_labels' : ListType(nb.types.unicode_type),
+    'incidence_threshold' : nb.float32[:, :],
     'matrix_labels' : nb.types.unicode_type,
     'matrix_label_multiplier' : nb.float32[:],
     'matrix_label_frac' : nb.float32[:],
@@ -59,9 +60,10 @@ spec_cfg = {
     'do_interventions' : nb.boolean,
     'threshold_types' : nb.int8[:], # which thing set off restrictions : 0 : certain date. 1 : 'real' incidens rate 2 : measured incidens rate
     'restriction_thresholds' : nb.int16[:], # len == 2*nr of different thresholds, on the form [start stop start stop etc.]
-    'threshold_interventions_to_apply' : nb.int8[:],
+    'incidence_interventions_to_apply' : nb.int8[:],
+    'planned_interventions_to_apply' : nb.int8[:],
+    'continuous_interventions_to_apply' : nb.int8[:],
     'list_of_threshold_interventions_effects' : nb.float64[:, :, :],
-    'continuous_interventions_to_apply' : ListType(nb.int64),
     'daily_tests' : nb.uint16,
     'test_delay_in_clicks' : nb.int64[:],
     'results_delay_in_clicks' : nb.int64[:],
@@ -104,7 +106,8 @@ class Config(object) :
         self.weighted_random_initial_infections = False
         self.initialize_at_kommune_level = False
         self.stratified_labels  = 'land'
-        self.incidence_labels   = 'land'
+        self.incidence_labels   = List(['land'])
+        self.incidence_threshold = np.array([[20000.0, 20000.0]], dtype=np.float32)
         self.matrix_labels      = 'land'
         self.matrix_label_multiplier = np.array([1.0], dtype=np.float32)
         self.matrix_label_frac  = np.array([0.0], dtype=np.float32)
@@ -228,6 +231,7 @@ spec_my = {
     'number_of_contacts' : nb.uint16[:],
     'state' : nb.int8[:],
     'sogn' : nb.uint16[:],
+    'N_sogne' : nb.uint16,
     'infectious_states' : ListType(nb.int64),
     'corona_type' : nb.uint8[:],
     'vaccination_type' : nb.int8[:],
@@ -255,6 +259,7 @@ class My(object) :
         self.number_of_contacts = np.zeros(N_tot, dtype=nb.uint16)
         self.state = np.full(N_tot, fill_value=-1, dtype=np.int8)
         self.sogn = np.zeros(N_tot, dtype=np.uint16)
+        self.N_sogne = 1
         self.infectious_states = List([4, 5, 6, 7])
         self.corona_type = np.zeros(N_tot, dtype=np.uint8)
         self.vaccination_type = np.zeros(N_tot, dtype=np.uint8)
@@ -380,33 +385,34 @@ class Gillespie(object) :
 #### ##    ##    ##    ######## ##     ##    ###    ######## ##    ##    ##    ####  #######  ##    ##
 
 spec_intervention = {
-    "cfg" : nb_cfg_type,
-    "cfg_network" : nb_cfg_network_type,
-    "label_counter" : nb.uint32[:],
-    "N_incidence_labels" : nb.uint32,
-    "N_matrix_labels" : nb.uint32,
-    "freedom_impact" : nb.float64[:],
-    "freedom_impact_list" : ListType(nb.float64),
-    "R_true_list" : ListType(nb.float64),
-    "R_true_list_brit" : ListType(nb.float64),
-    "day_found_infected" : nb.int32[:],
-    "reason_for_test" : nb.int8[:],
-    "positive_test_counter" : nb.uint32[:],
-    "clicks_when_tested" : nb.int32[:],
-    "clicks_when_tested_result" : nb.int32[:],
-    "clicks_when_isolated" : nb.int32[:],
-    "clicks_when_restriction_stops" : nb.int32[:],
-    "types" : nb.uint8[:],
-    "started_as" : nb.uint8[:],
-    "stratified_label_map" : DictType(nb.uint8, nb.uint8),
-    "matrix_label_map" : DictType(nb.uint8, nb.uint8),
-    "incidence_label_map" : DictType(nb.uint8, nb.uint8),
-    "vaccinations_per_age_group" : nb.int64[:, :, :],
-    "vaccination_schedule" : nb.int32[:, :],
-    "work_matrix_restrict" : nb.float64[:, :, :, :],
-    "other_matrix_restrict" : nb.float64[:, :, :, :],
+    'cfg' : nb_cfg_type,
+    'cfg_network' : nb_cfg_network_type,
+    'agents_per_incidence_label' : ListType(nb.uint32[:]),
+    'N_incidence_labels' : nb.uint16[:],
+    'N_matrix_labels' : nb.uint16,
+    'freedom_impact' : nb.float64[:],
+    'freedom_impact_list' : ListType(nb.float64),
+    'R_true_list' : ListType(nb.float64),
+    'R_true_list_brit' : ListType(nb.float64),
+    'day_found_infected' : nb.int32[:],
+    'reason_for_test' : nb.int8[:],
+    'positive_test_counter' : nb.uint32[:],
+    'clicks_when_tested' : nb.int32[:],
+    'clicks_when_tested_result' : nb.int32[:],
+    'clicks_when_isolated' : nb.int32[:],
+    'clicks_when_restriction_stops' : nb.int32[:],
+    'types' : nb.uint8[:],
+    'started' : nb.uint8[:],
+    'stratified_label_map' : DictType(nb.uint16, nb.uint16),
+    'matrix_label_map' : DictType(nb.uint16, nb.uint16),
+    'incidence_label_map' : ListType(DictType(nb.uint16, nb.uint16)),
+    'inverse_incidence_label_map' : ListType(DictType(nb.uint16, nb.uint16)),
+    'vaccinations_per_age_group' : nb.int64[:, :, :],
+    'vaccination_schedule' : nb.int32[:, :],
+    'work_matrix_restrict' : nb.float64[:, :, :, :],
+    'other_matrix_restrict' : nb.float64[:, :, :, :],
     'event_size_max' : nb.uint32[:],
-    "verbose" : nb.boolean,
+    'verbose' : nb.boolean,
 }
 
 
@@ -415,7 +421,7 @@ class Intervention(object) :
     """
     - N_incidence_labels : Number of incidence labels. "Label" here can be sogn, kommune, landsdel, region or land.
     - N_matrix_labels : Number of matrix labels. "Label" here can be sogn, kommune, landsdel, region or land.
-    - label_counter : count how many agent belong to a particular label
+    - agents_per_incidence_label : count how many agent belong to a particular label
 
     - day_found_infected : -1 if not infected, otherwise the day of infection
 
@@ -447,7 +453,7 @@ class Intervention(object) :
         # 4 : Random Testing
         # 5 : vaccinations
 
-    - started_as : describes whether or not an intervention has been applied. If 0, no intervention has been applied.
+    - started : describes whether or not an intervention has been applied. If 0, no intervention has been applied.
 
     - verbose : Prints status of interventions and removal of them
 
@@ -455,9 +461,9 @@ class Intervention(object) :
 
     def __init__(
         self,
-        nb_cfg,
-        nb_cfg_network,
+        my,
         incidence_label_map,
+        inverse_incidence_label_map,
         N_incidence_labels,
         matrix_label_map,
         N_matrix_labels,
@@ -467,14 +473,22 @@ class Intervention(object) :
         other_matrix_restrict,
         verbose=False) :
 
-        self.cfg         = nb_cfg
-        self.cfg_network = nb_cfg_network
+        self.cfg         = my.cfg
+        self.cfg_network = my.cfg_network
+
 
         self.N_incidence_labels = N_incidence_labels
         self.N_matrix_labels = N_matrix_labels
 
-        N_labels = max(N_incidence_labels, N_matrix_labels)
+        N_labels = max(max(N_incidence_labels), N_matrix_labels)
 
+        agents_per_incidence_label = List()
+        for ith_incidence_restriction, N_labels in enumerate(N_incidence_labels) :
+            label_counter = np.zeros(N_labels, dtype=np.uint32)
+            for sogn in my.sogn :
+                label_counter[incidence_label_map[ith_incidence_restriction][sogn]] += 1
+
+            agents_per_incidence_label.append(label_counter)
 
         self.day_found_infected            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.freedom_impact                = np.full(self.cfg_network.N_tot, fill_value=0.0, dtype=np.float64)
@@ -488,10 +502,11 @@ class Intervention(object) :
         self.clicks_when_isolated          = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_restriction_stops = np.full(N_labels, fill_value=-1, dtype=np.int32)
         self.types                         = np.zeros(N_labels, dtype=np.uint8)
-        self.started_as                    = np.zeros(N_labels, dtype=np.uint8)
+        self.started                       = np.zeros(N_labels, dtype=np.uint8)
 
         self.matrix_label_map    = matrix_label_map
         self.incidence_label_map = incidence_label_map
+        self.inverse_incidence_label_map = inverse_incidence_label_map
 
         self.vaccinations_per_age_group = vaccinations_per_age_group
         self.vaccination_schedule       = vaccination_schedule
@@ -499,6 +514,7 @@ class Intervention(object) :
         self.other_matrix_restrict      = other_matrix_restrict
         self.event_size_max             = self.cfg.event_size_max[0]
         self.verbose = verbose
+
 
     def agent_not_found_positive(self, agent) :
         return self.day_found_infected[agent] == -1
@@ -512,11 +528,7 @@ class Intervention(object) :
 
     @property
     def apply_interventions_on_label(self) :
-        return (
-            (1 in self.cfg.threshold_interventions_to_apply)
-            or (2 in self.cfg.threshold_interventions_to_apply)
-            or (3 in self.cfg.threshold_interventions_to_apply)
-        )
+        return (self.start_interventions_by_day or self.start_interventions_by_incidence)
 
     @property
     def apply_tracing(self) :
@@ -535,21 +547,18 @@ class Intervention(object) :
         return 4 in self.cfg.continuous_interventions_to_apply
 
     @property
-    def apply_matrix_restriction(self) :
-        return 3 in self.cfg.threshold_interventions_to_apply
-
-    @property
     def apply_vaccinations(self) :
         return 5 in self.cfg.continuous_interventions_to_apply
 
     @property
+    def apply_matrix_restriction(self) :
+        return 1 in self.cfg.planned_interventions_to_apply
+
+    @property
     def start_interventions_by_day(self) :
-        return 0 in self.cfg.threshold_types
+        return 0 not in self.cfg.planned_interventions_to_apply
 
     @property
-    def start_interventions_by_real_incidens_rate(self) :
-        return 1 in self.cfg.threshold_types
+    def start_interventions_by_incidence(self) :
+        return 0 not in self.cfg.incidence_interventions_to_apply
 
-    @property
-    def start_interventions_by_meassured_incidens_rate(self) :
-        return 2 in self.cfg.threshold_types

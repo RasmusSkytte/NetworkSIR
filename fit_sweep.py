@@ -7,7 +7,7 @@ from tqdm import tqdm
 from contexttimer import Timer
 
 
-params, start_date = utils.load_params("cfg/simulation_parameters_gatherings.yaml")
+params, start_date = utils.load_params("cfg/incidence_lockdowns.yaml")
 
 if utils.is_local_computer():
     f = 0.01

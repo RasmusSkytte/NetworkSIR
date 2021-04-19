@@ -30,7 +30,7 @@ Intervention_contact_matrices_name : [[ned2021jan, fase3/S3_0A_1, fase3/S3_0A_2,
 event_size_max: [[[5, 10], [10, 20], [20, 50]]] #max size of events. If 0 => N_tot (no max)  [indoor, outdoor]
 
 restriction_thresholds: [[2021-01-01, 2021-02-08, 2021-04-01, 2021-04-21, 2021-05-01, 2021-05-21]] # S03.A
-threshold_interventions_to_apply: [[3, 3, 3, 4, 3, 4]]
+threshold_interventions_to_apply: [[1, 1, 1, 2, 1, 2]]
 
 stratified_labels: region  # Output granularity
 incidence_labels:  kommune  # Incidence restriction granularity

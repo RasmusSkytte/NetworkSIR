@@ -826,7 +826,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                                 k = np.sum(intervention.cfg.threshold_interventions_to_apply[:i] == 3)
 
                                 if verbose :
-                                    if intervention.N_labels > 1 :
+                                    if intervention.N_matrix_labels > 1 :
                                         print('Intervention type : matrix restriction, name:', intervention.cfg.Intervention_contact_matrices_name[k] + '_label_' + str(ith_label) )
                                     else :
                                         print('Intervention type : matrix restriction, name:', intervention.cfg.Intervention_contact_matrices_name[k])

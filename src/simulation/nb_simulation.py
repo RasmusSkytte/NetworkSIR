@@ -752,6 +752,7 @@ def run_simulation(
                         agents_in_state,
                         state_total_counts,
                         stratified_infection_counts,
+                        stratified_label_map,
                         where_infections_happened_counter)
 
 

@@ -555,7 +555,7 @@ def generate_one_household(people_in_household_sogn, agent, agent0, do_continue,
         #set age for agent
         age = age_index  # just use age index as substitute for age
         my.age[agent] = age
-        my.sogn[agent] = sogn
+        my.sogn[agent] = np.uint16(sogn)
         counter_ages[age_index] += 1
         agents_in_age_group[age_index].append(np.uint32(agent))
 

@@ -67,9 +67,12 @@ class Simulation :
 
         # Set up the maps
         self.raw_label_map = pd.read_csv('Data/label_map.csv')
-        self.label_map = {'kommune_to_kommune_idx' : pd.Series(data=self.raw_label_map['kommune_idx'].drop_duplicates().values, index=self.raw_label_map['kommune'].drop_duplicates().values),
-                          'sogn_to_sogn_idx' :       pd.Series(data=self.raw_label_map.index,                                   index=self.raw_label_map['sogn']),
-                          'sogn_to_kommune_idx' :    pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map['sogn'])}
+        self.label_map = {'kommune_to_kommune_idx' :   pd.Series(data=self.raw_label_map['kommune_idx'].drop_duplicates().values, index=self.raw_label_map['kommune'].drop_duplicates().values),
+                          'kommune_idx_to_kommune' :   pd.Series(data=self.raw_label_map['kommune'].drop_duplicates().values,     index=self.raw_label_map['kommune_idx'].drop_duplicates().values),
+                          'sogn_to_sogn_idx' :         pd.Series(data=self.raw_label_map.index,                                   index=self.raw_label_map['sogn']),
+                          'sogn_to_kommune_idx' :      pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map['sogn']),
+                          'sogn_idx_to_kommune_idx' :  pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map.index),
+                          'sogn_idx_to_landsdel_idx' : pd.Series(data=self.raw_label_map['landsdel_idx'].values,                  index=self.raw_label_map.index)}
 
         if self.cfg.version == 1 :
             if self.cfg.do_interventions :
@@ -278,9 +281,9 @@ class Simulation :
             self.stratified_label_map = dict(zip(self.my.sogn, lm[self.my.sogn].values))
 
         # Convert map to numba dict
-        self.numba_stratified_label_map = Dict.empty(key_type=nb.uint8, value_type=nb.uint8)
+        self.numba_stratified_label_map = Dict.empty(key_type=nb.uint16, value_type=nb.uint16)
         for key, val in self.stratified_label_map.items() :
-            self.numba_stratified_label_map[np.uint8(key)] = np.uint8(val)
+            self.numba_stratified_label_map[np.uint16(key)] = np.uint16(val)
 
 
         # Map incidence restrictions
@@ -404,7 +407,7 @@ class Simulation :
         # Set the probability to choose agents
         if self.cfg.initialize_at_kommune_level :
 
-            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.map)
+            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.label_map['kommune_to_kommune_idx'])
 
             infected_per_kommune  /= infected_per_kommune.sum()
             immunized_per_kommune /= immunized_per_kommune.sum()
@@ -429,16 +432,16 @@ class Simulation :
                 if N == 0 and R == 0 :
                     continue
 
-                agents_in_kommune = np.array([agent for agent in possible_agents if self.my.kommune[agent] == kommune_id])
+                agents_in_kommune = np.array([agent for agent in possible_agents if self.label_map['sogn_idx_to_kommune_idx'][self.my.sogn[agent]] == kommune_id])
 
                 # Check if kommune is valid
                 if len(agents_in_kommune) == 0:
-                    warnings.warn(f"Agents selected for initialization in a kommune {kommune_id} : {self.kommune_dict['id_to_name'][kommune_id]} but no agents exists")
+                    warnings.warn(f"Agents selected for initialization in a kommune {kommune_id} : {self.label_map['kommune_idx_to_kommune'][kommune_id]} but no agents exists")
                     continue
 
                 # Check if too many have been selected
                 if len(agents_in_kommune) < (N + R) :
-                    warnings.warn(f"{N+R} agents selected for initialization in a kommune {kommune_id} : {self.kommune_dict['id_to_name'][kommune_id]} but only {len(agents_in_kommune)} agents exists")
+                    warnings.warn(f"{N+R} agents selected for initialization in a kommune {kommune_id} : {self.label_map['kommune_idx_to_kommune'][kommune_id]} but only {len(agents_in_kommune)} agents exists")
                     N = int(len(agents_in_kommune) * N / (N + R))
                     R = int(len(agents_in_kommune) * R / (N + R))
 
@@ -456,7 +459,7 @@ class Simulation :
                 prior_infected  /= prior_infected.sum()
                 prior_immunized /= prior_immunized.sum()
 
-                kommune_UK_frac = self.my.cfg.matrix_label_frac[self.my.label[agents_in_kommune[0]]]
+                kommune_UK_frac = self.my.cfg.matrix_label_frac[self.label_map['sogn_idx_to_landsdel_idx'][self.my.sogn[agents_in_kommune[0]]]]
 
                 initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized, kommune_UK_frac))
 

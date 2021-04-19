@@ -227,7 +227,7 @@ spec_my = {
     'infection_weight' : nb.float64[:],
     'number_of_contacts' : nb.uint16[:],
     'state' : nb.int8[:],
-    'sogn' : nb.uint8[:],
+    'sogn' : nb.uint16[:],
     'infectious_states' : ListType(nb.int64),
     'corona_type' : nb.uint8[:],
     'vaccination_type' : nb.int8[:],
@@ -254,7 +254,7 @@ class My(object) :
         self.infection_weight = np.ones(N_tot, dtype=np.float64)
         self.number_of_contacts = np.zeros(N_tot, dtype=nb.uint16)
         self.state = np.full(N_tot, fill_value=-1, dtype=np.int8)
-        self.sogn = np.zeros(N_tot, dtype=np.uint8)
+        self.sogn = np.zeros(N_tot, dtype=np.uint16)
         self.infectious_states = List([4, 5, 6, 7])
         self.corona_type = np.zeros(N_tot, dtype=np.uint8)
         self.vaccination_type = np.zeros(N_tot, dtype=np.uint8)

@@ -703,8 +703,7 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
 
 def load_kommune_infection_distribution(initial_distribution_file, label_map, beta = 0.55) :
 
-    N_kommuner = np.max(label_map['kommune_to_kommune_idx']) + 1
-
+    N_kommuner = len(label_map)
     infected_per_kommune  = np.zeros(N_kommuner)
     immunized_per_kommune = np.zeros(N_kommuner)
 
@@ -742,8 +741,8 @@ def load_kommune_infection_distribution(initial_distribution_file, label_map, be
 
 
         # Match the columns indicies
-        i_out_c = label_map['kommune_to_idx'][names_c]
-        i_out_t = label_map['kommune_to_idx'][names_t]
+        i_out_c = label_map[names_c]
+        i_out_t = label_map[names_t]
 
         cases_per_kommune[:, i_out_c] = values_c
         test_per_kommune[:,  i_out_t] = values_t

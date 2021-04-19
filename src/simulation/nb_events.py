@@ -23,6 +23,7 @@ def add_daily_events(
     agents_in_state,
     state_total_counts,
     stratified_infection_counts,
+    stratified_label_map,
     where_infections_happened_counter) :
 
     N_tot = my.cfg_network.N_tot
@@ -108,4 +109,5 @@ def add_daily_events(
 
         # Update the counters
         where_infections_happened_counter[3] += 1
-        stratified_infection_counts[my.label[agent]][my.corona_type[agent]][my.age[agent]] += 1
+        stratified_infection_counts[stratified_label_map[my.sogn[agent]]][my.corona_type[agent]][my.age[agent]] += 1
+

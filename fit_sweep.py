@@ -10,7 +10,7 @@ from contexttimer import Timer
 params, start_date = utils.load_params("cfg/simulation_parameters_gatherings.yaml")
 
 if utils.is_local_computer():
-    f = 0.1
+    f = 0.01
     n_steps = 1
     num_cores_max = 1
     N_runs = 3

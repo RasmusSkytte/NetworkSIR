@@ -92,9 +92,8 @@ class Simulation :
         sogne_translator = pd.Series({7247:9323, 7247:9323, 7636:9195, 8885:9196, 7249:9315, 8744:9317, 7615:9318, 7250:9315, 7625:9194, 8654:9320, 9271:9196, 7643:9319, 7447:9311, 7616:9318, 8141:9316, 8164:9193, 8306:9191, 7240:9183, 8688:9198, 8846:9314, 7618:9318, 7902:9188, 7365:9322, 8884:9196, 7252:9312, 7619:9321, 7025:9190, 8320:9187, 9227:9197, 7398:9186, 7244:9183, 7329:9324, 7241:9183, 7397:9186, 8743:9317, 7637:9195, 7302:9189, 7612:9318, 8321:9187, 7647:9319, 8623:9215, 8687:9198, 7030:9190, 7366:9322, 7328:9324, 7638:9195, 7242:9183, 8322:9232, 7293:9192, 8163:9193, 8831:9199, 7331:9324, 8830:9199, 9064:9197, 9261:9188, 8845:9314, 7301:9189, 8923:9313, 7617:9318, 7243:9183, 8924:9313, 7624:9194, 7292:9192, 7251:9312, 8307:9191, 8653:9320, 9086:9316, 7621:9194, 7620:9321, 7248:9323, 9245:9315, 8620:9214, 7282:9292})
         sogne_map = sogne_map.replace(sogne_translator)
 
-        self.N_sogne = len(set(sogne_map.values()))
-        print(self.N_sogne)
-        x = x
+        # Update the sogne counter
+        self.my.N_sogne = len(set(sogne_map.values))
 
         # Place agents
         N_tot = self.my.cfg_network.N_tot
@@ -358,10 +357,12 @@ class Simulation :
 
         numba_inverse_incidence_label_map = List()
         for ith_map, incidence_lm in enumerate(self.incidence_label_map) :
-            numba_inverse_incidence_label_map.append(Dict.empty(key_type=nb.uint16, value_type=nb.uint16))
-            for key, val in incidence_lm.items() :
-                numba_inverse_incidence_label_map[ith_map][np.uint16(val)] = np.uint16(key)
+            numba_inverse_incidence_label_map.append(Dict.empty(key_type=nb.uint16, value_type=nb.uint16[:]))
 
+            keys, vals = np.array([(keys, vals) for keys, vals in self.incidence_label_map[ith_map].items()]).T
+
+            for val in np.unique(vals) :
+                numba_inverse_incidence_label_map[ith_map][np.uint16(val)] = keys[vals == val].astype(np.uint16)
 
         self.intervention = nb_jitclass.Intervention(
             self.my,

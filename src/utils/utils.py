@@ -2046,7 +2046,7 @@ def parse_parameter(param, rounding=None) :
 
     return param
 
-def load_params(filename) :
+def load_params(filename, f) :
     params = file_loaders.load_yaml(filename)
     params = params.to_dict()
 
@@ -2064,9 +2064,9 @@ def load_params(filename) :
     params['day_max'] = (end_date - start_date).days
     params['start_date_offset'] = (start_date - params['start_date_offset']).days
 
-    if isinstance(params['restriction_thresholds'], list) :
+    if isinstance(params['planned_restriction_dates'], list) :
 
-        restriction_dates = [date for date in params['restriction_thresholds'][0]]
+        restriction_dates = [date for date in params['planned_restriction_dates'][0]]
 
         dates = [0]
         for i in range(1, len(restriction_dates)) :
@@ -2074,12 +2074,23 @@ def load_params(filename) :
             dates.append((date - start_date).days)
 
     else :
-        dates = [(params['restriction_thresholds'] - start_date).days]
+        dates = [(params['planned_restriction_dates'] - start_date).days]
 
-    params['restriction_thresholds'] =  [dates]
+    params['planned_restriction_dates'] =  [dates]
 
     if 'initial_infection_distribution' in params.keys() and isinstance(params['initial_infection_distribution'], datetime.date) :
         params['initial_infection_distribution'] = params['initial_infection_distribution'].strftime('%Y_%m_%d')
+
+    # Scale the population
+    params['N_tot']  = int(params['N_tot']  * f)
+    params['R_init'] = int(params['R_init'] * f)
+    params['N_init'] = int(params['N_init'] * f)
+
+    print(params['incidence_threshold'])
+    for i, value_set in enumerate(params['incidence_threshold']) :
+        for j, interventions in enumerate(value_set) :
+            for k, thresholds in enumerate(interventions) :
+                params['incidence_threshold'][i][j][k] = int(thresholds * f)
 
     return params, start_date
 

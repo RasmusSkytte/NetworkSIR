@@ -2,7 +2,7 @@ N_tot: 5_800_000
 rho: 0.1
 
 N_init: 6000
-beta: 0.030
+beta: 0.020
 
 R_guess: 0.75
 
@@ -22,20 +22,24 @@ lambda_I: 4 / 4.5 # Higher due to isolation
 start_date : 2021-01-01
 end_date : 2021-05-31
 
+# Set the testing variables
+daily_tests: 130_000 # Daily tests for the full population
+chance_of_finding_infected: [[0.0, 0.15, 0.15, 0.15]] # chance of being detected in test in I_th state
 
 
 contact_matrices_name: basis  # Target activity
 
 Intervention_contact_matrices_name : [[ned2021jan, fase3/S3_0A_1, fase3/S3_0A_2, fase3/S3_0A_3]]
 
-restriction_thresholds: [[2021-01-01, 2021-02-08, 2021-04-01, 2021-05-01]] # S03.A
-threshold_interventions_to_apply: [[1, 1, 1, 1]]
+planned_restriction_dates: [[2021-01-01, 2021-02-08, 2021-04-01, 2021-05-01]] # S03.A
+planned_restriction_type: [[1, 1, 1, 1]]
 
 stratified_labels: region  # Output granularity
 
 incidence_labels:  [[kommune, sogn]]   # Incidence restriction granularity
 incidence_threshold : [[[200, 200], [400, 400]]]
-incidence_interventions_to_apply: [1]
+incidence_intervention_effect : [[1, 0.9, 0.9]]
+incidence_interventions_to_apply: [[1]]
   # 0: Do nothing
   # 1: Lockdowns
 
@@ -50,20 +54,3 @@ Intervention_vaccination_effect_delays : [[21, 28]]
 Intervention_vaccination_efficacies : [[0.9, 0.6]]
 
 intervention_removal_delay_in_clicks: 0
-
-
-
-
-# Event related parameters
-N_events: 2_000_000 # number of daily events
-event_size_mean: [[20, 50]] # mean size of events (exponential distribution) [indoor, outdoor]
-
-event_beta_scaling: 5 # how much more disease spreads at events (1 = normal, 2 = double of normal)
-event_weekend_multiplier: 2.0 # ratio of how many more events are happening in weekends. 1 = similar, 2 = double
-
-event_rho : 0.5 # Distance factor for events
-event_epsilon_rho : 0.04 # Distance factor for events
-
-outdoor_indoor_event_ratio : 0.5 #  0: all events are indoor. 1: all events are outdoor
-outdoor_beta_scaling : 0.5 # Relative beta for outdoor events
-

@@ -59,11 +59,11 @@ spec_cfg = {
     # lockdown-related / interventions
     'do_interventions' : nb.boolean,
     'threshold_types' : nb.int8[:], # which thing set off restrictions : 0 : certain date. 1 : 'real' incidens rate 2 : measured incidens rate
-    'restriction_thresholds' : nb.int16[:], # len == 2*nr of different thresholds, on the form [start stop start stop etc.]
     'incidence_interventions_to_apply' : nb.int8[:],
-    'planned_interventions_to_apply' : nb.int8[:],
+    'incidence_intervention_effect' : nb.float32[:],
+    'planned_restriction_dates' : nb.uint16[:],
+    'planned_restriction_types' : nb.uint8[:],
     'continuous_interventions_to_apply' : nb.int8[:],
-    'list_of_threshold_interventions_effects' : nb.float64[:, :, :],
     'daily_tests' : nb.uint16,
     'test_delay_in_clicks' : nb.int64[:],
     'results_delay_in_clicks' : nb.int64[:],
@@ -108,6 +108,7 @@ class Config(object) :
         self.stratified_labels  = 'land'
         self.incidence_labels   = List(['land'])
         self.incidence_threshold = np.array([[20000.0, 20000.0]], dtype=np.float32)
+        self.incidence_intervention_effect = np.array([1.0, 0.9, 0.9], dtype=np.float32)
         self.matrix_labels      = 'land'
         self.matrix_label_multiplier = np.array([1.0], dtype=np.float32)
         self.matrix_label_frac  = np.array([0.0], dtype=np.float32)
@@ -128,6 +129,7 @@ class Config(object) :
 
         # Interventions / Lockdown
         self.do_interventions = True
+        self.planned_restriction_types = np.arange(0, dtype=np.uint8) # Trick to yield empty list
 
         # Season effects
         self.seasonal_list_name = 'None'
@@ -251,9 +253,7 @@ class My(object) :
         self.connections = utils.initialize_nested_lists(N_tot, np.uint32)
         self.connection_status = utils.initialize_nested_lists(N_tot, nb.boolean)
         self.connection_type = utils.initialize_nested_lists(N_tot, np.uint8)
-        self.beta_connection_type = np.array(
-            [3.0, 1.0, 1.0, 1.0], dtype=np.float32
-        )  # beta multiplier for [House, work, others, events]
+        self.beta_connection_type = np.array([3.0, 1.0, 1.0, 1.0], dtype=np.float32)  # beta multiplier for [House, work, others, events]
         self.connection_weight = np.ones(N_tot, dtype=np.float32)
         self.infection_weight = np.ones(N_tot, dtype=np.float64)
         self.number_of_contacts = np.zeros(N_tot, dtype=nb.uint16)
@@ -387,7 +387,7 @@ class Gillespie(object) :
 spec_intervention = {
     'cfg' : nb_cfg_type,
     'cfg_network' : nb_cfg_network_type,
-    'agents_per_incidence_label' : ListType(nb.uint32[:]),
+    'agents_per_incidence_label' : ListType(nb.uint32[ : :1]), # ListType[array(uint32, 1d, C)] (C vs. A)
     'N_incidence_labels' : nb.uint16[:],
     'N_matrix_labels' : nb.uint16,
     'freedom_impact' : nb.float64[:],
@@ -406,7 +406,7 @@ spec_intervention = {
     'stratified_label_map' : DictType(nb.uint16, nb.uint16),
     'matrix_label_map' : DictType(nb.uint16, nb.uint16),
     'incidence_label_map' : ListType(DictType(nb.uint16, nb.uint16)),
-    'inverse_incidence_label_map' : ListType(DictType(nb.uint16, nb.uint16)),
+    'inverse_incidence_label_map' : ListType(DictType(nb.uint16, nb.uint16[:])),
     'vaccinations_per_age_group' : nb.int64[:, :, :],
     'vaccination_schedule' : nb.int32[:, :],
     'work_matrix_restrict' : nb.float64[:, :, :, :],
@@ -480,8 +480,6 @@ class Intervention(object) :
         self.N_incidence_labels = N_incidence_labels
         self.N_matrix_labels = N_matrix_labels
 
-        N_labels = max(max(N_incidence_labels), N_matrix_labels)
-
         agents_per_incidence_label = List()
         for ith_incidence_restriction, N_labels in enumerate(N_incidence_labels) :
             label_counter = np.zeros(N_labels, dtype=np.uint32)
@@ -489,6 +487,10 @@ class Intervention(object) :
                 label_counter[incidence_label_map[ith_incidence_restriction][sogn]] += 1
 
             agents_per_incidence_label.append(label_counter)
+
+        self.agents_per_incidence_label = agents_per_incidence_label
+
+        N_labels = max(max(N_incidence_labels), N_matrix_labels)
 
         self.day_found_infected            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.freedom_impact                = np.full(self.cfg_network.N_tot, fill_value=0.0, dtype=np.float64)
@@ -504,15 +506,15 @@ class Intervention(object) :
         self.types                         = np.zeros(N_labels, dtype=np.uint8)
         self.started                       = np.zeros(N_labels, dtype=np.uint8)
 
-        self.matrix_label_map    = matrix_label_map
-        self.incidence_label_map = incidence_label_map
-        self.inverse_incidence_label_map = inverse_incidence_label_map
+        self.matrix_label_map              = matrix_label_map
+        self.incidence_label_map           = incidence_label_map
+        self.inverse_incidence_label_map   = inverse_incidence_label_map
 
-        self.vaccinations_per_age_group = vaccinations_per_age_group
-        self.vaccination_schedule       = vaccination_schedule
-        self.work_matrix_restrict       = work_matrix_restrict
-        self.other_matrix_restrict      = other_matrix_restrict
-        self.event_size_max             = self.cfg.event_size_max[0]
+        self.vaccinations_per_age_group    = vaccinations_per_age_group
+        self.vaccination_schedule          = vaccination_schedule
+        self.work_matrix_restrict          = work_matrix_restrict
+        self.other_matrix_restrict         = other_matrix_restrict
+        self.event_size_max                = self.cfg.event_size_max[0]
         self.verbose = verbose
 
 
@@ -552,11 +554,11 @@ class Intervention(object) :
 
     @property
     def apply_matrix_restriction(self) :
-        return 1 in self.cfg.planned_interventions_to_apply
+        return 1 in self.cfg.planned_restriction_types
 
     @property
     def start_interventions_by_day(self) :
-        return 0 not in self.cfg.planned_interventions_to_apply
+        return len(self.cfg.planned_restriction_types) > 0
 
     @property
     def start_interventions_by_incidence(self) :

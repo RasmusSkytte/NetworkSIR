@@ -7,8 +7,6 @@ from tqdm import tqdm
 from contexttimer import Timer
 
 
-params, start_date = utils.load_params("cfg/incidence_lockdowns.yaml")
-
 if utils.is_local_computer():
     f = 0.01
     n_steps = 1
@@ -32,14 +30,13 @@ if n_steps == 1 :
 else :
     noise = lambda m, d : np.round(m + np.linspace(-d, d, 2*(n_steps - 1) + 1), 5)
 
-# Sweep around parameter set
-params["beta"]               = noise(params["beta"], 0.005)
-params["N_init"]             = noise(params["N_init"] * f, 500 * f)
-params["N_init_UK_frac"]     = noise(params["N_init_UK_frac"], 1)
+params, start_date = utils.load_params('cfg/incidence_lockdowns.yaml', f)
 
-# Scale the population
-params["N_tot"]  = int(params["N_tot"]  * f)
-params["R_init"] = int(params["R_init"] * f)
+# Sweep around parameter set
+params['beta']               = noise(params['beta'], 0.005)
+params['N_init']             = noise(params['N_init'] * f, 500 * f)
+params['N_init_UK_frac']     = noise(params['N_init_UK_frac'], 1)
+
 
 N_files_total = 0
 if __name__ == "__main__":
@@ -66,8 +63,8 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
         if len(abm_files.cfgs) == 0 :
             raise ValueError('No files found')
 
-        lls_f     = []
-        lls_s     = []
+        lls_f = []
+        lls_s = []
 
         for cfg in tqdm(
             abm_files.iter_cfgs(),

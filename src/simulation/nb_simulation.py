@@ -514,7 +514,7 @@ def do_bug_check(
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-@njit
+#@njit
 def run_simulation(
     my,
     g,
@@ -794,4 +794,3 @@ def run_simulation(
         # print("N_positive_tested", N_positive_tested)
 
     return out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_my_state, intervention
-    #return out_time, out_state_counts, out_variant_counts, out_my_state, intervention

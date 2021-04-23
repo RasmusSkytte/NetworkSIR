@@ -277,7 +277,7 @@ def remove_intervention_at_sogn(my, g, intervention, ith_sogn) :
             my.restricted_status[agent] = 0
 
 
-#@njit
+@njit
 def check_if_intervention_on_labels_can_be_removed(my, g, intervention, day, click) :
 
     # Loop over all interventions and check if condition still applies
@@ -288,7 +288,6 @@ def check_if_intervention_on_labels_can_be_removed(my, g, intervention, day, cli
     for sogn, keep_intervention in enumerate(keep_intervention_at_sogn) :
         if not keep_intervention and intervention.types[sogn] == 1 :
             intervention.clicks_when_restriction_stops[sogn] = click + my.cfg.intervention_removal_delay_in_clicks
-
 
 
 
@@ -314,6 +313,7 @@ def check_incidence_against_treshold(my, intervention, day, treshold_idx) :
 
     # Loop over possible interventions
     for ith_intervention in range(len(my.cfg.incidence_threshold)) :
+
         treshold = my.cfg.incidence_threshold[ith_intervention][treshold_idx]
 
         # Determine the number of (found) infected per label
@@ -323,8 +323,7 @@ def check_incidence_against_treshold(my, intervention, day, treshold_idx) :
                 infected_per_label[intervention.incidence_label_map[ith_intervention][my.sogn[agent]]] += 1
 
         # Loop over labels
-        it = enumerate(zip(infected_per_label, intervention.agents_per_incidence_label[ith_intervention]))
-        for ith_label, (N_infected, N_inhabitants) in it :
+        for ith_label, (N_infected, N_inhabitants) in enumerate(zip(infected_per_label, intervention.agents_per_incidence_label[ith_intervention])) :
 
             if N_inhabitants == 0 :
                 continue
@@ -334,7 +333,7 @@ def check_incidence_against_treshold(my, intervention, day, treshold_idx) :
 
             # Check for restriction stop
             if incidence > treshold :
-                for sogn in intervention.inverse_incidence_label_map[ith_intervention][ith_label] :
+                for sogn in intervention.inverse_incidence_label_map[ith_intervention][np.uint16(ith_label)] :
                     intervention_at_sogn[sogn] = True
 
     return intervention_at_sogn
@@ -707,11 +706,10 @@ def apply_symptom_testing(my, intervention, agent, state, click) :
 @njit
 def apply_random_testing(my, intervention, click) :
     # choose N_daily_test people at random to test
-    N_daily_test = int(my.cfg.daily_tests * my.cfg_network.N_tot / 5_800_000)
 
     agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
 
-    random_agents_to_be_tested = np.random.choice(agents, N_daily_test)
+    random_agents_to_be_tested = np.random.choice(agents, my.cfg.daily_tests)
 
     intervention.clicks_when_tested[random_agents_to_be_tested] = click + intervention.cfg.test_delay_in_clicks[1]
 
@@ -735,7 +733,6 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                 intervention.types[ith_sogn] = 0
                 intervention.started[ith_sogn] = 0
 
-
         check_if_label_needs_intervention(my, intervention, day)
 
         for ith_sogn, _ in enumerate(intervention.types) :
@@ -746,7 +743,6 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
             if intervention_has_not_been_applied :
                 intervention.started[ith_sogn] = 1
                 lockdown_sogn(my, g, ith_sogn, intervention.cfg.incidence_intervention_effect)
-
 
 
     if intervention.start_interventions_by_day :
@@ -822,12 +818,12 @@ def test_tagged_agents(my, g, intervention, day, click) :
 
 
 
-@njit
+#@njit
 def apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose) :
-
+    print('--- 2.1 ---')
     if intervention.apply_interventions_on_label and day >= 0 :
         apply_interventions_on_label(my, g, intervention, day, click, verbose)
-
+    print('--- 2.2 ---')
     if intervention.apply_random_testing :
         apply_random_testing(my, intervention, click)
 

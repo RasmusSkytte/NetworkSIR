@@ -34,9 +34,8 @@ params, start_date = utils.load_params('cfg/incidence_lockdowns.yaml', f)
 
 # Sweep around parameter set
 params['beta']               = noise(params['beta'], 0.005)
-params['N_init']             = noise(params['N_init'] * f, 500 * f)
+params['N_init']             = noise(params['N_init'], 500 )
 params['N_init_UK_frac']     = noise(params['N_init_UK_frac'], 1)
-
 
 N_files_total = 0
 if __name__ == "__main__":

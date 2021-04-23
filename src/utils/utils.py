@@ -1157,7 +1157,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
             # Convert all inputs to lists
             if isinstance(lst, (int, float, str)) :
                 lst = [lst]
-
+            print(name)
             d_list.append([{name : val} for val in lst])
 
         d_list.append([{"ID" : ID} for ID in range(N_runs)])
@@ -1210,6 +1210,26 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
     return cfgs
 
+
+def scale_population_parameters(cfg) :
+    cfg_scaled = cfg.deepcopy()
+
+    f =  cfg.network.N_tot / 5_800_000
+
+    # Scale the population
+    cfg.R_init = int(cfg.R_init * f)
+    cfg.N_init = int(cfg.N_init * f)
+
+    for i, value_set in enumerate(cfg.incidence_threshold) :
+        for j, interventions in enumerate(value_set) :
+            for k, thresholds in enumerate(interventions) :
+                cfg.incidence_threshold[i][j][k] = int(thresholds * f)
+
+
+    cfg_scaled.daily_tests = int(cfg.daily_tests * f)
+
+
+    return cfg_scaled
 
 def cfg_to_hash(cfg, N=10, exclude_ID=True, exclude_hash=True) :
     """
@@ -2081,16 +2101,8 @@ def load_params(filename, f) :
     if 'initial_infection_distribution' in params.keys() and isinstance(params['initial_infection_distribution'], datetime.date) :
         params['initial_infection_distribution'] = params['initial_infection_distribution'].strftime('%Y_%m_%d')
 
-    # Scale the population
+    # Scale the total population
     params['N_tot']  = int(params['N_tot']  * f)
-    params['R_init'] = int(params['R_init'] * f)
-    params['N_init'] = int(params['N_init'] * f)
-
-    print(params['incidence_threshold'])
-    for i, value_set in enumerate(params['incidence_threshold']) :
-        for j, interventions in enumerate(value_set) :
-            for k, thresholds in enumerate(interventions) :
-                params['incidence_threshold'][i][j][k] = int(thresholds * f)
 
     return params, start_date
 

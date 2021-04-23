@@ -53,7 +53,7 @@ class Simulation :
 
         self.verbose = verbose
 
-        self.cfg = cfg.deepcopy()
+        self.cfg = cfg
         self.cfg.pop("hash")
 
         self.N_tot = cfg.network.N_tot
@@ -673,7 +673,11 @@ def run_single_simulation(
             warnings.simplefilter("ignore", NumbaTypeSafetyWarning)
             # warnings.simplefilter("ignore", NumbaPendingDeprecationWarning)
 
-        simulation = Simulation(cfg, verbose)
+
+        # Scale the population parameters
+        cfg_scaled = utils.scale_population_parameters(cfg)
+
+        simulation = Simulation(cfg_scaled, verbose)
 
         simulation.initialize_network(
             force_rerun=force_rerun, save_initial_network=save_initial_network, only_initialize_network=only_initialize_network

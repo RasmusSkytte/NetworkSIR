@@ -514,7 +514,7 @@ def do_bug_check(
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-#@njit
+@njit
 def run_simulation(
     my,
     g,

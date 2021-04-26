@@ -53,8 +53,8 @@ class Simulation :
 
         self.verbose = verbose
 
-        self.cfg = cfg
-        self.cfg.pop("hash")
+        self.cfg = cfg.deepcopy()
+        self.cfg.pop('hash')
 
         self.N_tot = cfg.network.N_tot
 

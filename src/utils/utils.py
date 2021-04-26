@@ -9,7 +9,7 @@ import re
 import datetime
 import os
 from pathlib import Path
-
+import numbers
 
 from numba import njit, typeof, generated_jit
 from numba.core import types
@@ -1155,9 +1155,8 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
         for name, lst in d_simulation_parameters.items() :
 
             # Convert all inputs to lists
-            if isinstance(lst, (int, float, str)) :
+            if isinstance(lst, (numbers.Number, str)) :
                 lst = [lst]
-            print(name)
             d_list.append([{name : val} for val in lst])
 
         d_list.append([{"ID" : ID} for ID in range(N_runs)])
@@ -1214,16 +1213,15 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 def scale_population_parameters(cfg) :
     cfg_scaled = cfg.deepcopy()
 
-    f =  cfg.network.N_tot / 5_800_000
+    f = cfg.network.N_tot / 5_800_000
 
     # Scale the population
-    cfg.R_init = int(cfg.R_init * f)
-    cfg.N_init = int(cfg.N_init * f)
+    cfg_scaled.R_init = int(cfg.R_init * f)
+    cfg_scaled.N_init = int(cfg.N_init * f)
 
-    for i, value_set in enumerate(cfg.incidence_threshold) :
-        for j, interventions in enumerate(value_set) :
-            for k, thresholds in enumerate(interventions) :
-                cfg.incidence_threshold[i][j][k] = int(thresholds * f)
+    for j, interventions in enumerate(cfg.incidence_threshold) :
+        for k, thresholds in enumerate(interventions) :
+            cfg_scaled['incidence_threshold'][j][k] = int(thresholds * f)
 
 
     cfg_scaled.daily_tests = int(cfg.daily_tests * f)

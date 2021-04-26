@@ -818,12 +818,12 @@ def test_tagged_agents(my, g, intervention, day, click) :
 
 
 
-#@njit
+@njit
 def apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose) :
-    print('--- 2.1 ---')
+
     if intervention.apply_interventions_on_label and day >= 0 :
         apply_interventions_on_label(my, g, intervention, day, click, verbose)
-    print('--- 2.2 ---')
+
     if intervention.apply_random_testing :
         apply_random_testing(my, intervention, click)
 

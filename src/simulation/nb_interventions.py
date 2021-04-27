@@ -657,60 +657,64 @@ def test_agent(my, g, intervention, agent, click) :
     # Set the time of result
     intervention.clicks_when_tested_result[agent] = click + intervention.cfg.results_delay_in_clicks[intervention.reason_for_test[agent]]
 
+    if my.agent_is_infectious(agent) :
+        intervention.result_of_test[agent] = 1
+    else :
+        intervention.result_of_test[agent] = 0
 
 @njit
 def check_test_results(my, g, intervention, agent, click) :
 
-    # if agent is infectious and hasn't been tested before
-    if my.agent_is_infectious(agent) and intervention.agent_not_found_positive(agent):
+    # If agent receives positive test result
+    if intervention.result_of_test[agent] == 1 :
 
         # Count reason for being found infected
         intervention.positive_test_counter[intervention.reason_for_test[agent]] += 1
 
-    # check if tracing is on
-    if intervention.apply_tracing :
-        # loop over contacts
-        for ith_contact, contact in enumerate(my.connections[agent]) :
-            if (
-                np.random.rand()
-                < intervention.cfg.tracing_rates[my.connection_type[agent][ith_contact]]
-                and intervention.clicks_when_tested[contact] == -1
-            ) :
-                intervention.reason_for_test[contact] = 2
-                intervention.clicks_when_tested[contact] = (
-                    click + intervention.cfg.test_delay_in_clicks[2]
-                )
-                intervention.clicks_when_isolated[contact] = click + my.cfg.tracing_delay
+        # Go into self-isolation
+        intervention.clicks_when_isolated[agent] = click
 
-    # this should only trigger if they have gone into isolation after contact tracing goes out of isolation
-    elif (
-        my.agent_is_not_infectious(agent)
-        and intervention.agent_not_found_positive(agent)
-        and click > intervention.clicks_when_isolated[agent]
-    ) :
+
+        # Check if tracing is on
+        if intervention.apply_tracing :
+
+            # loop over contacts
+            for ith_contact, contact in enumerate(my.connections[agent]) :
+                if (
+                    np.random.rand() < intervention.cfg.tracing_rates[my.connection_type[agent][ith_contact]]    # Not all will be traced
+                    and intervention.day_found_infected[contact] == -1                                           # The contact should not have tested positive before
+                    and intervention.clicks_when_tested_result[contact] < click                                  # The contact should not be waiting for test result
+                ) :
+                    # Book new test
+                    intervention.reason_for_test[contact] = 2
+                    intervention.clicks_when_tested[contact] = click + my.cfg.tracing_delay + intervention.cfg.test_delay_in_clicks[2]
+
+                    # Isolate while waiting
+                    intervention.clicks_when_isolated[contact] = click + my.cfg.tracing_delay
+
+
+    else : # They recieve negative test result
         reset_rates_of_agent(my, g, agent, intervention)
 
-    intervention.clicks_when_isolated[agent] = -1
-    intervention.clicks_when_tested[agent] = -1
-    intervention.reason_for_test[agent] = -1
 
 
 @njit
 def apply_symptom_testing(my, intervention, agent, state, click) :
 
+    # Infectious agents may test due to symptopns
     if my.agent_is_infectious(agent) :
 
-        prob = intervention.cfg.chance_of_finding_infected[state - 4] # TODO: Fjern hardcoded 4
-        randomly_selected = np.random.rand() < prob
-        not_tested_before = intervention.clicks_when_tested[agent] == -1
+        if np.random.rand() < intervention.cfg.chance_of_finding_infected[state - 4] :  # TODO: Fjern hardcoded 4
 
-        if randomly_selected and not_tested_before :
-
-            # testing in n_clicks for symptom checking
+            # Testing in n_clicks for symptom checking
             intervention.clicks_when_tested[agent] = click + intervention.cfg.test_delay_in_clicks[0]
+            intervention.result_of_test[agent]     = 1
 
-            # set the reason for testing to symptoms (0)
+            # Set the reason for testing to symptoms (0)
             intervention.reason_for_test[agent] = 0
+
+            # Isolate while waiting
+            intervention.clicks_when_isolated[agent] = click
 
 
 @njit
@@ -722,12 +726,13 @@ def apply_random_testing(my, intervention, click) :
     random_agents_to_be_tested = np.random.choice(agents, my.cfg.daily_tests)
 
     # Filter out those who have been tested before
-    intervention.reason_for_test[agent] = 0
+    I = intervention.day_found_infected[random_agents_to_be_tested] == -1
 
-    intervention.clicks_when_tested[random_agents_to_be_tested] = click + intervention.cfg.test_delay_in_clicks[1]
+    intervention.clicks_when_tested[random_agents_to_be_tested[I]] = click + intervention.cfg.test_delay_in_clicks[1]
 
     # specify that random test is the reason for test
-    intervention.reason_for_test[random_agents_to_be_tested] = 1
+    intervention.reason_for_test[random_agents_to_be_tested[I]] = 1
+
 
 
 @njit
@@ -814,31 +819,9 @@ def testing_intervention(my, g, intervention, day, click) :
         if intervention.clicks_when_tested_result[agent] == click :
             check_test_results(my, g, intervention, agent, click)
 
-
-
-
+        # check for isolation
         if intervention.clicks_when_isolated[agent] == click and intervention.apply_isolation :
-            cut_rates_of_agent(
-                my,
-                g,
-                intervention,
-                agent,
-                rate_reduction=intervention.cfg.isolation_rate_reduction)
-
-        # getting results for people
-        if intervention.clicks_when_tested_result[agent] == click :
-
-            intervention.clicks_when_tested_result[agent] = -1
-            intervention.day_found_infected[agent] = day
-
-            if intervention.apply_isolation :
-                cut_rates_of_agent(
-                    my,
-                    g,
-                    intervention,
-                    agent,
-                    rate_reduction=intervention.cfg.isolation_rate_reduction)
-
+            cut_rates_of_agent(my, g, intervention, agent, rate_reduction=intervention.cfg.isolation_rate_reduction)
 
 
 @njit

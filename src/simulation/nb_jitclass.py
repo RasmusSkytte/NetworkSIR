@@ -396,6 +396,7 @@ spec_intervention = {
     'R_true_list_brit' : ListType(nb.float64),
     'day_found_infected' : nb.int32[:],
     'reason_for_test' : nb.int8[:],
+    'results_of_test' : nb.int8[:],
     'positive_test_counter' : nb.uint32[:],
     'clicks_when_tested' : nb.int32[:],
     'clicks_when_tested_result' : nb.int32[:],
@@ -430,6 +431,11 @@ class Intervention(object) :
          1 : random_test
          2 : tracing,
         -1 : No reason yet (or no impending tests). You can still be tested again later on (if negative test)
+
+    - results_of_test :
+         0 : negative
+         1 : positive
+        -1 : no result yet
 
     - positive_test_counter : counter of how many were found tested positive due to reasom 0, 1 or 2
 
@@ -498,6 +504,7 @@ class Intervention(object) :
         self.R_true_list                   = List([0.0])
         self.R_true_list_brit              = List([0.0])
         self.reason_for_test               = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
+        self.result_of_test                = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
         self.positive_test_counter         = np.zeros(3, dtype=np.uint32)
         self.clicks_when_tested            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_tested_result     = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)

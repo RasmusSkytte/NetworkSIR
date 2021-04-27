@@ -6,7 +6,7 @@ from numba.typed import List
 
 from src.utils import utils
 
-from src.simulation.nb_interventions   import test_tagged_agents, vaccinate, apply_symptom_testing, apply_daily_interventions
+from src.simulation.nb_interventions   import testing_intervention, vaccinate, apply_symptom_testing, apply_daily_interventions
 from src.simulation.nb_interventions   import calculate_R_True, calculate_R_True_brit, calculate_population_freedom_impact
 from src.simulation.nb_events          import add_daily_events
 from src.simulation.nb_helpers         import nb_random_choice, single_random_choice
@@ -556,7 +556,6 @@ def run_simulation(
             for d in range(-my.cfg.start_date_offset, 1) :
                 vaccinate(my, g, intervention, d, stratified_vaccination_counts, verbose=verbose)
 
-
     # Run the simulation ################################
     continue_run = True
     while continue_run :
@@ -700,13 +699,13 @@ def run_simulation(
 
         while nts * click  < real_time :
 
+            # Apply interventions on clicks
+            if intervention.apply_interventions :
+                testing_intervention(my, g, intervention, day, click)
+
             # Advance click
             click += 1
             daily_counter += 1
-
-            # Apply interventions on clicks
-            if intervention.apply_interventions:
-                test_tagged_agents(my, g, intervention, day, click)
 
             # Check if day is over
             if daily_counter >= 10 :
@@ -773,11 +772,15 @@ def run_simulation(
         s_counter[s] += 1
 
     if verbose :
-        print("Simulation step_number, ", step_number)
-        print("s_counter", s_counter)
-        print("Where", where_infections_happened_counter)
-        print("positive_test_counter", intervention.positive_test_counter)
-        print("n_found", np.sum(np.array([1 for day_found in intervention.day_found_infected if day_found>=0])))
+        print('Simulation step_number, ', step_number)
+        print('s_counter', s_counter)
+        print('Where', where_infections_happened_counter)
+        f = 5_800_000 / my.cfg_network.N_tot
+        print('daily_tests', int(f * intervention.test_counter.sum() / day))
+        print('daily_test_counter', [int(f * tests / day) for tests in intervention.test_counter])
+        # Smitteopspringen kontakter ca. 1250 + 600 = 1850 personer pr dag.
+        print('positive_test_counter', intervention.positive_test_counter)
+        print('n_found', np.sum(np.array([1 for day_found in intervention.day_found_infected if day_found>=0])))
         #label_contacts, label_infected, label_people = calculate_contact_distribution_label(my, intervention)
         #print(list(label_contacts))
         #print(list(label_infected))
@@ -794,4 +797,3 @@ def run_simulation(
         # print("N_positive_tested", N_positive_tested)
 
     return out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_my_state, intervention
-    #return out_time, out_state_counts, out_variant_counts, out_my_state, intervention

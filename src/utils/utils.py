@@ -9,7 +9,7 @@ import re
 import datetime
 import os
 from pathlib import Path
-
+import numbers
 
 from numba import njit, typeof, generated_jit
 from numba.core import types
@@ -1155,9 +1155,8 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
         for name, lst in d_simulation_parameters.items() :
 
             # Convert all inputs to lists
-            if isinstance(lst, (int, float, str)) :
+            if isinstance(lst, (numbers.Number, str)) :
                 lst = [lst]
-
             d_list.append([{name : val} for val in lst])
 
         d_list.append([{"ID" : ID} for ID in range(N_runs)])
@@ -1210,6 +1209,26 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
     return cfgs
 
+
+def scale_population_parameters(cfg) :
+    cfg_scaled = cfg.deepcopy()
+
+    f = cfg.network.N_tot / 5_800_000
+
+    # Scale the population
+    cfg_scaled.R_init = int(cfg.R_init * f)
+    cfg_scaled.N_init = int(cfg.N_init * f)
+
+    if len(cfg.incidence_labels) > 0 :
+        for j, interventions in enumerate(cfg.incidence_threshold) :
+            for k, thresholds in enumerate(interventions) :
+                cfg_scaled['incidence_threshold'][j][k] = int(thresholds * f)
+
+
+    cfg_scaled.daily_tests = int(cfg.daily_tests * f)
+
+
+    return cfg_scaled
 
 def cfg_to_hash(cfg, N=10, exclude_ID=True, exclude_hash=True) :
     """
@@ -2046,7 +2065,7 @@ def parse_parameter(param, rounding=None) :
 
     return param
 
-def load_params(filename) :
+def load_params(filename, f) :
     params = file_loaders.load_yaml(filename)
     params = params.to_dict()
 
@@ -2064,9 +2083,9 @@ def load_params(filename) :
     params['day_max'] = (end_date - start_date).days
     params['start_date_offset'] = (start_date - params['start_date_offset']).days
 
-    if isinstance(params['restriction_thresholds'], list) :
+    if isinstance(params['planned_restriction_dates'], list) :
 
-        restriction_dates = [date for date in params['restriction_thresholds'][0]]
+        restriction_dates = [date for date in params['planned_restriction_dates'][0]]
 
         dates = [0]
         for i in range(1, len(restriction_dates)) :
@@ -2074,12 +2093,15 @@ def load_params(filename) :
             dates.append((date - start_date).days)
 
     else :
-        dates = [(params['restriction_thresholds'] - start_date).days]
+        dates = [(params['planned_restriction_dates'] - start_date).days]
 
-    params['restriction_thresholds'] =  [dates]
+    params['planned_restriction_dates'] =  [dates]
 
     if 'initial_infection_distribution' in params.keys() and isinstance(params['initial_infection_distribution'], datetime.date) :
         params['initial_infection_distribution'] = params['initial_infection_distribution'].strftime('%Y_%m_%d')
+
+    # Scale the total population
+    params['N_tot']  = int(params['N_tot']  * f)
 
     return params, start_date
 

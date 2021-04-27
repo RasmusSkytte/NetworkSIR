@@ -30,12 +30,16 @@ initialize_at_kommune_level: False # Initiate infections at kommune basis
 # Set label information:
 # land, region, landsdel, kommune, sogne
 stratified_labels: region  # Output granularity
-incidence_labels:  kommune  # Incidence restriction granularity
+
+incidence_labels:  [kommune] # Incidence restriction granularity
+incidence_threshold : [[200, 200]]
+incidence_intervention_effect : [1, 1, 1]
+
 matrix_labels:     landsdel    # Matrix restriction granularity
 matrix_label_multiplier: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Landsdelniveau
 matrix_label_frac:       [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Landsdelniveau
 
-day_max: 0 # 5 weeks. Sets the maximum number of days the algorithm runs
+day_max: 35 # 5 weeks. Sets the maximum number of days the algorithm runs
 
 
 # vaccinations related variables.
@@ -44,20 +48,10 @@ start_date_offset: 0 # Number of days between start date and vaccination start
 
 #  Define default intervention parameters
 do_interventions: True
-# [[kind of interventions], [start, stop intervention 0],[start, stop intervention 1] etc ]
-restriction_thresholds: [1, 39]
 
-threshold_types: [0]
-  # 0: Specific dates
-  # 1: Real incidence rate
-  # 2: Measured incidence rate
-
-threshold_interventions_to_apply: [3]
+incidence_interventions_to_apply: [1]
   # 0: Do nothing
-  # 1: lockdown (cut some contacts and reduce the rest)
-  # 2: Masking (reduce some contacts)
-  # 3: Matrix based (used loaded contact matrices)
-  # 4: Events (change the allowed event sizes)
+  # 1: Lockdowns
 
 continuous_interventions_to_apply: [1, 2, 3, 4, 5]
     # 0: Do nothing
@@ -86,10 +80,8 @@ testing_penetration: [0.50,  0.50,  0.48,  0.48,  0.50,  0.60,  0.75,  0.80]
 # masking_rate_reduction: [[0.0, 0.0, 0.3], [0.0, 0.0, 0.8]] # [family, job, other]
 # lockdown_rate_reduction: [[0.0, 1.0, 0.6], [0.0, 0.6, 0.6]] # [family, job, other]
 isolation_rate_reduction: [0.2, 1.0, 1.0] # [family, job, other]
-tracing_rates: [1.0, 0.8, 0.0] # [family, job, other]
+tracing_rates: [0.5, 0.0, 0.0] # [family, job, other]
 tracing_delay: 10 #
-
-Intervention_contact_matrices_name : [reference]
 
 # Vaccination related parameters
 Intervention_vaccination_schedule_name : None

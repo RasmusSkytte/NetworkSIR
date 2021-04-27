@@ -103,7 +103,7 @@ seasonal_strength : 0
 
 # Event related parameters
 N_events: 0 # number of daily events
-event_size_max: [10, 20] #max size of events. If 0 => N_tot (no max)  [indoor, outdoor]
+event_size_max: [[10, 20]] #max size of events. If 0 => N_tot (no max)  [indoor, outdoor]
 event_size_mean: [5, 10] # mean size of events (exponential distribution) [indoor, outdoor]
 
 event_beta_scaling: 5 # how much more disease spreads at events (1 = normal, 2 = double of normal)

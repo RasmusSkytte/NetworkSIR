@@ -1219,9 +1219,10 @@ def scale_population_parameters(cfg) :
     cfg_scaled.R_init = int(cfg.R_init * f)
     cfg_scaled.N_init = int(cfg.N_init * f)
 
-    for j, interventions in enumerate(cfg.incidence_threshold) :
-        for k, thresholds in enumerate(interventions) :
-            cfg_scaled['incidence_threshold'][j][k] = int(thresholds * f)
+    if len(cfg.incidence_labels) > 0 :
+        for j, interventions in enumerate(cfg.incidence_threshold) :
+            for k, thresholds in enumerate(interventions) :
+                cfg_scaled['incidence_threshold'][j][k] = int(thresholds * f)
 
 
     cfg_scaled.daily_tests = int(cfg.daily_tests * f)

@@ -60,7 +60,7 @@ spec_cfg = {
     'do_interventions' : nb.boolean,
     'threshold_types' : nb.int8[:], # which thing set off restrictions : 0 : certain date. 1 : 'real' incidens rate 2 : measured incidens rate
     'incidence_interventions_to_apply' : nb.int8[:],
-    'incidence_intervention_effect' : nb.float32[:],
+    'incidence_intervention_effect' : nb.float64[:],
     'planned_restriction_dates' : nb.uint16[:],
     'planned_restriction_types' : nb.uint8[:],
     'continuous_interventions_to_apply' : nb.int8[:],
@@ -108,7 +108,7 @@ class Config(object) :
         self.stratified_labels  = 'land'
         self.incidence_labels   = List(['land'])
         self.incidence_threshold = np.array([[20000.0, 20000.0]], dtype=np.float32)
-        self.incidence_intervention_effect = np.array([1.0, 0.9, 0.9], dtype=np.float32)
+        self.incidence_intervention_effect = np.array([1.0, 0.9, 0.9], dtype=np.float64)
         self.matrix_labels      = 'land'
         self.matrix_label_multiplier = np.array([1.0], dtype=np.float32)
         self.matrix_label_frac  = np.array([0.0], dtype=np.float32)
@@ -530,7 +530,7 @@ class Intervention(object) :
 
     @property
     def apply_interventions_on_label(self) :
-        return (self.start_interventions_by_day or self.start_interventions_by_incidence)
+        return (self.apply_matrix_restriction or self.start_interventions_by_incidence)
 
     @property
     def apply_tracing(self) :

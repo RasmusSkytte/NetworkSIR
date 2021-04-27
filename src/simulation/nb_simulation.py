@@ -6,7 +6,7 @@ from numba.typed import List
 
 from src.utils import utils
 
-from src.simulation.nb_interventions   import test_tagged_agents, vaccinate, apply_symptom_testing, apply_daily_interventions
+from src.simulation.nb_interventions   import testing_intervention, vaccinate, apply_symptom_testing, apply_daily_interventions
 from src.simulation.nb_interventions   import calculate_R_True, calculate_R_True_brit, calculate_population_freedom_impact
 from src.simulation.nb_events          import add_daily_events
 from src.simulation.nb_helpers         import nb_random_choice, single_random_choice
@@ -556,7 +556,6 @@ def run_simulation(
             for d in range(-my.cfg.start_date_offset, 1) :
                 vaccinate(my, g, intervention, d, stratified_vaccination_counts, verbose=verbose)
 
-
     # Run the simulation ################################
     continue_run = True
     while continue_run :
@@ -706,7 +705,7 @@ def run_simulation(
 
             # Apply interventions on clicks
             if intervention.apply_interventions:
-                test_tagged_agents(my, g, intervention, day, click)
+                testing_interventions(my, g, intervention, day, click)
 
             # Check if day is over
             if daily_counter >= 10 :

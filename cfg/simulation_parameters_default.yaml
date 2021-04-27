@@ -31,9 +31,9 @@ initialize_at_kommune_level: False # Initiate infections at kommune basis
 # land, region, landsdel, kommune, sogne
 stratified_labels: region  # Output granularity
 
-incidence_labels:  kommune # Incidence restriction granularity
+incidence_labels:  [kommune] # Incidence restriction granularity
 incidence_threshold : [[200, 200]]
-incidence_intervention_effect : [[1, 0.9, 0.9]]
+incidence_intervention_effect : [1, 1, 1]
 
 matrix_labels:     landsdel    # Matrix restriction granularity
 matrix_label_multiplier: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Landsdelniveau

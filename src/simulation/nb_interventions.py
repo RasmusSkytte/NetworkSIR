@@ -653,24 +653,34 @@ def matrix_restriction_on_label(my, g, intervention, label, n, verbose=False) :
 
 @njit
 def test_agent(my, g, intervention, agent, click) :
+
+    # Set the time of result
+    intervention.clicks_when_tested_result[agent] = click + intervention.cfg.results_delay_in_clicks[intervention.reason_for_test[agent]]
+
+
+@njit
+def check_test_results(my, g, intervention, agent, click) :
+
     # if agent is infectious and hasn't been tested before
     if my.agent_is_infectious(agent) and intervention.agent_not_found_positive(agent):
-        intervention.clicks_when_tested_result[agent] = click + intervention.cfg.results_delay_in_clicks[intervention.reason_for_test[agent]]
-        intervention.positive_test_counter[intervention.reason_for_test[agent]]+= 1  # count reason found infected
-        # check if tracing is on
-        if intervention.apply_tracing :
-            # loop over contacts
-            for ith_contact, contact in enumerate(my.connections[agent]) :
-                if (
-                    np.random.rand()
-                    < intervention.cfg.tracing_rates[my.connection_type[agent][ith_contact]]
-                    and intervention.clicks_when_tested[contact] == -1
-                ) :
-                    intervention.reason_for_test[contact] = 2
-                    intervention.clicks_when_tested[contact] = (
-                        click + intervention.cfg.test_delay_in_clicks[2]
-                    )
-                    intervention.clicks_when_isolated[contact] = click + my.cfg.tracing_delay
+
+        # Count reason for being found infected
+        intervention.positive_test_counter[intervention.reason_for_test[agent]] += 1
+
+    # check if tracing is on
+    if intervention.apply_tracing :
+        # loop over contacts
+        for ith_contact, contact in enumerate(my.connections[agent]) :
+            if (
+                np.random.rand()
+                < intervention.cfg.tracing_rates[my.connection_type[agent][ith_contact]]
+                and intervention.clicks_when_tested[contact] == -1
+            ) :
+                intervention.reason_for_test[contact] = 2
+                intervention.clicks_when_tested[contact] = (
+                    click + intervention.cfg.test_delay_in_clicks[2]
+                )
+                intervention.clicks_when_isolated[contact] = click + my.cfg.tracing_delay
 
     # this should only trigger if they have gone into isolation after contact tracing goes out of isolation
     elif (
@@ -692,7 +702,7 @@ def apply_symptom_testing(my, intervention, agent, state, click) :
 
         prob = intervention.cfg.chance_of_finding_infected[state - 4] # TODO: Fjern hardcoded 4
         randomly_selected = np.random.rand() < prob
-        not_tested_before = (intervention.clicks_when_tested[agent] == -1)
+        not_tested_before = intervention.clicks_when_tested[agent] == -1
 
         if randomly_selected and not_tested_before :
 
@@ -710,6 +720,9 @@ def apply_random_testing(my, intervention, click) :
     agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
 
     random_agents_to_be_tested = np.random.choice(agents, my.cfg.daily_tests)
+
+    # Filter out those who have been tested before
+    intervention.reason_for_test[agent] = 0
 
     intervention.clicks_when_tested[random_agents_to_be_tested] = click + intervention.cfg.test_delay_in_clicks[1]
 
@@ -735,14 +748,17 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
 
         check_if_label_needs_intervention(my, intervention, day)
 
-        for ith_sogn, _ in enumerate(intervention.types) :
+        for ith_sogn, intervention_type in enumerate(intervention.types) :
 
             # Check if intervention has been applied
             intervention_has_not_been_applied = intervention.started[ith_sogn] == 0
 
             if intervention_has_not_been_applied :
-                intervention.started[ith_sogn] = 1
-                lockdown_sogn(my, g, ith_sogn, intervention.cfg.incidence_intervention_effect)
+
+               # Lockdown on high incidence
+               if intervention_type == 1 :
+                    intervention.started[ith_sogn] = 1
+                    lockdown_sogn(my, g, ith_sogn, intervention.cfg.incidence_intervention_effect)
 
 
     if intervention.start_interventions_by_day :
@@ -785,7 +801,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
 
 
 @njit
-def test_tagged_agents(my, g, intervention, day, click) :
+def testing_intervention(my, g, intervention, day, click) :
 
     # test everybody whose counter say we should test
     for agent in range(my.cfg_network.N_tot) :
@@ -793,6 +809,13 @@ def test_tagged_agents(my, g, intervention, day, click) :
         # testing everybody who should be tested
         if intervention.clicks_when_tested[agent] == click:
             test_agent(my, g, intervention, agent, click)
+
+        # check for test results
+        if intervention.clicks_when_tested_result[agent] == click :
+            check_test_results(my, g, intervention, agent, click)
+
+
+
 
         if intervention.clicks_when_isolated[agent] == click and intervention.apply_isolation :
             cut_rates_of_agent(

@@ -203,6 +203,10 @@ def reset_rates_of_connection(my, g, agent, ith_contact, intervention, two_way=T
 
     # TODO: Here we should implement transmission risk for vaccinted persons
 
+    # Account for self-isolation
+    if intervention.isolated[agent] or intervention.isolated[contact] :
+        infection_rate *= intervention.cfg.isolation_rate_reduction[my.connection_type[agent][ith_contact]]
+
     # Reset the g.rates if agent is not susceptible or recovered
     if my.agent_is_susceptible(contact) :
         target_rate = infection_rate
@@ -657,6 +661,9 @@ def test_agent(my, g, intervention, agent, click) :
     # Set the time of result
     intervention.clicks_when_tested_result[agent] = click + intervention.cfg.results_delay_in_clicks[intervention.reason_for_test[agent]]
 
+    # Count the tests
+    intervention.test_counter[intervention.reason_for_test[agent]] += 1
+
     if my.agent_is_infectious(agent) :
         intervention.result_of_test[agent] = 1
     else :
@@ -673,6 +680,7 @@ def check_test_results(my, g, intervention, agent, click) :
 
         # Go into self-isolation
         intervention.clicks_when_isolated[agent] = click
+        intervention.isolated[agent] = True
 
 
         # Check if tracing is on
@@ -694,6 +702,7 @@ def check_test_results(my, g, intervention, agent, click) :
 
 
     else : # They recieve negative test result
+        intervention.isolated[agent] = False
         reset_rates_of_agent(my, g, agent, intervention)
 
 
@@ -715,12 +724,13 @@ def apply_symptom_testing(my, intervention, agent, state, click) :
 
             # Isolate while waiting
             intervention.clicks_when_isolated[agent] = click
+            intervention.isolated[agent] = True
 
 
 @njit
 def apply_random_testing(my, intervention, click) :
-    # choose N_daily_test people at random to test
 
+    # choose N_daily_test people at random to test
     agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
 
     random_agents_to_be_tested = np.random.choice(agents, my.cfg.daily_tests)
@@ -804,7 +814,6 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                             intervention.event_size_max = intervention.cfg.event_size_max[k]
 
 
-
 @njit
 def testing_intervention(my, g, intervention, day, click) :
 
@@ -821,6 +830,7 @@ def testing_intervention(my, g, intervention, day, click) :
 
         # check for isolation
         if intervention.clicks_when_isolated[agent] == click and intervention.apply_isolation :
+            intervention.isolated[agent] = True
             cut_rates_of_agent(my, g, intervention, agent, rate_reduction=intervention.cfg.isolation_rate_reduction)
 
 

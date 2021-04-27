@@ -396,12 +396,14 @@ spec_intervention = {
     'R_true_list_brit' : ListType(nb.float64),
     'day_found_infected' : nb.int32[:],
     'reason_for_test' : nb.int8[:],
-    'results_of_test' : nb.int8[:],
+    'result_of_test' : nb.int8[:],
     'positive_test_counter' : nb.uint32[:],
+    'test_counter' : nb.uint32[:],
     'clicks_when_tested' : nb.int32[:],
     'clicks_when_tested_result' : nb.int32[:],
     'clicks_when_isolated' : nb.int32[:],
     'clicks_when_restriction_stops' : nb.int32[:],
+    'isolated' : nb.boolean[:],
     'types' : nb.uint8[:],
     'started' : nb.uint8[:],
     'stratified_label_map' : DictType(nb.uint16, nb.uint16),
@@ -437,6 +439,8 @@ class Intervention(object) :
          1 : positive
         -1 : no result yet
 
+    - test_counter : counter of how many were  tested due to reason 0, 1 or 2
+
     - positive_test_counter : counter of how many were found tested positive due to reasom 0, 1 or 2
 
     - clicks_when_tested : When you were tested measured in clicks (10 clicks = 1 day)
@@ -444,6 +448,8 @@ class Intervention(object) :
     - clicks_when_tested_result : When you get your test results measured in clicks
 
     - clicks_when_isolated : when you were told to go in isolation and be tested
+
+    - isolated : boolean to store the state of the agent
 
     - threshold_interventions : array to keep count of which intervention are at place at which label
         0 : Do nothing
@@ -505,11 +511,13 @@ class Intervention(object) :
         self.R_true_list_brit              = List([0.0])
         self.reason_for_test               = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
         self.result_of_test                = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
+        self.test_counter         = np.zeros(3, dtype=np.uint32)
         self.positive_test_counter         = np.zeros(3, dtype=np.uint32)
         self.clicks_when_tested            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_tested_result     = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_isolated          = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_restriction_stops = np.full(N_labels, fill_value=-1, dtype=np.int32)
+        self.isolated                      = np.full(self.cfg_network.N_tot, fill_value=False, dtype=nb.boolean)
         self.types                         = np.zeros(N_labels, dtype=np.uint8)
         self.started                       = np.zeros(N_labels, dtype=np.uint8)
 

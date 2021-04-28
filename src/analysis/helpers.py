@@ -1,4 +1,5 @@
 
+from re import T
 import numpy as np
 import pandas as pd
 
@@ -143,7 +144,7 @@ def compute_loglikelihood(input_data, validation_data, transformation_function =
     arr_sigma = [val for val, t in zip(data_sigma,   t_data)  if t in intersection]
 
     # Calculate (log) proability for every point
-    log_prop = norm.logpdf(transformation_function(arr_model), loc=arr_data, scale=arr_sigma)
+    log_prop = norm.logpdf(transformation_function(arr_model), loc=arr_data[:len(arr_model)], scale=arr_sigma[:len(arr_model)])
 
     # Determine scaled the log likelihood
     return np.sum(log_prop) / len(log_prop)

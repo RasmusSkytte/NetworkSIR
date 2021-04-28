@@ -13,10 +13,10 @@ from src.analysis.plotters import *
 
 
 if utils.is_local_computer():
-    f = 0.01
+    f = 0.05
     n_steps = 1
-    num_cores_max = 1
-    N_runs = 1
+    num_cores_max = 3
+    N_runs = 3
 else :
     f = 0.5
     n_steps = 1

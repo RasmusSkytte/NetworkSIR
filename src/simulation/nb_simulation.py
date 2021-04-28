@@ -274,12 +274,13 @@ def initialize_states(
             # Moves into a infectious State
             if my.agent_is_infectious(agent) :
                 for ith_contact, contact in enumerate(my.connections[agent]) :
+
+                    # Strain specific multiplier
+                    if my.corona_type[agent] == 1 :
+                        g.rates[agent][ith_contact] *= my.cfg.beta_UK_multiplier
+
                     # update rates if contact is susceptible
                     if my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact) :
-
-                        # Strain specific multiplier
-                        if my.corona_type[agent] == 1 :
-                            g.rates[agent][ith_contact] *= my.cfg.beta_UK_multiplier
 
                         # Set the rates
                         rate = g.rates[agent][ith_contact]
@@ -726,11 +727,12 @@ def run_simulation(
 
                 # Print current progress
                 if verbose :
-                    print("--- day : ", day, " ---")
-                    print("n_infected : ", np.round(my.cfg.N_init + np.sum(where_infections_happened_counter)))
-                    print("R_true : ", np.round(intervention.R_true_list[-1], 3))
-                    print("freedom_impact : ", np.round(intervention.freedom_impact_list[-1], 3))
-                    print("R_true_list_brit : ", np.round(intervention.R_true_list_brit[-1], 3))
+                    print('--- day : ', day, ' ---')
+                    print('n_infected : ', np.round(my.cfg.N_init + np.sum(where_infections_happened_counter)))
+                    print('R_true : ', np.round(intervention.R_true_list[-1], 3))
+                    print('freedom_impact : ', np.round(intervention.freedom_impact_list[-1], 3))
+                    print('R_true_list_brit : ', np.round(intervention.R_true_list_brit[-1], 3))
+                    print('Season multiplier : ', np.round(g.seasonality(day), 2))
 
 
                 # Advance day

@@ -1,3 +1,4 @@
+from attr import s
 import numpy as np
 import pandas as pd
 import numba as nb
@@ -65,12 +66,14 @@ class Simulation :
 
         # Set up the maps
         self.raw_label_map = pd.read_csv('Data/label_map.csv')
-        self.label_map = {'kommune_to_kommune_idx' :   pd.Series(data=self.raw_label_map['kommune_idx'].drop_duplicates().values, index=self.raw_label_map['kommune'].drop_duplicates().values),
-                          'kommune_idx_to_kommune' :   pd.Series(data=self.raw_label_map['kommune'].drop_duplicates().values,     index=self.raw_label_map['kommune_idx'].drop_duplicates().values),
-                          'sogn_to_sogn_idx' :         pd.Series(data=self.raw_label_map.index,                                   index=self.raw_label_map['sogn']),
-                          'sogn_to_kommune_idx' :      pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map['sogn']),
-                          'sogn_idx_to_kommune_idx' :  pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map.index),
-                          'sogn_idx_to_landsdel_idx' : pd.Series(data=self.raw_label_map['landsdel_idx'].values,                  index=self.raw_label_map.index)}
+        self.label_map = {'region_idx_to_region' :      self.raw_label_map[['region_idx',  'region' ]].drop_duplicates().set_index('region_idx')['region'],
+                          'kommune_to_kommune_idx' :    self.raw_label_map[['kommune',     'kommune_idx']].drop_duplicates().set_index('kommune')['kommune_idx'],
+                          'kommune_idx_to_kommune' :    self.raw_label_map[['kommune',     'kommune_idx']].drop_duplicates().set_index('kommune_idx')['kommune'],
+                          'kommune_idx_to_region_idx' : self.raw_label_map[['kommune_idx', 'region_idx' ]].drop_duplicates().set_index('kommune_idx')['region_idx'],
+                          'sogn_to_sogn_idx' :          pd.Series(data=self.raw_label_map.index,                                   index=self.raw_label_map['sogn']),
+                          'sogn_to_kommune_idx' :       pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map['sogn']),
+                          'sogn_idx_to_kommune_idx' :   pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map.index),
+                          'sogn_idx_to_landsdel_idx' :  pd.Series(data=self.raw_label_map['landsdel_idx'].values,                  index=self.raw_label_map.index)}
 
         if self.cfg.version == 1 :
             if self.cfg.do_interventions :
@@ -416,7 +419,18 @@ class Simulation :
         # Set the probability to choose agents
         if self.cfg.initialize_at_kommune_level :
 
+            w_region = np.array([1.0, 1.0, 1.2, 1.0, 1.1])
+
             infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.label_map['kommune_to_kommune_idx'])
+
+            n_kommuner = len(self.label_map['kommune_to_kommune_idx'])
+            w_kommune = np.ones(n_kommuner)
+            for i in range(n_kommuner) :
+                w_kommune[i] = w_region[self.label_map['kommune_idx_to_region_idx'][i]]
+
+            w_kommune /= w_kommune.sum()
+            infected_per_kommune *= w_kommune
+
 
             infected_per_kommune  /= infected_per_kommune.sum()
             immunized_per_kommune /= immunized_per_kommune.sum()

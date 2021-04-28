@@ -603,22 +603,19 @@ def download_SSI_data(date=None,
 
     date_SSI = date.strftime('%d%m%Y')
 
-    # Format changed on April 22nd 2021
-    if date < datetime.datetime(2021, 4, 22) :
-        s = re.search(f'rapport-{date_SSI}', html, re.IGNORECASE)
-        if s is None :
-            raise ValueError(f'No data found for date: {date}')
-
-        data_url = html[s.start()-80:s.end()+5]
-        data_url = data_url.split('="')[1] + ".zip"
-
+    # Format changed on April 16nd 2021
+    if date <= datetime.datetime(2021, 4, 16) :
+        search_string = f'rapport-{date_SSI}'
     else :
-        s = re.search(f'overvaagningsdata-covid19-{date_SSI}', html, re.IGNORECASE)
-        if s is None :
-            raise ValueError(f'No data found for date: {date}')
+        search_string = f'overvaagningsdata-covid19-{date_SSI}'
 
-        data_url = html[s.start()-90:s.end()+5]
-        data_url = data_url.split('="')[1] + ".zip"
+    s = re.search(search_string, html, re.IGNORECASE)
+    if s is None :
+        raise ValueError(f'No data found for date: {date}')
+
+    data_url = html[s.start()-90:s.end()+10]
+    data_url = data_url.split('href="')[1]
+    data_url = data_url.split('" ')[0]
 
     filename = date.strftime('%Y_%m_%d') + '.csv'
 

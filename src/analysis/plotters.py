@@ -24,7 +24,7 @@ def plot_simulation_category(tests_by_category, t, axes) :
     tmp_handles = []
     # Create the plots
     for i in range(np.size(tests_by_category, 1)) :
-        tmp_handle = axes[i].plot(t[:np.size(tests_by_category, 0)], tests_by_category[:, i], lw=4, c=plt.cm.tab10(i))[0]
+        tmp_handle = axes[i].plot(t[:np.size(tests_by_category, 0)], tests_by_category[:, i], lw=4, c=plt.cm.tab10(i % 10))[0]
         tmp_handles.append(tmp_handle)
 
     return tmp_handles

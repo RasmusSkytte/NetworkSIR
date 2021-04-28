@@ -55,8 +55,12 @@ for subset in subsets :
     fig3, axes3 = plt.subplots(nrows=3, ncols=3, sharex=True, sharey=True, figsize=(12, 12))
     axes3 = axes3.flatten()
 
-    fig4, axes4 = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True, figsize=(12, 12))
-    axes4 = axes4.flatten()
+    if cfg.stratified_labels == 'region' :
+        fig4, axes4 = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True, figsize=(12, 12))
+        axes4 = axes4.flatten()
+    elif cfg.stratified_labels == 'landsdel' :
+        fig4, axes4 = plt.subplots(nrows=3, ncols=4, sharex=True, sharey=True, figsize=(12, 12))
+        axes4 = axes4.flatten()
 
     fig5, axes5 = plt.subplots(nrows=3, ncols=3, sharex=True, sharey=True, figsize=(12, 12))
     axes5 = axes5.flatten()
@@ -96,6 +100,7 @@ for subset in subsets :
         lls.append(ll)
 
     lls = np.array(lls)
+    lls[np.isneginf(lls)] = np.nan
 
     # Filter out 'bad' runs
     ulls = lls[~np.isnan(lls)] # Only non-nans
@@ -286,14 +291,16 @@ for subset in subsets :
     ##     ## ########  ######   ####  #######  ##    ##  ######
     raw_label_map = pd.read_csv('Data/label_map.csv')
 
-    label_map = {'region_idx_to_region' :    raw_label_map[['region_idx',  'region' ]].drop_duplicates().set_index('region_idx')['region'],
-                 'region_idx_to_kommune' :   raw_label_map[['region_idx',  'kommune' ]].drop_duplicates().set_index('region_idx')['kommune'],
-                 'kommune_to_kommune_idx' :  raw_label_map[['kommune',     'kommune_idx']].drop_duplicates().set_index('kommune')['kommune_idx'],
-                 'kommune_idx_to_kommune' :  raw_label_map[['kommune',     'kommune_idx']].drop_duplicates().set_index('kommune_idx')['kommune'],
-                 'kommune_to_region_idx' :   raw_label_map[['kommune', 'region_idx']].drop_duplicates().set_index('kommune')['region_idx']}
+
+    stratification = cfg.stratified_labels
+    label_map = {'stratification_idx_to_stratification' :    raw_label_map[[stratification+'_idx',  stratification ]].drop_duplicates().set_index(stratification+'_idx')[stratification],
+                 'stratification_idx_to_kommune' :   raw_label_map[[stratification+'_idx',  'kommune' ]].drop_duplicates().set_index(stratification+'_idx')['kommune'],
+                 'kommune_to_stratification_idx' :   raw_label_map[[stratification+'_idx',  'kommune' ]].drop_duplicates().set_index('kommune')[stratification+'_idx'],
+                 'kommune_to_kommune_idx' :  raw_label_map[['kommune',     'kommune_idx']].drop_duplicates().set_index('kommune')['kommune_idx']}
 
 
-    N_kommuner = len(label_map['kommune_to_kommune_idx'])
+    N_kommuner        = len(label_map['kommune_to_kommune_idx'])
+    N_stratifications = len(label_map['stratification_idx_to_stratification'])
 
     infected_per_kommune  = np.zeros(N_kommuner)
     immunized_per_kommune = np.zeros(N_kommuner)
@@ -317,12 +324,12 @@ for subset in subsets :
     values_c = values_c[idx_c, :]
     values_t = values_t[idx_t, :]
 
-    tests_per_label = np.zeros((len(values_t), 5))
-    cases_per_label = np.zeros((len(values_c), 5))
+    tests_per_label = np.zeros((len(values_t), N_stratifications))
+    cases_per_label = np.zeros((len(values_c), N_stratifications))
 
     for i, (name_t, name_c) in enumerate(zip(names_t, names_c)) :
-        tests_per_label[:, label_map['kommune_to_region_idx'][name_t]] += values_t[:, i]
-        cases_per_label[:, label_map['kommune_to_region_idx'][name_c]] += values_c[:, i]
+        tests_per_label[:, label_map['kommune_to_stratification_idx'][name_t]] += values_t[:, i]
+        cases_per_label[:, label_map['kommune_to_stratification_idx'][name_c]] += values_c[:, i]
 
     tests_per_day = np.sum(tests_per_label, axis=1)
 
@@ -334,7 +341,7 @@ for subset in subsets :
     for i in range(len(axes4)) :
 
         # Delete empty axes
-        if i == len(label_map['region_idx_to_kommune'].index.unique()) :
+        if i == N_stratifications :
             for ax in axes4[i:] :
                 ax.remove()
             break
@@ -343,9 +350,16 @@ for subset in subsets :
 
         axes4[i].set_ylim(0, 500)
 
-        set_date_xaxis(axes4[i], start_date, end_date, interval=2)
+        if cfg.stratified_labels == 'region' :
+            interval = 2
+            fontsize = 24
+        elif cfg.stratified_labels == 'landsdel' :
+            interval = 3
+            fontsize = 18
 
-        axes4[i].set_title(label_map['region_idx_to_region'][i], fontsize=24, pad=5)
+        set_date_xaxis(axes4[i], start_date, end_date, interval=interval)
+
+        axes4[i].set_title(label_map['stratification_idx_to_stratification'][i], fontsize=fontsize, pad=5)
 
         axes4[i].tick_params(axis='x', labelsize=24)
         axes4[i].tick_params(axis='y', labelsize=24)

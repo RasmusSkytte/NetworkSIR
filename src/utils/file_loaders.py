@@ -571,6 +571,9 @@ def newest_SSI_filename() :
     if date.hour < 14 :
         date -= datetime.timedelta(days=1)
 
+    while date.isoweekday() > 5 :
+        date -= datetime.timedelta(days=1)
+
     return date.strftime('%Y_%m_%d')
 
 def SSI_data_missing(filename) :
@@ -589,21 +592,35 @@ def download_SSI_data(date=None,
                       path_municipality_cases=None,
                       download_age=True,
                       path_age=None) :
+    # Parse date
+    date = datetime.datetime.strptime(date, '%Y_%m_%d')
+
+
     url = 'https://covid19.ssi.dk/overvagningsdata/download-fil-med-overvaagningdata'
 
     with urllib.request.urlopen(url) as response :
         html = str(response.read())
 
-    date_SSI = datetime.datetime.strptime(date, '%Y_%m_%d').strftime('%d%m%Y')
+    date_SSI = date.strftime('%d%m%Y')
 
-    s = re.search(f'rapport-{date_SSI}', html, re.IGNORECASE)
-    if s is None :
-        raise ValueError(f'No data found for date: {date}')
+    # Format changed on April 22nd 2021
+    if date < datetime.datetime(2021, 4, 22) :
+        s = re.search(f'rapport-{date_SSI}', html, re.IGNORECASE)
+        if s is None :
+            raise ValueError(f'No data found for date: {date}')
 
-    data_url = html[s.start()-80:s.end()+5]
-    data_url = data_url.split('="')[1] + ".zip"
+        data_url = html[s.start()-80:s.end()+5]
+        data_url = data_url.split('="')[1] + ".zip"
 
-    filename = date + '.csv'
+    else :
+        s = re.search(f'overvaagningsdata-covid19-{date_SSI}', html, re.IGNORECASE)
+        if s is None :
+            raise ValueError(f'No data found for date: {date}')
+
+        data_url = html[s.start()-90:s.end()+5]
+        data_url = data_url.split('="')[1] + ".zip"
+
+    filename = date.strftime('%Y_%m_%d') + '.csv'
 
     with ZipFile(BytesIO(urllib.request.urlopen(data_url).read())) as zfile :
 

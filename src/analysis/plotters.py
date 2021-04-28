@@ -24,7 +24,7 @@ def plot_simulation_category(tests_by_category, t, axes) :
     tmp_handles = []
     # Create the plots
     for i in range(np.size(tests_by_category, 1)) :
-        tmp_handle = axes[i].plot(t, tests_by_category[:, i], lw=4, c=plt.cm.tab10(i))[0]
+        tmp_handle = axes[i].plot(t[:np.size(tests_by_category, 0)], tests_by_category[:, i], lw=4, c=plt.cm.tab10(i))[0]
         tmp_handles.append(tmp_handle)
 
     return tmp_handles
@@ -63,9 +63,9 @@ def plot_simulation_growth_rates(tests_by_variant, t, axes) :
     return tmp_handles
 
 
-def set_date_xaxis(ax, start_date, end_date) :
+def set_date_xaxis(ax, start_date, end_date, interval=1) :
 
-    months     = mdates.MonthLocator()
+    months     = mdates.MonthLocator(interval=interval)
     months_fmt = mdates.DateFormatter('%b')
 
     ax.xaxis.set_major_locator(months)

@@ -1,5 +1,4 @@
 import numpy as np
-import scipy
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -15,7 +14,6 @@ from src.analysis.plotters import *
 
 # Define the subset to plot on
 subsets = [ {'Intervention_contact_matrices_name' : ['fase3/S2_1', 'fase3/S2_2', 'fase3/S2_3', 'fase3/S2_4', 'fase3/S2_5', 'fase3/S2_6', 'fase3/S2_7', 'fase3/S2_8']} ]
-
 
 for subset in subsets :
     fig_name = Path('Figures/' + subset['Intervention_contact_matrices_name'][-1].replace('/','_') + '.png')
@@ -64,8 +62,8 @@ for subset in subsets :
 
 
     print('Plotting the individual ABM simulations. Please wait', flush=True)
-    for filename in tqdm(
-        abm_files.iter_files(),
+    for (filename, network_filename) in tqdm(
+        zip(abm_files.iter_files(), abm_files.iter_network_files()),
         total=len(abm_files.filenames)) :
 
         # Load
@@ -74,22 +72,19 @@ for subset in subsets :
             tests_per_age_group,
             tests_by_variant,
             tests_by_region,
-            vaccinations_by_age_group) = load_from_file(filename, start_date)
-
-        # Add vaccine summery graph
-        vaccinations_by_age_group = np.concatenate((vaccinations_by_age_group, np.sum(vaccinations_by_age_group, axis=1).reshape(-1, 1)), axis=1)
+            vaccinations_by_age_group) = load_from_file(filename, network_filename, start_date)
 
         # Plot
         h  = plot_simulation_cases_and_variant_fraction(total_tests, f, t_day, t_week, axes1)
         h2 = plot_simulation_growth_rates(tests_by_variant, t_day, axes2)
         #h3 = plot_simulation_category(tests_per_age_group, t_day, axes3)
         #h4 = plot_simulation_category(tests_by_region, t_day, axes4)
-        #h5 = plot_simulation_category(vaccinations_by_age_group, t_day, axes5)
+        h5 = plot_simulation_category(vaccinations_by_age_group, t_day, axes5)
 
         h.extend(h2)
         #h.extend(h3)
         #h.extend(h4)
-        #h.extend(h5)
+        h.extend(h5)
 
         # Evaluate
         #ll =  compute_loglikelihood((total_tests, t_day), (logK,         logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
@@ -263,7 +258,7 @@ for subset in subsets :
 
         axes3[i].set_ylim(0, 300)
 
-        set_date_xaxis(axes3[i], start_date, end_date)
+        set_date_xaxis(axes3[i], start_date, end_date, interval=2)
 
         axes3[i].set_title(f'{10*i}-{10*(i+1)-1}', fontsize=24, pad=5)
 
@@ -281,125 +276,122 @@ for subset in subsets :
 
 
 
-    # ########  ########  ######   ####  #######  ##    ##  ######
-    # ##     ## ##       ##    ##   ##  ##     ## ###   ## ##    ##
-    # ##     ## ##       ##         ##  ##     ## ####  ## ##
-    # ########  ######   ##   ####  ##  ##     ## ## ## ##  ######
-    # ##   ##   ##       ##    ##   ##  ##     ## ##  ####       ##
-    # ##    ##  ##       ##    ##   ##  ##     ## ##   ### ##    ##
-    # ##     ## ########  ######   ####  #######  ##    ##  ######
+    ########  ########  ######   ####  #######  ##    ##  ######
+    ##     ## ##       ##    ##   ##  ##     ## ###   ## ##    ##
+    ##     ## ##       ##         ##  ##     ## ####  ## ##
+    ########  ######   ##   ####  ##  ##     ## ## ## ##  ######
+    ##   ##   ##       ##    ##   ##  ##     ## ##  ####       ##
+    ##    ##  ##       ##    ##   ##  ##     ## ##   ### ##    ##
+    ##     ## ########  ######   ####  #######  ##    ##  ######
+    raw_label_map = pd.read_csv('Data/label_map.csv')
+    label_map = {'kommune_to_kommune_idx' : pd.Series(data =raw_label_map['kommune_idx'].values, index=raw_label_map['kommune'].values).drop_duplicates(),
+                 'kommune_idx_to_kommune' : pd.Series(index=raw_label_map['kommune_idx'].values, data =raw_label_map['kommune'].values).drop_duplicates(),
+                 'region_idx_to_kommune'  : pd.Series(data=raw_label_map['kommune'].values,      index=raw_label_map['region_idx'].values).drop_duplicates(),
+                 'region_idx_to_region'   : pd.Series(data=raw_label_map['region'].values,       index=raw_label_map['region_idx'].values).drop_duplicates()}
 
-    # filename = f'Initialized_networks/{utils.cfg_to_hash(cfg.network, exclude_ID=False)}.hdf5'
+    N_kommuner = len(label_map['kommune_to_kommune_idx'])
 
-    # raw_label_map = pd.read_csv('Data/label_map.csv')
-    # label_map = {'kommune_to_kommune_idx' : pd.Series(data=raw_label_map['kommune_idx'].values, index=raw_label_map['kommune'].values).drop_duplicates(),
-    #              'kommune_idx_to_kommune' : pd.Series(index=raw_label_map['kommune_idx'].values, data=raw_label_map['kommune'].values).drop_duplicates(),
-    #              'region_idx_to_kommune'  : pd.Series(data=raw_label_map['kommune'].values, index=raw_label_map['region_idx'].values).drop_duplicates(),
-    #              'region_idx_to_region'   : pd.Series(data=raw_label_map['region'].values, index=raw_label_map['region_idx'].values).drop_duplicates()}
+    infected_per_kommune  = np.zeros(N_kommuner)
+    immunized_per_kommune = np.zeros(N_kommuner)
 
-    # N_kommuner = len(label_map['kommune_to_kommune_idx'])
+    df_cases, df_tests, _ = file_loaders.get_SSI_data(date='newest', return_data=True)
 
-    # infected_per_kommune  = np.zeros(N_kommuner)
-    # immunized_per_kommune = np.zeros(N_kommuner)
+    df_cases = df_cases.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA'])
+    df_tests = df_tests.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA', 'Christiansø'])
 
-    # df_cases, df_tests, _ = file_loaders.get_SSI_data(date='2021_03_19', return_data=True)
+    names_c  = df_cases.columns
+    values_c = df_cases.to_numpy()
 
-    # df_cases = df_cases.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA'])
-    # df_tests = df_tests.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA', 'Christiansø'])
+    names_t  = df_tests.columns
+    values_t = df_tests.to_numpy()
 
-    # names_c  = df_cases.columns
-    # values_c = df_cases.to_numpy()
+    # Must have same dates in both datasets
+    intersection = df_cases.index.intersection(df_tests.index)
+    idx_c = np.isin(df_cases.index, intersection)
+    idx_t = np.isin(df_tests.index, intersection)
 
-    # names_t  = df_tests.columns
-    # values_t = df_tests.to_numpy()
+    values_c = values_c[idx_c, :]
+    values_t = values_t[idx_t, :]
 
-    # # Must have same dates in both datasets
-    # intersection = df_cases.index.intersection(df_tests.index)
-    # idx_c = np.isin(df_cases.index, intersection)
-    # idx_t = np.isin(df_tests.index, intersection)
+    tests_per_kommune = np.zeros((len(values_t), N_kommuner))
+    cases_per_kommune = np.zeros((len(values_c), N_kommuner))
 
-    # values_c = values_c[idx_c, :]
-    # values_t = values_t[idx_t, :]
+    # Match the columns indicies
+    i_out_c = label_map['kommune_to_kommune_idx'][names_c]
+    i_out_t = label_map['kommune_to_kommune_idx'][names_t]
 
-    # tests_per_kommune = np.zeros((len(values_t), N_kommuner))
-    # cases_per_kommune = np.zeros((len(values_c), N_kommuner))
+    cases_per_kommune[:, i_out_c] = values_c
+    tests_per_kommune[:, i_out_t] = values_t
 
-    # # Match the columns indicies
-    # i_out_c = label_map['kommune_to_kommune_idx'][names_c]
-    # i_out_t = label_map['kommune_to_kommune_idx'][names_t]
+    tests_per_day = np.sum(tests_per_kommune, axis=1)
 
-    # cases_per_kommune[:, i_out_c] = values_c
-    # tests_per_kommune[:, i_out_t] = values_t
+    tests_per_kommune_adjusted = tests_per_kommune * ref_tests / np.repeat(tests_per_day.reshape(-1, 1), tests_per_kommune.shape[1], axis=1)
 
-    # tests_per_day = np.sum(tests_per_kommune, axis=1)
+    cases_per_kommune           = pd.DataFrame(data=cases_per_kommune,          columns=label_map['kommune_idx_to_kommune'], index=intersection)
+    tests_per_kommune           = pd.DataFrame(data=tests_per_kommune,          columns=label_map['kommune_idx_to_kommune'], index=intersection)
+    tests_per_kommune_adjusted  = pd.DataFrame(data=tests_per_kommune_adjusted, columns=label_map['kommune_idx_to_kommune'], index=intersection)
 
-    # tests_per_kommune_adjusted = tests_per_kommune * ref_tests / np.repeat(tests_per_day.reshape(-1, 1), tests_per_kommune.shape[1], axis=1)
+    cases_per_label = []
+    tests_per_label = []
+    tests_per_label_adjusted = []
 
-    # cases_per_kommune           = pd.DataFrame(data=cases_per_kommune,          columns=label_map['kommune_idx_to_kommune'], index=intersection)
-    # tests_per_kommune           = pd.DataFrame(data=tests_per_kommune,          columns=label_map['kommune_idx_to_kommune'], index=intersection)
-    # tests_per_kommune_adjusted  = pd.DataFrame(data=tests_per_kommune_adjusted, columns=label_map['kommune_idx_to_kommune'], index=intersection)
+    cols = cases_per_kommune.columns
+    for region_idx in label_map['region_idx_to_kommune'].index.unique() :
+        cases_per_label.append(np.sum(cases_per_kommune[label_map['region_idx_to_kommune'][region_idx]], axis=1).to_numpy())
+        tests_per_label.append(np.sum(tests_per_kommune[label_map['region_idx_to_kommune'][region_idx]], axis=1).to_numpy())
+        tests_per_label_adjusted.append(np.sum(tests_per_kommune_adjusted[label_map['region_idx_to_kommune'][region_idx]], axis=1).to_numpy())
 
-    # cases_per_label = []
-    # tests_per_label = []
-    # tests_per_label_adjusted = []
-
-    # cols = cases_per_kommune.columns
-    # for region_idx in label_map['region_idx_to_kommune'].index.unique() :
-    #     cases_per_label.append(np.sum(cases_per_kommune[label_map['region_idx_to_kommune'][region_idx]], axis=1).to_numpy())
-    #     tests_per_label.append(np.sum(tests_per_kommune[label_map['region_idx_to_kommune'][region_idx]], axis=1).to_numpy())
-    #     tests_per_label_adjusted.append(np.sum(tests_per_kommune_adjusted[label_map['region_idx_to_kommune'][region_idx]], axis=1).to_numpy())
-
-    # incidence_per_label = np.array(cases_per_label) * (np.array(tests_per_label_adjusted) / np.array(tests_per_label)) ** beta
-    # t = intersection
+    incidence_per_label = np.array(cases_per_label) * (np.array(tests_per_label_adjusted) / np.array(tests_per_label)) ** beta
+    t = pd.to_datetime(intersection)
 
 
-    # for i in range(len(axes4)) :
+    for i in range(len(axes4)) :
 
-    #     # Delete empty axes
-    #     if i == len(label_map['region_idx_to_kommune'].index.unique()) :
-    #         for ax in axes4[i:] :
-    #             ax.remove()
-    #         break
+        # Delete empty axes
+        if i == len(label_map['region_idx_to_kommune'].index.unique()) :
+            for ax in axes4[i:] :
+                ax.remove()
+            break
 
-    #     axes4[i].scatter(t, incidence_per_label[i, :], color='k', s=10, zorder=100)
+        axes4[i].scatter(t, incidence_per_label[i, :], color='k', s=10, zorder=100)
 
-    #     axes4[i].set_ylim(0, 500)
+        axes4[i].set_ylim(0, 500)
 
-    #     set_date_xaxis(axes4[i], start_date, end_date)
+        set_date_xaxis(axes4[i], start_date, end_date, interval=2)
 
-    #     axes4[i].set_title(label_map['region_idx_to_region'][i], fontsize=24, pad=5)
+        axes4[i].set_title(label_map['region_idx_to_region'][i], fontsize=24, pad=5)
 
-    #     axes4[i].tick_params(axis='x', labelsize=24)
-    #     axes4[i].tick_params(axis='y', labelsize=24)
+        axes4[i].tick_params(axis='x', labelsize=24)
+        axes4[i].tick_params(axis='y', labelsize=24)
 
 
-    # fig4.savefig(os.path.splitext(fig_name)[0] + '_regions.png')
+    fig4.savefig(os.path.splitext(fig_name)[0] + '_regions.png')
 
 
 
 
 
 
-    # ##     ##    ###     ######   ######  #### ##    ##    ###    ######## ####  #######  ##    ##  ######
-    # ##     ##   ## ##   ##    ## ##    ##  ##  ###   ##   ## ##      ##     ##  ##     ## ###   ## ##    ##
-    # ##     ##  ##   ##  ##       ##        ##  ####  ##  ##   ##     ##     ##  ##     ## ####  ## ##
-    # ##     ## ##     ## ##       ##        ##  ## ## ## ##     ##    ##     ##  ##     ## ## ## ##  ######
-    #  ##   ##  ######### ##       ##        ##  ##  #### #########    ##     ##  ##     ## ##  ####       ##
-    #   ## ##   ##     ## ##    ## ##    ##  ##  ##   ### ##     ##    ##     ##  ##     ## ##   ### ##    ##
-    #    ###    ##     ##  ######   ######  #### ##    ## ##     ##    ##    ####  #######  ##    ##  ######
+    ##     ##    ###     ######   ######  #### ##    ##    ###    ######## ####  #######  ##    ##  ######
+    ##     ##   ## ##   ##    ## ##    ##  ##  ###   ##   ## ##      ##     ##  ##     ## ###   ## ##    ##
+    ##     ##  ##   ##  ##       ##        ##  ####  ##  ##   ##     ##     ##  ##     ## ####  ## ##
+    ##     ## ##     ## ##       ##        ##  ## ## ## ##     ##    ##     ##  ##     ## ## ## ##  ######
+     ##   ##  ######### ##       ##        ##  ##  #### #########    ##     ##  ##     ## ##  ####       ##
+      ## ##   ##     ## ##    ## ##    ##  ##  ##   ### ##     ##    ##     ##  ##     ## ##   ### ##    ##
+       ###    ##     ##  ######   ######  #### ##    ## ##     ##    ##    ####  #######  ##    ##  ######
 
-    # for i in range(len(axes5)) :
+    for i in range(len(axes5)) :
 
-    #     set_date_xaxis(axes5[i], start_date, end_date)
+        set_date_xaxis(axes5[i], start_date, end_date, interval=2)
 
-    #     axes5[i].set_title(f'{10*i}-{10*(i+1)-1}', fontsize=24, pad=5)
+        axes5[i].set_title(f'{10*i}-{10*(i+1)-1}', fontsize=24, pad=5)
 
-    #     axes5[i].tick_params(axis='x', labelsize=24)
-    #     axes5[i].tick_params(axis='y', labelsize=24)
+        axes5[i].tick_params(axis='x', labelsize=24)
+        axes5[i].tick_params(axis='y', labelsize=24)
 
-    # # Adjust the last title
-    # axes5[-2].set_title(f'{10*(i-1)}+', fontsize=24, pad=5)
-    # axes5[-1].set_title('all', fontsize=24, pad=5)
+    # Adjust the last title
+    axes5[-2].set_title(f'{10*(i-1)}+', fontsize=24, pad=5)
+    axes5[-1].set_title('all', fontsize=24, pad=5)
 
 
-    # fig5.savefig(os.path.splitext(fig_name)[0] + '_vaccinations.png')
+    fig5.savefig(os.path.splitext(fig_name)[0] + '_vaccinations.png')

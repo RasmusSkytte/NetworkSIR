@@ -268,10 +268,6 @@ class Simulation :
             self._load_initialized_network(filename)
 
 
-        # Define label maps
-        # TODO
-
-
     def initialize_maps(self) :
 
         # Map stratifications
@@ -631,6 +627,7 @@ class Simulation :
         with h5py.File(filename_hdf5, 'w', **hdf5_kwargs) as f :  #
             f.create_dataset('my_state', data=self.my_state)
             f.create_dataset('my_corona_type', data=self.my.corona_type)
+            f.create_dataset('my_age', data=self.my.age)
 
             f.create_dataset('my_number_of_contacts', data=self.my.number_of_contacts)
             f.create_dataset('my_connection_type',   data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_type,   pad_value=-1))

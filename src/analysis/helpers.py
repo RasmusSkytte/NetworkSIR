@@ -8,6 +8,7 @@ from scipy.stats import norm
 
 from src.utils import utils
 from src.utils import file_loaders
+from src.analysis import plotters
 
 ref_tests = 100_000
 
@@ -33,12 +34,16 @@ def aggregate_array(arr, chunk_size=10) :
         return out_arr
 
 
-def load_from_file(filename, start_date) :
+def load_from_file(filename, network_filename, start_date) :
 
     cfg = utils.read_cfg_from_hdf5_file(filename)
 
     # Load the csv summery file
     df = file_loaders.pandas_load_file(filename)
+
+    # Load some data from network
+    ages = plotters._load_data_from_network_file(network_filename, ['my_age'], cfg=cfg)[0]
+    ages = [np.sum(ages == age) for age in range(np.max(ages) + 1)]
 
     # Find all columns with "T_"
     test_cols = [col for col in df.columns if 'T_l' in col]
@@ -86,14 +91,15 @@ def load_from_file(filename, start_date) :
     T_labels    = np.sum(stratified_infections, axis=(2, 3))
 
     V_age_groups = stratified_vaccinations
-
+    V_age_groups = np.concatenate((V_age_groups, np.sum(V_age_groups, axis=1).reshape(-1, 1)), axis=1) # Add vaccine summery graph
+    V_age_groups /= np.append(ages, np.sum(ages))  # Convert to fraction of population
 
     # Get daily values
     T_total      = T_total
     T_variants   = T_variants
     T_uk         = T_uk
     T_age_groups = T_age_groups
-    T_labels    = T_labels
+    T_labels     = T_labels
 
     # Get weekly values
     # Remove days if not starting on a monday

@@ -6,7 +6,8 @@ from numba.typed import List
 
 from src.utils import utils
 
-from src.simulation.nb_interventions   import testing_intervention, vaccinate, apply_symptom_testing, apply_daily_interventions
+from src.simulation.nb_interventions   import testing_intervention, vaccinate, apply_daily_interventions
+from src.simulation.nb_interventions   import apply_symptom_testing, apply_random_testing
 from src.simulation.nb_interventions   import calculate_R_True, calculate_R_True_brit, calculate_population_freedom_impact
 from src.simulation.nb_events          import add_daily_events
 from src.simulation.nb_helpers         import nb_random_choice, single_random_choice
@@ -222,7 +223,7 @@ def find_possible_agents(my, initial_ages_exposed, agents_in_age_group) :
     return possible_agents
 
 
-@njit
+#@njit
 def initialize_states(
     my,
     g,
@@ -237,11 +238,11 @@ def initialize_states(
     R_init,
     prior_infected,
     prior_immunized,
+    nts,
     verbose=False) :
 
 
     if N_init > 0 :
-
         agents = choose_initial_agents(my, possible_agents, N_init, prior_infected)
 
         #  Make initial infections
@@ -267,8 +268,22 @@ def initialize_states(
             g.cumulative_sum_of_state_changes[new_state :] += g.SIR_transition_rates[new_state]
 
             if intervention.apply_interventions and intervention.apply_symptom_testing :
-                for i in range(new_state) :
+
+                for i in range(4, new_state) :
+
                     apply_symptom_testing(my, intervention, agent, i, 0)
+
+                    if intervention.result_of_test[agent] == 1 :
+
+                        # Randomize the time of the test
+                        day_when_symptom_testing = np.random.rand() * (i - new_state) / (my.cfg.lambda_I)
+                        click_when_symptom_testing = np.int32(day_when_symptom_testing / nts)
+
+                        intervention.clicks_when_tested[agent]   = click_when_symptom_testing + intervention.cfg.test_delay_in_clicks[0]
+                        intervention.clicks_when_isolated[agent] = click_when_symptom_testing
+
+                        # Break the symptom testing loop
+                        break
 
 
             # Moves into a infectious State
@@ -323,85 +338,16 @@ def initialize_states(
             update_infection_list_for_newly_infected_agent(my, g, agent)
 
 
+@njit
+def initialize_testing(my, g, intervention, nts) :
 
-
-    # English Corona Type TODO
-
-    #if my.cfg.N_init_UK > 0 : init uk, as outbreak
-    if False :
-
-        rho_init_local_outbreak = 0.1
-
-        possible_agents_UK = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
-
-        # this is where the outbreak starts
-
-        if my.cfg.outbreak_position_UK.lower() == "københavn" :
-            coordinate = (55.67594, 12.56553)
-
-            outbreak_agent_UK = find_outbreak_agent(
-                my,
-                possible_agents_UK,
-                coordinate,
-                rho_init_local_outbreak,
-                max_tries=10_000,
-            )
-
-            # print("København", outbreak_agent_UK, my.coordinates[outbreak_agent_UK])
-
-        elif my.cfg.outbreak_position_UK.lower() == "nordjylland" :
-            coordinate = (57.36085, 10.09901)  # "Vendsyssel" på Google Maps
-
-            outbreak_agent_UK = find_outbreak_agent(
-                my,
-                possible_agents_UK,
-                coordinate,
-                rho_init_local_outbreak,
-                max_tries=10_000,
-            )
-            # print("nordjylland", outbreak_agent_UK, my.coordinates[outbreak_agent_UK])
-
-        # elif "," in my.cfg.outbreak_position_UK :
-        # pass
-        else :
-            outbreak_agent_UK = single_random_choice(possible_agents_UK)
-            # print("random", outbreak_agent_UK, my.coordinates[outbreak_agent_UK])
-
-        initial_agents_to_infect_UK = List()
-        initial_agents_to_infect_UK.append(outbreak_agent_UK)
-
-        while len(initial_agents_to_infect_UK) < my.cfg.N_init_UK :
-            proposed_agent_UK = single_random_choice(possible_agents_UK)
-
-            if my.dist_accepted(outbreak_agent_UK, proposed_agent_UK, rho_init_local_outbreak) :
-                if proposed_agent_UK not in initial_agents_to_infect_UK :
-                    if my.agent_is_susceptible(proposed_agent_UK) :
-                        initial_agents_to_infect_UK.append(proposed_agent_UK)
-
-        initial_agents_to_infect_UK = np.asarray(initial_agents_to_infect_UK, dtype=np.uint32)
-
-        ##  Now make initial UK infections
-        for _, agent in enumerate(initial_agents_to_infect_UK) :
-            weights = calc_E_I_distribution(my, 1)
-            states = np.arange(N_states - 1, dtype=np.int8)
-            new_state = nb_random_choice(states, weights)[0]
-            my.state[agent] = new_state
-            my.corona_type[agent] = 1  # IMPORTANT LINE!
-
-            agents_in_state[new_state].append(np.uint32(agent))
-            state_total_counts[new_state] += 1
-
-            g.total_sum_of_state_changes += g.SIR_transition_rates[new_state]
-            g.cumulative_sum_of_state_changes[new_state :] += g.SIR_transition_rates[new_state]
-
-            # Moves TO infectious State from non-infectious
-            if my.agent_is_infectious(agent) :
-                for contact, rate in zip(my.connections[agent], g.rates[agent]) :
-                    # update rates if contact is susceptible
-                    if my.agent_is_susceptible(contact) :
-                        g.update_rates(my, +rate, agent)
-
-            update_infection_list_for_newly_infected_agent(my, g, agent)
+    start_click = np.int32( - g.N_infectious_states / (my.cfg.lambda_I * nts))
+    print(start_click)
+    # Loop over all posible clicks
+    for click in range(start_click, 0) :
+        print(click)
+        # Implement the consequences of testing
+        testing_intervention(my, g, intervention, np.int32(click*nts), click)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -515,7 +461,7 @@ def do_bug_check(
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-@njit
+#@njit
 def run_simulation(
     my,
     g,
@@ -742,6 +688,9 @@ def run_simulation(
                 # Apply interventions for the new day
                 if intervention.apply_interventions :
                     apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
+
+                if day > 50 :
+                    x = X
 
                 # Apply events for the new day
                 if my.cfg.N_events > 0 :

@@ -743,7 +743,7 @@ def apply_random_testing(my, intervention, click) :
 
     # TODO: Weight by testing_penetration (Implement my.p_test)
     # Choose the agents
-    random_agents_to_be_tested = nb_random_choice(agents, prob=np.ones_like(agents), size = my.cfg.daily_tests, replace = False)
+    random_agents_to_be_tested = np.random.choice(agents, size = my.cfg.daily_tests, replace = False)
 
     # Filter out those who have been tested before
     I_not_found = intervention.day_found_infected[random_agents_to_be_tested] == -10_000

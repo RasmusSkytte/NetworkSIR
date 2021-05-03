@@ -73,7 +73,7 @@ def rand_choice_nb(prob) :
     """
     prob = normalize_probabilities(prob)
     return np.searchsorted(np.cumsum(prob), np.random.random(), side="right")
-    
+
 @njit
 def normalize_probabilities(p) :
     return p / p.sum()

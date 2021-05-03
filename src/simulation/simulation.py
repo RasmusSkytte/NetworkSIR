@@ -533,11 +533,6 @@ class Simulation :
         )
 
 
-        print('N_init : ',  np.sum([1 for agent in possible_agents if self.my.agent_is_infectious(agent)]))
-        print('N_found : ', np.sum([1 for agent in possible_agents if self.intervention.day_found_infected[agent] != -10_000 ]))
-        print('Incidence limits : ', self.cfg.incidence_threshold)
-        x = X
-
         if check_distributions:
             ages = [self.my.age[agent] for agent in possible_agents if self.my.agent_is_infectious(agent)]
             _, dist = np.unique(ages, return_counts=True)

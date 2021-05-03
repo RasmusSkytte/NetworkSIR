@@ -98,14 +98,14 @@ def calculate_R_True(my, g, day) :
 
 
 @njit
-def calculate_R_True_brit(my, g) :
+def calculate_R_True_brit(my, g, day) :
     lambda_I = my.cfg.lambda_I
     rate_sum = 0
     N_infected = 0
     for agent in range(my.cfg_network.N_tot) :
         if my.agent_is_infectious(agent) and my.corona_type[agent] == 1 :
             N_infected += 1
-            rate_sum += g.sum_of_rates[agent]
+            rate_sum += g.sum_of_rates[agent] * g.seasonality(day)
     return rate_sum / lambda_I / np.maximum(N_infected, 1.0) * 4
 
 
@@ -281,17 +281,13 @@ def remove_intervention_at_sogn(my, g, intervention, ith_sogn) :
             my.restricted_status[agent] = 0
 
 
-#@njit
+@njit
 def check_status_for_intervention_on_labels(my, g, intervention, day, click) :
 
     # Loop over all interventions and check if condition still applies
     # if yes, write to all sogn within label of intervention
 
-    print('- intervention.types (before)')
-    print(intervention.types[:20])
     required_interventions_at_sogn = check_incidence_against_tresholds(my, intervention, day)
-    print('- required_interventions_at_sogn')
-    print(required_interventions_at_sogn[:20])
 
     # Loop over sogne to remove restricitons
     for sogn, required_interventions in enumerate(required_interventions_at_sogn) :
@@ -303,8 +299,6 @@ def check_status_for_intervention_on_labels(my, g, intervention, day, click) :
                 intervention.types[sogn] = required_interventions
                 intervention.clicks_when_restriction_changes[sogn] = click + my.cfg.intervention_update_delay_in_clicks
 
-    print('- intervention.types (after)')
-    print(intervention.types[:20])
 
 @njit
 def check_incidence_against_tresholds(my, intervention, day) :
@@ -319,21 +313,15 @@ def check_incidence_against_tresholds(my, intervention, day) :
     for ith_intervention in range(len(my.cfg.incidence_threshold)) :
 
         # Determine the number of (found) infected per label
-        infected_per_label = np.zeros(intervention.N_incidence_labels[ith_intervention], dtype=np.uint32)
+        infected_per_label = np.zeros(intervention.N_incidence_labels[ith_intervention], dtype=np.float32)
         for agent, day_found in enumerate(intervention.day_found_infected) :
             if day_found > day - intervention.cfg.days_looking_back :
-                infected_per_label[intervention.incidence_label_map[ith_intervention][my.sogn[agent]]] += 1
-
-        print('- infected_per_label')
-        print(infected_per_label)
-
-        print('- incidence per label')
-        print(infected_per_label / (intervention.agents_per_incidence_label[0] / 100_000))
+                infected_per_label[intervention.incidence_label_map[ith_intervention][my.sogn[agent]]] += 1.0
 
         # Loop over labels
         for ith_label, (N_infected, N_inhabitants) in enumerate(zip(infected_per_label, intervention.agents_per_incidence_label[ith_intervention])) :
 
-            if N_inhabitants == 0 :
+            if N_inhabitants == 0.0 :
                 continue
 
             # Compute the incidence on the label
@@ -349,8 +337,6 @@ def check_incidence_against_tresholds(my, intervention, day) :
                 # Check for restriction start
                 if incidence > my.cfg.incidence_threshold[ith_intervention][1] :
                     sogne_above_off_treshold[sogn] += 2**ith_intervention   # Encode as binary flags
-
-
 
 
     # Interventions are set to active if either they are active or (|) when incidence is above the on treshold
@@ -730,7 +716,7 @@ def check_test_results(my, g, intervention, agent, day, click) :
 
 
 
-#@njit
+@njit
 def apply_symptom_testing(my, intervention, agent, state, click) :
 
     # Infectious agents may test due to symptopns
@@ -753,13 +739,11 @@ def apply_symptom_testing(my, intervention, agent, state, click) :
 def apply_random_testing(my, intervention, click) :
 
     # choose N_daily_test people at random to test
-    agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
+    agents = np.arange(my.cfg_network.N_tot, dtype = np.uint32)
 
-    # Weight by testing_penetration
-    w_age = np.array([my.cfg.testing_penetration[my.age[agent]] for agent in agents])
-
+    # TODO: Weight by testing_penetration (Implement my.p_test)
     # Choose the agents
-    random_agents_to_be_tested = nb_random_choice(agents, prob = w_age, size = my.cfg.daily_tests)
+    random_agents_to_be_tested = nb_random_choice(agents, prob=np.ones_like(agents), size = my.cfg.daily_tests, replace = False)
 
     # Filter out those who have been tested before
     I_not_found = intervention.day_found_infected[random_agents_to_be_tested] == -10_000
@@ -778,30 +762,22 @@ def apply_random_testing(my, intervention, click) :
 
 
 
-#@njit
-def apply_interventions_on_label(my, g, intervention, day, click, verbose=False) :
+@njit
+def apply_interventions_on_label(my, g, intervention, day, click, verbose = False) :
 
     if intervention.start_interventions_by_incidence :
 
         check_status_for_intervention_on_labels(my, g, intervention, day, click)
 
-        print('- intervention.clicks_when_restriction_changes :')
-        print(intervention.clicks_when_restriction_changes)
-
-        print('- Entering loop over intervention.clicks_when_restriction_changes')
         # Loop over sogne to update restrictions
         for ith_sogn, clicks_when_restriction_changes in enumerate(intervention.clicks_when_restriction_changes) :
 
             if clicks_when_restriction_changes == click :
                 # Remove interventions
-                print('- Entering remove_intervention_at_sogn')
                 remove_intervention_at_sogn(my, g, intervention, ith_sogn)
 
                 # .. and re-apply if needed
-                print('- Entering loop over utils.decode_binary_flags(intervention.types[ith_sogn])')
                 for ith_intervention in utils.decode_binary_flags(intervention.types[ith_sogn]) :
-                    if verbose :
-                        print('Incidence restrictions changed at sogn: ', ith_sogn)
                     lockdown_sogn(my, g, ith_sogn, intervention.cfg.incidence_intervention_effect[ith_intervention])
 
 
@@ -827,7 +803,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose=False)
                                 else :
                                     print('Intervention type : matrix restriction, name:', intervention.cfg.Intervention_contact_matrices_name[k])
 
-                            matrix_restriction_on_label(my, g, intervention, ith_label, k, verbose=verbose)
+                            matrix_restriction_on_label(my, g, intervention, ith_label, k, verbose = verbose)
 
                         # if event restrictions
                         elif intervention.cfg.planned_restriction_types[k] == 2 :
@@ -860,10 +836,10 @@ def testing_intervention(my, g, intervention, day, click) :
         # check for isolation
         if intervention.clicks_when_isolated[agent] == click and intervention.apply_isolation :
             intervention.isolated[agent] = True
-            cut_rates_of_agent(my, g, intervention, agent, rate_reduction=intervention.cfg.isolation_rate_reduction)
+            cut_rates_of_agent(my, g, intervention, agent, rate_reduction = intervention.cfg.isolation_rate_reduction)
 
 
-#@njit
+@njit
 def apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose) :
 
     if intervention.apply_interventions_on_label and day >= 0 :
@@ -873,4 +849,4 @@ def apply_daily_interventions(my, g, intervention, day, click, stratified_vaccin
         apply_random_testing(my, intervention, click)
 
     if intervention.apply_vaccinations :
-        vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=verbose)
+        vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose = verbose)

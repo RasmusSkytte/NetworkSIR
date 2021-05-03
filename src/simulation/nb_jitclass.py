@@ -330,7 +330,7 @@ spec_g = {
     'cumulative_sum' : nb.float64,
     'cumulative_sum_of_state_changes' : nb.float64[:],
     'cumulative_sum_infection_rates' : nb.float64[:],
-    'SIR_transition_rates' : nb.float64[:],
+    'transition_rates' : nb.float64[:],
     'rates' : ListType(nb.float64[ : :1]),  # ListType[array(float64, 1d, C)] (C vs. A)
     'sum_of_rates' : nb.float64[:],
     'seasonal_model' : nb.float64[:],
@@ -365,9 +365,9 @@ class Gillespie(object) :
         self.sum_of_rates = np.zeros(my.cfg_network.N_tot, dtype=np.float64)
 
     def _initialize_SIR_rates(self, my) :
-        self.SIR_transition_rates = np.zeros(self.N_states, dtype=np.float64)
-        self.SIR_transition_rates[:self.N_infectious_states] = my.cfg.lambda_E
-        self.SIR_transition_rates[self.N_infectious_states : 2 * self.N_infectious_states] = my.cfg.lambda_I
+        self.transition_rates = np.zeros(self.N_states, dtype=np.float64)
+        self.transition_rates[:self.N_infectious_states] = my.cfg.lambda_E
+        self.transition_rates[self.N_infectious_states : 2 * self.N_infectious_states] = my.cfg.lambda_I
 
     def update_rates(self, my, rate, agent) :
         self.total_sum_infections += rate
@@ -388,7 +388,7 @@ class Gillespie(object) :
 spec_intervention = {
     'cfg' : nb_cfg_type,
     'cfg_network' : nb_cfg_network_type,
-    'agents_per_incidence_label' : ListType(nb.uint32[ : :1]), # ListType[array(uint32, 1d, C)] (C vs. A)
+    'agents_per_incidence_label' : ListType(nb.float32[ : :1]), # ListType[array(uint32, 1d, C)] (C vs. A)
     'N_incidence_labels' : nb.uint16[:],
     'N_matrix_labels' : nb.uint16,
     'freedom_impact' : nb.float64[:],
@@ -492,9 +492,9 @@ class Intervention(object) :
 
         agents_per_incidence_label = List()
         for ith_incidence_restriction, N_labels in enumerate(N_incidence_labels) :
-            label_counter = np.zeros(N_labels, dtype=np.uint32)
+            label_counter = np.zeros(N_labels, dtype=np.float32)
             for sogn in my.sogn :
-                label_counter[incidence_label_map[ith_incidence_restriction][sogn]] += 1
+                label_counter[incidence_label_map[ith_incidence_restriction][sogn]] += 1.0
 
             agents_per_incidence_label.append(label_counter)
 

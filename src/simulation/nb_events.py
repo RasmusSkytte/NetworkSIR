@@ -101,8 +101,8 @@ def add_daily_events(
         my.state[agent] = 0
         agents_in_state[0].append(np.uint32(agent))
         state_total_counts[0] += 1
-        g.total_sum_of_state_changes += g.SIR_transition_rates[0]
-        g.cumulative_sum_of_state_changes += g.SIR_transition_rates[0]
+        g.total_sum_of_state_changes += g.transition_rates[0]
+        g.cumulative_sum_of_state_changes += g.transition_rates[0]
 
         # Update the network
         nb_simulation.update_infection_list_for_newly_infected_agent(my, g, agent)

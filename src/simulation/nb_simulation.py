@@ -223,7 +223,7 @@ def find_possible_agents(my, initial_ages_exposed, agents_in_age_group) :
     return possible_agents
 
 
-#@njit
+@njit
 def initialize_states(
     my,
     g,
@@ -264,8 +264,8 @@ def initialize_states(
             agents_in_state[new_state].append(np.uint32(agent))
             state_total_counts[new_state] += 1
 
-            g.total_sum_of_state_changes += g.SIR_transition_rates[new_state]
-            g.cumulative_sum_of_state_changes[new_state :] += g.SIR_transition_rates[new_state]
+            g.total_sum_of_state_changes += g.transition_rates[new_state]
+            g.cumulative_sum_of_state_changes[new_state :] += g.transition_rates[new_state]
 
             if intervention.apply_interventions and intervention.apply_symptom_testing :
 
@@ -331,8 +331,8 @@ def initialize_states(
 
             state_total_counts[R_state] += 1
 
-            g.total_sum_of_state_changes += g.SIR_transition_rates[R_state]
-            g.cumulative_sum_of_state_changes[R_state :] += g.SIR_transition_rates[R_state]
+            g.total_sum_of_state_changes += g.transition_rates[R_state]
+            g.cumulative_sum_of_state_changes[R_state :] += g.transition_rates[R_state]
 
             # Disable incomming rates
             update_infection_list_for_newly_infected_agent(my, g, agent)
@@ -341,11 +341,11 @@ def initialize_states(
 @njit
 def initialize_testing(my, g, intervention, nts) :
 
-    start_click = np.int32( - g.N_infectious_states / (my.cfg.lambda_I * nts))
-    print(start_click)
+    start_click = -np.float32(g.N_infectious_states) / (my.cfg.lambda_I * nts)
+
     # Loop over all posible clicks
-    for click in range(start_click, 0) :
-        print(click)
+    for click in range(np.int32(start_click), 0) :
+
         # Implement the consequences of testing
         testing_intervention(my, g, intervention, np.int32(click*nts), click)
 
@@ -461,7 +461,7 @@ def do_bug_check(
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-#@njit
+@njit
 def run_simulation(
     my,
     g,
@@ -539,12 +539,12 @@ def run_simulation(
             state_total_counts[state_now]   -= 1
             state_total_counts[state_after] += 1
 
-            g.total_sum_of_state_changes -= g.SIR_transition_rates[state_now]
-            g.total_sum_of_state_changes += g.SIR_transition_rates[state_after]
+            g.total_sum_of_state_changes -= g.transition_rates[state_now]
+            g.total_sum_of_state_changes += g.transition_rates[state_after]
 
-            g.cumulative_sum_of_state_changes[state_now] -= g.SIR_transition_rates[state_now]
+            g.cumulative_sum_of_state_changes[state_now] -= g.transition_rates[state_now]
             g.cumulative_sum_of_state_changes[state_after :] += (
-                g.SIR_transition_rates[state_after] - g.SIR_transition_rates[state_now]
+                g.transition_rates[state_after] - g.transition_rates[state_now]
             )
 
             g.cumulative_sum_infection_rates[state_now] -= g.sum_of_rates[agent]
@@ -616,8 +616,8 @@ def run_simulation(
 
                                 agents_in_state[0].append(np.uint32(contact))
                                 state_total_counts[0] += 1
-                                g.total_sum_of_state_changes += g.SIR_transition_rates[0]
-                                g.cumulative_sum_of_state_changes += g.SIR_transition_rates[0]
+                                g.total_sum_of_state_changes += g.transition_rates[0]
+                                g.cumulative_sum_of_state_changes += g.transition_rates[0]
                                 accept = True
                                 agent_getting_infected = contact
                                 break
@@ -667,18 +667,18 @@ def run_simulation(
                     out_my_state.append(my.state.copy())
 
                     intervention.R_true_list.append(calculate_R_True(my, g, day))
+                    intervention.R_true_list_brit.append(calculate_R_True_brit(my, g, day))
                     intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
-                    intervention.R_true_list_brit.append(calculate_R_True_brit(my, g))
 
 
                 # Print current progress
                 if verbose :
                     print('--- day : ', day, ' ---')
-                    print('n_infected : ', np.round(my.cfg.N_init + np.sum(where_infections_happened_counter)))
-                    print('R_true : ', np.round(intervention.R_true_list[-1], 3))
-                    print('freedom_impact : ', np.round(intervention.freedom_impact_list[-1], 3))
-                    print('R_true_list_brit : ', np.round(intervention.R_true_list_brit[-1], 3))
-                    print('Season multiplier : ', np.round(g.seasonality(day), 2))
+                    print('n_infected : ',        np.round(my.cfg.N_init + np.sum(where_infections_happened_counter)))
+                    print('freedom_impact : ',    np.round(intervention.freedom_impact_list[-1], 3))
+                    print('R_true : ',            np.round(intervention.R_true_list[-1],         3))
+                    print('R_true_list_brit : ',  np.round(intervention.R_true_list_brit[-1],    3))
+                    print('Season multiplier : ', np.round(g.seasonality(day),                   2))
 
 
                 # Advance day
@@ -688,9 +688,6 @@ def run_simulation(
                 # Apply interventions for the new day
                 if intervention.apply_interventions :
                     apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
-
-                if day > 50 :
-                    x = X
 
                 # Apply events for the new day
                 if my.cfg.N_events > 0 :

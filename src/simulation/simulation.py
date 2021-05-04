@@ -4,6 +4,7 @@ import pandas as pd
 import numba as nb
 
 from numba.typed import List, Dict
+from numba.types import DictType
 from numba.core.errors import NumbaTypeSafetyWarning, NumbaExperimentalFeatureWarning
 
 import warnings
@@ -60,6 +61,7 @@ class Simulation :
         self.N_tot = cfg.network.N_tot
 
         self.hash = cfg.hash
+
         self.my = nb_jitclass.initialize_My(self.cfg.deepcopy())
 
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
@@ -274,6 +276,18 @@ class Simulation :
 
     def initialize_maps(self) :
 
+        # Count the number of different incidence labels
+        self.N_matrix_labels = len(set(self.raw_label_map[self.cfg.matrix_labels.lower()]))
+
+        # Create a dictionary that has the incidence labels as key, and the number of labels as value
+        unique_incidence_labels = set([item for sublist in self.cfg.incidence_labels for item in sublist])
+        N_incidence_labels = list(map(lambda x : len(set(self.raw_label_map[x.lower()])), unique_incidence_labels))
+
+        self.N_incidence_labels = Dict.empty(key_type=nb.types.unicode_type, value_type=nb.uint16)
+        for key, val in zip(unique_incidence_labels, N_incidence_labels) :
+            self.N_incidence_labels[key] = np.uint16(val)
+
+
         # Map stratifications
         if self.cfg.stratified_labels.lower() == 'sogn' :
             self.stratified_label_map = dict(zip(self.my.sogn, self.my.sogn))
@@ -288,13 +302,16 @@ class Simulation :
 
 
         # Map incidence restrictions
-        self.incidence_label_map = []
-        for incidence_label in self.cfg.incidence_labels :
+        self.incidence_label_map = {}
+        for incidence_label in unique_incidence_labels :
             if incidence_label.lower() == 'sogn' :
-                self.incidence_label_map.append(dict(zip(self.my.sogn, self.my.sogn)))
+                lm = dict(zip(self.my.sogn, self.my.sogn))
             else :
                 lm = self.raw_label_map[incidence_label.lower() + '_idx']
-                self.incidence_label_map.append(dict(zip(self.my.sogn, lm[self.my.sogn].values)))
+                lm = dict(zip(self.my.sogn, lm[self.my.sogn].values))
+
+            self.incidence_label_map[incidence_label.lower()] = lm
+
 
         # Map matrix restrictions
         if self.cfg.matrix_labels.lower() == 'sogn' :
@@ -309,9 +326,6 @@ class Simulation :
         if self.verbose :
             print('\nINITIALING INTERVENTIONS')
 
-        N_matrix_labels = len(set(self.raw_label_map[self.cfg.matrix_labels.lower()]))
-        N_incidence_labels = list(map(lambda x : len(set(self.raw_label_map[x.lower()])), self.cfg.incidence_labels))
-
         if verbose_interventions is None :
             verbose_interventions = self.verbose
 
@@ -325,11 +339,11 @@ class Simulation :
         other_matrix_restrict = []
 
         for scenario in self.cfg.Intervention_contact_matrices_name :
-            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=N_matrix_labels)
+            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=self.N_matrix_labels)
 
             # Check the loaded contact matrices have the right size
-            if not len(tmp_other_matrix_restrict) == N_matrix_labels :
-                raise ValueError(f'Number of labels ({N_matrix_labels}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for scenario: {scenario} and label: {self.cfg.labels}')
+            if not len(tmp_other_matrix_restrict) == self.N_matrix_labels :
+                raise ValueError(f'Number of labels ({self.N_matrix_labels}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for scenario: {scenario} and label: {self.cfg.labels}')
 
             work_matrix_restrict.append(tmp_work_matrix_restrict)
             other_matrix_restrict.append(tmp_other_matrix_restrict)
@@ -339,43 +353,55 @@ class Simulation :
         om = np.array(other_matrix_restrict)
 
         for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
-            for l in range(len(np.unique(N_matrix_labels))) :
+            for l in range(len(np.unique(self.N_matrix_labels))) :
                 wm[s, l, :, :] *= self.cfg.matrix_label_multiplier[l]
                 om[s, l, :, :] *= self.cfg.matrix_label_multiplier[l]
 
 
         # Convert maps to numba dicts
-        numba_matrix_label_map = Dict.empty(key_type=nb.uint16, value_type=nb.uint16)
+        matrix_label_map = Dict.empty(key_type=nb.uint16, value_type=nb.uint16)
         for key, val in self.matrix_label_map.items() :
-            numba_matrix_label_map[np.uint16(key)] = np.uint16(val)
+            matrix_label_map[np.uint16(key)] = np.uint16(val)
 
-        numba_incidence_label_map = List()
-        for ith_map, incidence_lm in enumerate(self.incidence_label_map) :
-            numba_incidence_label_map.append(Dict.empty(key_type=nb.uint16, value_type=nb.uint16))
-            for key, val in incidence_lm.items() :
-                numba_incidence_label_map[ith_map][np.uint16(key)] = np.uint16(val)
+        incidence_label_map = Dict.empty(key_type=nb.types.unicode_type, value_type=DictType(nb.uint16, nb.uint16))
+        for incidence_label, incidence_map in self.incidence_label_map.items() :
+            incidence_label_map[incidence_label] = Dict.empty(key_type=nb.uint16, value_type=nb.uint16)
+            for key, val in incidence_map.items() :
+                incidence_label_map[incidence_label][np.uint16(key)] = np.uint16(val)
 
-        numba_inverse_incidence_label_map = List()
-        for ith_map, incidence_lm in enumerate(self.incidence_label_map) :
-            numba_inverse_incidence_label_map.append(Dict.empty(key_type=nb.uint16, value_type=nb.uint16[:]))
+        inverse_incidence_label_map = Dict.empty(key_type=nb.types.unicode_type, value_type=DictType(nb.uint16, nb.uint16[:]))
+        for incidence_label, incidence_map in self.incidence_label_map.items() :
+            inverse_incidence_label_map[incidence_label] = Dict.empty(key_type=nb.uint16, value_type=nb.uint16[:])
 
-            keys, vals = np.array([(keys, vals) for keys, vals in self.incidence_label_map[ith_map].items()]).T
+            keys, vals = np.array([(keys, vals) for keys, vals in self.incidence_label_map[incidence_label].items()]).T
 
             for val in np.unique(vals) :
-                numba_inverse_incidence_label_map[ith_map][np.uint16(val)] = keys[vals == val].astype(np.uint16)
+                inverse_incidence_label_map[incidence_label][np.uint16(val)] = keys[vals == val].astype(np.uint16)
+
+        agents_per_incidence_label = Dict.empty(key_type=nb.types.unicode_type, value_type=nb.float32[:])
+        for incidence_label, N_labels in self.N_incidence_labels.items() :
+
+            label_counter = np.zeros(N_labels, dtype=np.float32)
+            for sogn in self.my.sogn :
+                label_counter[incidence_label_map[incidence_label][sogn]] += 1.0
+
+            agents_per_incidence_label[incidence_label] = label_counter
+
 
         self.intervention = nb_jitclass.Intervention(
             self.my,
-            incidence_label_map = numba_incidence_label_map,
-            inverse_incidence_label_map = numba_inverse_incidence_label_map,
-            N_incidence_labels = np.array(N_incidence_labels, dtype=np.uint16),
-            matrix_label_map = numba_matrix_label_map,
-            N_matrix_labels = N_matrix_labels,
-            vaccinations_per_age_group = vaccinations_per_age_group,
-            vaccination_schedule = vaccination_schedule,
-            work_matrix_restrict = wm,
-            other_matrix_restrict = om,
-            verbose = verbose_interventions)
+            incidence_label_map         = incidence_label_map,
+            inverse_incidence_label_map = inverse_incidence_label_map,
+            N_incidence_labels          = self.N_incidence_labels,
+            agents_per_incidence_label  = agents_per_incidence_label,
+            matrix_label_map            = matrix_label_map,
+            N_matrix_labels             = self.N_matrix_labels,
+            vaccinations_per_age_group  = vaccinations_per_age_group,
+            vaccination_schedule        = vaccination_schedule,
+            work_matrix_restrict        = wm,
+            other_matrix_restrict       = om,
+            verbose                     = verbose_interventions)
+
 
     def initialize_states(self) :
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
@@ -636,6 +662,8 @@ class Simulation :
                 f.create_dataset('df', data=utils.dataframe_to_hdf5_format(self.df))
                 self._add_cfg_to_hdf5_file(f)
 
+            print(utils.read_cfg_from_hdf5_file(filename_hdf5))
+            x = X
 
     def _save_simulation_results(self, save_only_ID_0=False, time_elapsed=None) :
 
@@ -651,8 +679,8 @@ class Simulation :
             f.create_dataset('my_age', data=self.my.age)
 
             f.create_dataset('my_number_of_contacts', data=self.my.number_of_contacts)
-            f.create_dataset('my_connection_type',   data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_type,   pad_value=-1))
-            f.create_dataset('my_connection_status', data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_status, pad_value=-1))
+            f.create_dataset('my_connection_type',   data=utils.nested_list_to_rectangular_numpy_array(self.my.connection_type,   pad_value=-1))
+            f.create_dataset('my_connection_status', data=utils.nested_list_to_rectangular_numpy_array(self.my.connection_status, pad_value=-1))
 
             f.create_dataset('day_found_infected', data=self.intervention.day_found_infected)
             f.create_dataset('coordinates', data=self.my.coordinates)

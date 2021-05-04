@@ -1,7 +1,7 @@
 import numpy as np
 import numba as nb
 from numba.experimental import jitclass
-from numba.typed import List
+from numba.typed import List, Dict
 from numba.types import ListType, DictType
 
 from src.utils import utils
@@ -36,8 +36,9 @@ spec_cfg = {
     'weighted_random_initial_infections' : nb.boolean,
     'initialize_at_kommune_level' : nb.boolean,
     'stratified_labels' : nb.types.unicode_type,
-    'incidence_labels' : ListType(nb.types.unicode_type),
-    'incidence_threshold' : nb.float32[:, :],
+    'incidence_labels' : ListType(ListType(nb.types.unicode_type)),
+    'incidence_threshold' : ListType(nb.float64[:, : :1]),  # to make the type C instead of A
+    'incidence_intervention_effect' : ListType(nb.float64[:, : :1]), # to make the type C instead of A
     'matrix_labels' : nb.types.unicode_type,
     'matrix_label_multiplier' : nb.float32[:],
     'matrix_label_frac' : nb.float32[:],
@@ -60,7 +61,6 @@ spec_cfg = {
     # lockdown-related / interventions
     'do_interventions' : nb.boolean,
     'incidence_interventions_to_apply' : nb.int8[:],
-    'incidence_intervention_effect' : nb.float64[:, :],
     'planned_restriction_dates' : nb.uint16[:],
     'planned_restriction_types' : nb.uint8[:],
     'continuous_interventions_to_apply' : nb.int8[:],
@@ -102,25 +102,25 @@ class Config(object) :
         self.lambda_I = 1.0
 
         # other
-        self.make_random_initial_infections = True
+        self.make_random_initial_infections     = True
         self.weighted_random_initial_infections = False
-        self.initialize_at_kommune_level = False
-        self.stratified_labels  = 'land'
-        self.incidence_labels   = List(['land'])
-        self.incidence_threshold = np.array([[20000.0, 20000.0]], dtype=np.float32)
-        self.incidence_intervention_effect = np.array([[1.0, 0.9, 0.9]], dtype=np.float64)
-        self.matrix_labels      = 'land'
-        self.matrix_label_multiplier = np.array([1.0], dtype=np.float32)
-        self.matrix_label_frac  = np.array([0.0], dtype=np.float32)
-        self.initial_infected_label_weight = np.array([1.0], dtype=np.float32)
-        self.day_max = 0
-        self.clustering_connection_retries = 0
-        self.beta_UK_multiplier = 1.0
+        self.initialize_at_kommune_level        = False
+        self.stratified_labels                  = 'land'
+        self.incidence_labels                   = List([List(['land'])])
+        self.incidence_threshold                = List([np.full( (1, 2), fill_value=2000.0, dtype=np.float64)])
+        self.incidence_intervention_effect      = List([np.array([[1.0, 0.9, 0.9]], dtype=np.float64)])
+        self.matrix_labels                      = 'land'
+        self.matrix_label_multiplier            = np.array([1.0], dtype=np.float32)
+        self.matrix_label_frac                  = np.array([0.0], dtype=np.float32)
+        self.initial_infected_label_weight      = np.array([1.0], dtype=np.float32)
+        self.day_max                            = 0
+        self.clustering_connection_retries      = 0
+        self.beta_UK_multiplier                 = 1.0
 
         # events
         self.N_events = 0
-        self.event_size_max = np.array([[50, 50]], dtype=np.uint32)
-        self.event_size_mean = np.array([50, 50],  dtype=np.float32)
+        self.event_size_max  = np.array([[50, 50]], dtype=np.uint32)
+        self.event_size_mean = np.array([50, 50],   dtype=np.float32)
         self.event_beta_scaling = 10
         self.event_weekend_multiplier = 1.0
         self.event_rho = 0.1
@@ -147,8 +147,14 @@ def initialize_nb_cfg(obj, cfg, spec) :
                 # Check for nested list
                 if len(val) > 0 :
                     if any(isinstance(v, list) for v in val) :
+
+                        nested_type = getattr(obj, key)[0]
+
                         for ind in range(len(val)) :
-                            val[ind] = List(val[ind])
+                            if isinstance(nested_type, nb.typed.typedlist.List) :
+                                val[ind] = List(val[ind])
+                            elif isinstance(nested_type, np.ndarray) :
+                                val[ind] = np.array([l for l in val[ind]])  # Prevents reflected list
 
                 val = List(val)
 
@@ -386,15 +392,15 @@ class Gillespie(object) :
 #### ##    ##    ##    ######## ##     ##    ###    ######## ##    ##    ##    ####  #######  ##    ##
 
 spec_intervention = {
+    # Configs
     'cfg' : nb_cfg_type,
     'cfg_network' : nb_cfg_network_type,
-    'agents_per_incidence_label' : ListType(nb.float32[ : :1]), # ListType[array(uint32, 1d, C)] (C vs. A)
-    'N_incidence_labels' : nb.uint16[:],
-    'N_matrix_labels' : nb.uint16,
+    # Measures
     'freedom_impact' : nb.float64[:],
     'freedom_impact_list' : ListType(nb.float64),
     'R_true_list' : ListType(nb.float64),
     'R_true_list_brit' : ListType(nb.float64),
+    # Testing
     'day_found_infected' : nb.int32[:],
     'reason_for_test' : nb.int8[:],
     'result_of_test' : nb.int8[:],
@@ -403,18 +409,28 @@ spec_intervention = {
     'clicks_when_tested' : nb.int32[:],
     'clicks_when_tested_result' : nb.int32[:],
     'clicks_when_isolated' : nb.int32[:],
-    'clicks_when_restriction_changes' : nb.int32[:],
     'isolated' : nb.boolean[:],
+    # Incidence
+    'N_incidence_labels' : DictType(nb.types.unicode_type, nb.uint16),
+    'incidence_labels' : ListType(nb.types.unicode_type),
+    'incidence_threshold' : nb.float64[:, :],
+    'incidence_intervention_effect' : nb.float64[:, :],
+    'incidence_label_map' : DictType(nb.types.unicode_type, DictType(nb.uint16, nb.uint16)),
+    'inverse_incidence_label_map' : DictType(nb.types.unicode_type, DictType(nb.uint16, nb.uint16[:])),
+    'agents_per_incidence_label' : DictType(nb.types.unicode_type, nb.float32[:]),
     'types' : nb.int8[:],
-    'stratified_label_map' : DictType(nb.uint16, nb.uint16),
-    'matrix_label_map' : DictType(nb.uint16, nb.uint16),
-    'incidence_label_map' : ListType(DictType(nb.uint16, nb.uint16)),
-    'inverse_incidence_label_map' : ListType(DictType(nb.uint16, nb.uint16[:])),
+    'clicks_when_restriction_changes' : nb.int32[:],
+    # Vaccinations
     'vaccinations_per_age_group' : nb.int64[:, :, :],
     'vaccination_schedule' : nb.int32[:, :],
+    # Contact matrcies
+    'N_matrix_labels' : nb.uint16,
+    'matrix_label_map' : DictType(nb.uint16, nb.uint16),
     'work_matrix_restrict' : nb.float64[:, :, :, :],
     'other_matrix_restrict' : nb.float64[:, :, :, :],
+    # Events
     'event_size_max' : nb.uint32[:],
+    # Options
     'verbose' : nb.boolean,
 }
 
@@ -475,6 +491,7 @@ class Intervention(object) :
         incidence_label_map,
         inverse_incidence_label_map,
         N_incidence_labels,
+        agents_per_incidence_label,
         matrix_label_map,
         N_matrix_labels,
         vaccinations_per_age_group,
@@ -487,44 +504,45 @@ class Intervention(object) :
         self.cfg_network = my.cfg_network
 
 
-        self.N_incidence_labels = N_incidence_labels
-        self.N_matrix_labels = N_matrix_labels
-
-        agents_per_incidence_label = List()
-        for ith_incidence_restriction, N_labels in enumerate(N_incidence_labels) :
-            label_counter = np.zeros(N_labels, dtype=np.float32)
-            for sogn in my.sogn :
-                label_counter[incidence_label_map[ith_incidence_restriction][sogn]] += 1.0
-
-            agents_per_incidence_label.append(label_counter)
-
-        self.agents_per_incidence_label = agents_per_incidence_label
-
-        self.day_found_infected              = np.full(self.cfg_network.N_tot, fill_value=-10_000, dtype=np.int32)
         self.freedom_impact                  = np.full(self.cfg_network.N_tot, fill_value=0.0, dtype=np.float64)
         self.freedom_impact_list             = List([0.0])
         self.R_true_list                     = List([0.0])
         self.R_true_list_brit                = List([0.0])
+
+
+        self.day_found_infected              = np.full(self.cfg_network.N_tot, fill_value=-10_000, dtype=np.int32)
         self.reason_for_test                 = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
         self.result_of_test                  = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
-        self.test_counter                    = np.zeros(3, dtype=np.uint32)
         self.positive_test_counter           = np.zeros(3, dtype=np.uint32)
+        self.test_counter                    = np.zeros(3, dtype=np.uint32)
         self.clicks_when_tested              = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_tested_result       = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
         self.clicks_when_isolated            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.clicks_when_restriction_changes = np.full(my.N_sogne,        fill_value=-1, dtype=np.int32)
         self.isolated                        = np.full(self.cfg_network.N_tot, fill_value=False, dtype=nb.boolean)
-        self.types                           = np.zeros(my.N_sogne, dtype=np.int8)
 
+
+        self.N_incidence_labels            = N_incidence_labels
+        self.incidence_labels              = self.cfg.incidence_labels[0]
+        self.incidence_threshold           = self.cfg.incidence_threshold[0]
+        self.incidence_intervention_effect = self.cfg.incidence_intervention_effect[0]
+        self.incidence_label_map           = incidence_label_map
+        self.inverse_incidence_label_map   = inverse_incidence_label_map
+
+        self.agents_per_incidence_label      = agents_per_incidence_label
+        self.types                           = np.zeros(my.N_sogne, dtype=np.int8)
+        self.clicks_when_restriction_changes = np.full(my.N_sogne,  fill_value=-1, dtype=np.int32)
+
+
+        self.N_matrix_labels = N_matrix_labels
         self.matrix_label_map                = matrix_label_map
-        self.incidence_label_map             = incidence_label_map
-        self.inverse_incidence_label_map     = inverse_incidence_label_map
+        self.work_matrix_restrict            = work_matrix_restrict
+        self.other_matrix_restrict           = other_matrix_restrict
 
         self.vaccinations_per_age_group      = vaccinations_per_age_group
         self.vaccination_schedule            = vaccination_schedule
-        self.work_matrix_restrict            = work_matrix_restrict
-        self.other_matrix_restrict           = other_matrix_restrict
+
         self.event_size_max                  = self.cfg.event_size_max[0]
+
         self.verbose = verbose
 
 

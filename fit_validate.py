@@ -293,9 +293,9 @@ for subset in subsets :
 
 
     stratification = cfg.stratified_labels
-    label_map = {'stratification_idx_to_stratification' :    raw_label_map[[stratification+'_idx',  stratification ]].drop_duplicates().set_index(stratification+'_idx')[stratification],
-                 'stratification_idx_to_kommune' :   raw_label_map[[stratification+'_idx',  'kommune' ]].drop_duplicates().set_index(stratification+'_idx')['kommune'],
-                 'kommune_to_stratification_idx' :   raw_label_map[[stratification+'_idx',  'kommune' ]].drop_duplicates().set_index('kommune')[stratification+'_idx'],
+    label_map = {'stratification_idx_to_stratification' :    raw_label_map[[stratification + '_idx',  stratification ]].drop_duplicates().set_index(stratification + '_idx')[stratification],
+                 'stratification_idx_to_kommune' :   raw_label_map[[stratification + '_idx',  'kommune' ]].drop_duplicates().set_index(stratification + '_idx')['kommune'],
+                 'kommune_to_stratification_idx' :   raw_label_map[[stratification + '_idx',  'kommune' ]].drop_duplicates().set_index('kommune')[stratification + '_idx'],
                  'kommune_to_kommune_idx' :  raw_label_map[['kommune',     'kommune_idx']].drop_duplicates().set_index('kommune')['kommune_idx']}
 
 

@@ -8,10 +8,10 @@ from contexttimer import Timer
 
 
 if utils.is_local_computer():
-    f = 0.1
+    f = 0.001
     n_steps = 1
-    num_cores_max = 3
-    N_runs = 3
+    num_cores_max = 1
+    N_runs = 1
 else :
     f = 0.5
     n_steps = 3
@@ -30,7 +30,7 @@ if n_steps == 1 :
 else :
     noise = lambda m, d : np.round(m + np.linspace(-d, d, 2*(n_steps - 1) + 1), 5)
 
-params, start_date = utils.load_params('cfg/simulation_parameters_gatherings.yaml', f)
+params, start_date = utils.load_params('cfg/simulation_parameters_local_lockdowns.yaml', f)
 
 # Sweep around parameter set
 #params['beta']               = noise(params['beta'], 0.005)
@@ -38,13 +38,13 @@ params, start_date = utils.load_params('cfg/simulation_parameters_gatherings.yam
 #params['N_init_UK_frac']     = noise(params['N_init_UK_frac'], 1)
 
 N_files_total = 0
-if __name__ == "__main__":
+if __name__ == '__main__':
     with Timer() as t:
 
         N_files_total +=  simulation.run_simulations(params, N_runs=N_runs, num_cores_max=num_cores_max, verbose=verbose)
 
-    print(f"\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}")
-    print("Finished simulating!")
+    print(f'\n{N_files_total:,} files were generated, total duration {utils.format_time(t.elapsed)}')
+    print('Finished simulating!')
 
 
 
@@ -98,32 +98,32 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
         cfgs = [cfg for cfg in abm_files.iter_cfgs()]
         cfg_best = cfgs[np.nanargmax(lls_s)]
         ll_best = lls_s[np.nanargmax(lls_s)]
-        print("--- Best parameters - Smitte ---")
-        print(f"Weighted loglikelihood : {ll_best:.3f}")
-        print(f"beta : {cfg_best.beta:.5f}")
-        print(f"beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}")
-        print(f"N_init : {cfg_best.N_init:.0f}")
-        print(f"N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}")
+        print('--- Best parameters - Smitte ---')
+        print(f'Weighted loglikelihood : {ll_best:.3f}')
+        print(f'beta : {cfg_best.beta:.5f}')
+        print(f'beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}')
+        print(f'N_init : {cfg_best.N_init:.0f}')
+        print(f'N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}')
 
         cfg_best = cfgs[np.nanargmax(lls_f)]
         ll_best = lls_f[np.nanargmax(lls_f)]
-        print("--- Best parameters - B.1.1.7 ---")
-        print(f"Weighted loglikelihood : {ll_best:.3f}")
-        print(f"beta : {cfg_best.beta:.5f}")
-        print(f"beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}")
-        print(f"N_init : {cfg_best.N_init:.0f}")
-        print(f"N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}")
+        print('--- Best parameters - B.1.1.7 ---')
+        print(f'Weighted loglikelihood : {ll_best:.3f}')
+        print(f'beta : {cfg_best.beta:.5f}')
+        print(f'beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}')
+        print(f'N_init : {cfg_best.N_init:.0f}')
+        print(f'N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}')
 
 
         lls = np.array(lls_s) + np.array(lls_f)
         cfg_best = cfgs[np.nanargmax(lls)]
         ll_best = lls[np.nanargmax(lls)]
-        print("--- Best parameters ---")
-        print(f"Weighted loglikelihood : {ll_best:.3f}")
-        print(f"beta : {cfg_best.beta:.5f}")
-        print(f"beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}")
-        print(f"N_init : {cfg_best.N_init:.0f}")
-        print(f"N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}")
+        print('--- Best parameters ---')
+        print(f'Weighted loglikelihood : {ll_best:.3f}')
+        print(f'beta : {cfg_best.beta:.5f}')
+        print(f'beta_UK_multiplier : {cfg_best.beta_UK_multiplier:.3f}')
+        print(f'N_init : {cfg_best.N_init:.0f}')
+        print(f'N_init_UK_frac : {cfg_best.N_init_UK_frac:.3f}')
 
         betas     = np.array([cfg.beta                for cfg in cfgs])
         rel_betas = np.array([cfg.beta_UK_multiplier  for cfg in cfgs])
@@ -143,16 +143,16 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
             I = np.argmax(u_arr == val)
 
             # Print the houtput
-            out_string = "["
+            out_string = '['
             for i in range(len(u_arr)) :
                 if i == I :
-                    out_string += " *" + str(u_arr[i]) + "*"
+                    out_string += ' *' + str(u_arr[i]) + '*'
                 else :
-                    out_string += "  " + str(u_arr[i]) + " "
-            out_string += f" ]"# sens. : {d_lls:.2g}"
-            print(name + "\t" + out_string)
+                    out_string += '  ' + str(u_arr[i]) + ' '
+            out_string += f' ]'# sens. : {d_lls:.2g}'
+            print(name + '\t' + out_string)
 
-        print("--- Maximum likelihood value locations ---")
-        terminal_printer("beta* :      ", betas,          cfg_best.beta                 , lls)
-        terminal_printer("N_init* :    ", N_init,         cfg_best.N_init               , lls)
-        terminal_printer("N_UK_frac* : ", N_init_UK_frac, cfg_best.N_init_UK_frac       , lls)
+        print('--- Maximum likelihood value locations ---')
+        terminal_printer('beta* :      ', betas,          cfg_best.beta                 , lls)
+        terminal_printer('N_init* :    ', N_init,         cfg_best.N_init               , lls)
+        terminal_printer('N_UK_frac* : ', N_init_UK_frac, cfg_best.N_init_UK_frac       , lls)

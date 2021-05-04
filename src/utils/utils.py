@@ -1167,25 +1167,25 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
                 if key in spec_cfg.keys() :
 
-                    if key == "initial_infection_distribution" and not d["initial_infection_distribution"] == "random" :
-                        d["initial_infection_distribution"] = file_loaders.get_SSI_data(date=d["initial_infection_distribution"], return_name=True, verbose=verbose)
+                    if key == 'initial_infection_distribution' and not d['initial_infection_distribution'] == 'random' :
+                        d['initial_infection_distribution'] = file_loaders.get_SSI_data(date=d['initial_infection_distribution'], return_name=True, verbose=verbose)
 
                     cfg.update(d)
 
 
                 elif key in spec_network.keys() :
-                    cfg["network"].update(d)
+                    cfg['network'].update(d)
 
-                    if key == "contact_matrices_name" :
+                    if key == 'contact_matrices_name' :
                         # TODO : fix the DotDict indexing
                         work_matix, other_matrix, work_other_ratio, _ = file_loaders.load_contact_matrices(scenario = d[key])
-                        cfg["network"].update({"work_matrix" : work_matix[0], "other_matrix" : other_matrix[0], "work_other_ratio" : work_other_ratio[0]})
+                        cfg['network'].update({'work_matrix' : work_matix[0], 'other_matrix' : other_matrix[0], 'work_other_ratio' : work_other_ratio[0]})
 
                 #elif key in spec_intervention.keys() :
-                #    cfg["intervention"].update(d)
+                #    cfg['intervention'].update(d)
 
 
-            if not N_tot_max or cfg["N_tot"] < N_tot_max :
+            if not N_tot_max or cfg['N_tot'] < N_tot_max :
 
                 cfg              = format_cfg(cfg, spec_cfg)
                 cfg.network      = format_cfg(cfg.network, spec_network)
@@ -1197,7 +1197,7 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
                 cfgs.append(cfg)
             else :
                 if verbose and has_not_printed :
-                    print("Skipping some files due to N_tot > N_tot_max")
+                    print('Skipping some files due to N_tot > N_tot_max')
                     has_not_printed = False
 
     return cfgs
@@ -1884,31 +1884,31 @@ def hash_to_seed(hash_) :
     return seed
 
 
-def delete_every_file_with_hash(hashes, base_dir="./Output/", verbose=True) :
+def delete_every_file_with_hash(hashes, base_dir='./Output/', verbose=True) :
 
     if isinstance(hashes, str) :
         hashes = [hashes]
 
     files_to_delete = []
     for hash_ in hashes :
-        files_to_delete.extend(list(Path(base_dir).rglob(f"*{hash_}*")))
+        files_to_delete.extend(list(Path(base_dir).rglob(f'*{hash_}*')))
 
-    prompt = f"You are about the delete {len(files_to_delete)} files or folders. "
+    prompt = f'You are about the delete {len(files_to_delete)} files or folders. '
     prompt += "Please type exactly 'yes' (without apostrofes) to delete them."
     input_str = input(prompt)
 
-    if input_str == "yes" :
+    if input_str == 'yes' :
         folders_to_delete = []
         for file_to_delete in files_to_delete :
-            if "." in str(file_to_delete) :
+            if '.' in str(file_to_delete) :
                 if verbose :
-                    print(f"Deleting file : {file_to_delete}")
+                    print(f'Deleting file : {file_to_delete}')
                 file_to_delete.unlink()
             else :
                 folders_to_delete.append(file_to_delete)
         for folder_to_delete in folders_to_delete :
             if verbose :
-                print(f"Deleting folder : {folder_to_delete}")
+                print(f'Deleting folder : {folder_to_delete}')
             folder_to_delete.rmdir()
 
 
@@ -1927,22 +1927,25 @@ def add_cfg_to_hdf5_file_recursively(f, cfg, path = 'cfg') :
 
         if isinstance(val, (int, float, str, np.ndarray, list)) :
 
-            # Check if list is nested
-            if key == 'label_map' :
-                d.attrs[key] = repr(val)    # TODO: Find a better way to store nested list
+            if key == 'incidence_labels' :
+                val = nested_list_to_rectangular_numpy_array(val, pad_value='').astype('S')
 
-            else :
-                d.attrs[key] = val
+            if key == 'incidence_threshold' :
+                val = nested_list_to_rectangular_numpy_array(val, pad_value=-1)
+
+            print(key)
+            print(val)
+            d.attrs[key] = val
 
         elif isinstance(val, dict) :
             add_cfg_to_hdf5_file_recursively(f, val, path = path + '/' + key)
 
         else :
-            raise ValueError("Cannot save %s of %s type" % (key, type(val)))
+            raise ValueError('Cannot save %s of %s type' % (key, type(val)))
 
 
 def read_cfg_from_hdf5_file(filename) :
-    with h5py.File(filename, "r") as f :
+    with h5py.File(filename, 'r') as f :
         cfg = read_cfg_from_hdf5_file_recursively(f)
 
     cfg              = format_cfg(cfg,         nb_jitclass.spec_cfg)
@@ -1953,7 +1956,15 @@ def read_cfg_from_hdf5_file(filename) :
 def read_cfg_from_hdf5_file_recursively(f, path='cfg') :
     tmp = {}
     for key in f[path].attrs :
-        tmp[key] = f[path].attrs[key]
+        val = f[path].attrs[key]
+
+        if key == 'incidence_labels' :
+            val = rectangular_numpy_array_to_nested_list(val, pad_value='')# .astype(str)
+
+        if key == 'incidence_threshold' :
+            val = rectangular_numpy_array_to_nested_list(val, pad_value=-1)# .astype(str)
+
+        tmp[key] = val
 
     for item in f[path].keys() :
         tmp[item] = read_cfg_from_hdf5_file_recursively(f, path=path + '/' + item)
@@ -2143,10 +2154,17 @@ def generate_random_point(polygon):
             return pnt
 
 
-def nested_numba_list_to_rectangular_numpy_array(nested_list, pad_value) :
+def nested_list_to_rectangular_numpy_array(nested_list, pad_value) :
 
     # Get the maximum dimension
     arrlen = max(map(len, nested_list))
 
-    # Create retangular numpy arraye
+    # Create retangular numpy array
     return np.array([list(tl)+[pad_value]*(arrlen-len(tl)) for tl in nested_list])
+
+
+def rectangular_numpy_array_to_nested_list(rectangular_array, pad_value) :
+
+    nested_list = []
+    for item in rectangular_array :
+        nested_list.append(item.tolist()) #.remove(pad_value)

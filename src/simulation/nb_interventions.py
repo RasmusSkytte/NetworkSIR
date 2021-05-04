@@ -310,16 +310,17 @@ def check_incidence_against_tresholds(my, intervention, day) :
     sogne_above_off_treshold = np.zeros_like(intervention.types, dtype=np.int8)
 
     # Loop over possible interventions
-    for ith_intervention in range(len(my.cfg.incidence_threshold)) :
+    for ith_intervention, incidence_label in enumerate(intervention.incidence_labels) :
 
         # Determine the number of (found) infected per label
-        infected_per_label = np.zeros(intervention.N_incidence_labels[ith_intervention], dtype=np.float32)
+        infected_per_label = np.zeros(intervention.N_incidence_labels[incidence_label], dtype=np.float32)
+
         for agent, day_found in enumerate(intervention.day_found_infected) :
             if day_found > day - intervention.cfg.days_looking_back :
-                infected_per_label[intervention.incidence_label_map[ith_intervention][my.sogn[agent]]] += 1.0
+                infected_per_label[intervention.incidence_label_map[incidence_label][my.sogn[agent]]] += 1.0
 
         # Loop over labels
-        for ith_label, (N_infected, N_inhabitants) in enumerate(zip(infected_per_label, intervention.agents_per_incidence_label[ith_intervention])) :
+        for ith_label, (N_infected, N_inhabitants) in enumerate(zip(infected_per_label, intervention.agents_per_incidence_label[incidence_label])) :
 
             if N_inhabitants == 0.0 :
                 continue
@@ -328,19 +329,19 @@ def check_incidence_against_tresholds(my, intervention, day) :
             incidence = N_infected / (N_inhabitants / 100_000)
 
             # Loop over parishes on label
-            for sogn in intervention.inverse_incidence_label_map[ith_intervention][np.uint16(ith_label)] :
+            for sogn in intervention.inverse_incidence_label_map[incidence_label][np.uint16(ith_label)] :
 
                 # Check for restriction start
-                if incidence > my.cfg.incidence_threshold[ith_intervention][0] :
+                if incidence > intervention.incidence_threshold[ith_intervention][0] :
                     sogne_above_on_treshold[sogn] += 2**ith_intervention   # Encode as binary flags
 
                 # Check for restriction start
-                if incidence > my.cfg.incidence_threshold[ith_intervention][1] :
+                if incidence > intervention.incidence_threshold[ith_intervention][1] :
                     sogne_above_off_treshold[sogn] += 2**ith_intervention   # Encode as binary flags
 
 
     # Interventions are set to active if either they are active or (|) when incidence is above the on treshold
-    intervention_at_sogn = np.bitwise_or(intervention.types, sogne_above_on_treshold)
+    intervention_at_sogn = np.bitwise_or(intervention.types,    sogne_above_on_treshold)
 
     # Interventions are set to inactive unless they are already active and (&) incidence is above the off treshold
     intervention_at_sogn = np.bitwise_and(intervention_at_sogn, sogne_above_off_treshold)
@@ -777,8 +778,12 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose = Fals
                 remove_intervention_at_sogn(my, g, intervention, ith_sogn)
 
                 # .. and re-apply if needed
-                for ith_intervention in utils.decode_binary_flags(intervention.types[ith_sogn]) :
-                    lockdown_sogn(my, g, ith_sogn, intervention.cfg.incidence_intervention_effect[ith_intervention])
+                if intervention.types[ith_sogn] > 0 :
+                    ith_intervention = -1
+                    for ith_intervention in utils.decode_binary_flags(intervention.types[ith_sogn]) : # Using only the last entry in iterator
+                        pass
+
+                    lockdown_sogn(my, g, ith_sogn, intervention.incidence_intervention_effect[ith_intervention])
 
 
     if intervention.start_interventions_by_day :
@@ -817,6 +822,22 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose = Fals
                                 print('Intervention type : event restriction:', intervention.cfg.event_size_max[k])
 
                             intervention.event_size_max = intervention.cfg.event_size_max[k]
+
+
+                        # if incidence restrictions
+                        elif intervention.cfg.planned_restriction_types[k] == 3 :
+
+                            if ith_label >= 1 :
+                                break
+
+                            k = np.sum(intervention.cfg.planned_restriction_types[:i] == 3)
+
+                            if verbose :
+                                print('Intervention type : incidence restriction:', intervention.cfg.incidence_labels[k])
+
+                            intervention.incidence_labels              = intervention.cfg.incidence_labels[k]
+                            intervention.incidence_threshold           = intervention.cfg.incidence_threshold[k]
+                            intervention.incidence_intervention_effect = intervention.cfg.incidence_intervention_effect[k]
 
 
 @njit

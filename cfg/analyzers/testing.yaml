@@ -29,9 +29,9 @@ end_date : 2021-08-01
 stratified_labels: landsdel  # Output granularity
 
 
-incidence_labels:               [[ kommune,      kommune,       sogn]] # Incidence restriction granularity
-incidence_threshold :           [[[100, 100],    [200, 200],    [400, 400]]]
-incidence_intervention_effect : [[[1, 0.9, 0.9], [1, 0.9, 0.9], [1, 0.9, 0.9]]]
+incidence_labels:               [[[ kommune,       kommune,         sogn]]] # Incidence restriction granularity
+incidence_threshold :           [[[[100.0, 100.0], [200.0, 200.0], [400.0, 400.0]]]]
+incidence_intervention_effect : [[[[1, 0.9, 0.9],  [1, 0.8, 0.8],   [1, 0.7, 0.7]]]]
 
 
 contact_matrices_name: basis  # Target activity
@@ -49,7 +49,6 @@ initial_infected_label_weight : [[1.5,                1.0,                1.0,  
 
 incidence_interventions_to_apply: [[1]] # Lockdowns
 
-intervention_removal_delay_in_clicks: 0
 
 start_date_offset: 2020-12-28 # Start date for vaccinations
 Intervention_vaccination_schedule_name : 2021_apr_26

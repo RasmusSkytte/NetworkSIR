@@ -2081,7 +2081,9 @@ def load_params(filename, f) :
     params.pop('end_date')
 
     params['day_max'] = (end_date - start_date).days
-    params['start_date_offset'] = (start_date - params['start_date_offset']).days
+
+    if 'start_date_offset' in params :
+        params['start_date_offset'] = (start_date - params['start_date_offset']).days
 
     if isinstance(params['planned_restriction_dates'], list) :
 

@@ -37,7 +37,9 @@ spec_cfg = {
     'initialize_at_kommune_level' : nb.boolean,
     'stratified_labels' : nb.types.unicode_type,
     'incidence_labels' : ListType(ListType(nb.types.unicode_type)),
-    'incidence_threshold' : ListType(nb.float64[:, : :1]),  # to make the type C instead of A
+    'incidence_threshold' : ListType(nb.float64[: :1]), # to make the type C instead of A
+    'infection_threshold' : ListType(nb.int64[: :1]), # to make the type C instead of A
+    'percentage_threshold' : ListType(nb.float64[: :1]), # to make the type C instead of A
     'incidence_intervention_effect' : ListType(nb.float64[:, : :1]), # to make the type C instead of A
     'matrix_labels' : nb.types.unicode_type,
     'matrix_label_multiplier' : nb.float32[:],
@@ -75,7 +77,7 @@ spec_cfg = {
     'isolation_rate_reduction' : nb.float64[:],
     'tracing_rates' : nb.float64[:],
     'tracing_delay' : nb.int64,
-    'intervention_update_delay_in_clicks' : nb.int32,
+    'intervention_removal_delay_in_clicks' : nb.int32,
     'Intervention_contact_matrices_name' : ListType(nb.types.unicode_type),
     'Intervention_vaccination_schedule_name' : nb.types.unicode_type,
     'Intervention_vaccination_effect_delays' : nb.int16[:],
@@ -107,7 +109,9 @@ class Config(object) :
         self.initialize_at_kommune_level        = False
         self.stratified_labels                  = 'land'
         self.incidence_labels                   = List([List(['land'])])
-        self.incidence_threshold                = List([np.full( (1, 2), fill_value=2000.0, dtype=np.float64)])
+        self.incidence_threshold                = List([np.array( [2_000.0],        dtype=np.float64)])
+        self.infection_threshold                 = List([np.array( [0],              dtype=np.int64)])
+        self.percentage_threshold               = List([np.array( [0.0],            dtype=np.float64)])
         self.incidence_intervention_effect      = List([np.array([[1.0, 0.9, 0.9]], dtype=np.float64)])
         self.matrix_labels                      = 'land'
         self.matrix_label_multiplier            = np.array([1.0], dtype=np.float32)
@@ -413,7 +417,8 @@ spec_intervention = {
     # Incidence
     'N_incidence_labels' : DictType(nb.types.unicode_type, nb.uint16),
     'incidence_labels' : ListType(nb.types.unicode_type),
-    'incidence_threshold' : nb.float64[:, :],
+    'incidence_threshold' : nb.float64[:],
+    'infection_threshold' : nb.int64[:],
     'incidence_intervention_effect' : nb.float64[:, :],
     'incidence_label_map' : DictType(nb.types.unicode_type, DictType(nb.uint16, nb.uint16)),
     'inverse_incidence_label_map' : DictType(nb.types.unicode_type, DictType(nb.uint16, nb.uint16[:])),
@@ -524,6 +529,8 @@ class Intervention(object) :
         self.N_incidence_labels            = N_incidence_labels
         self.incidence_labels              = self.cfg.incidence_labels[0]
         self.incidence_threshold           = self.cfg.incidence_threshold[0]
+        self.infection_threshold            = self.cfg.infection_threshold[0]
+        self.percentage_threshold          = self.cfg.percentage_threshold[0]
         self.incidence_intervention_effect = self.cfg.incidence_intervention_effect[0]
         self.incidence_label_map           = incidence_label_map
         self.inverse_incidence_label_map   = inverse_incidence_label_map

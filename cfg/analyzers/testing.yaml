@@ -49,7 +49,6 @@ initial_infected_label_weight : [[1.5,                1.0,                1.0,  
 
 incidence_interventions_to_apply: [[1]] # Lockdowns
 
-
 start_date_offset: 2020-12-28 # Start date for vaccinations
 Intervention_vaccination_schedule_name : 2021_apr_26
 Intervention_vaccination_effect_delays : [[21, 28]]

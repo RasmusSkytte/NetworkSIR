@@ -1930,7 +1930,7 @@ def add_cfg_to_hdf5_file_recursively(f, cfg, path = 'cfg') :
             if key == 'incidence_labels' :
                 val = nested_list_to_rectangular_numpy_array(val, pad_value='').astype('S')
 
-            if key == 'incidence_threshold' :
+            if key in  ['incidence_threshold', 'incidence_intervention_effect'] :
                 val = nested_list_to_rectangular_numpy_array(val, pad_value=-1)
 
             print(key)

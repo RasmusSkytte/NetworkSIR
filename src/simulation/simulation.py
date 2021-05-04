@@ -679,8 +679,8 @@ class Simulation :
             f.create_dataset('my_age', data=self.my.age)
 
             f.create_dataset('my_number_of_contacts', data=self.my.number_of_contacts)
-            f.create_dataset('my_connection_type',   data=utils.nested_list_to_rectangular_numpy_array(self.my.connection_type,   pad_value=-1))
-            f.create_dataset('my_connection_status', data=utils.nested_list_to_rectangular_numpy_array(self.my.connection_status, pad_value=-1))
+            f.create_dataset('my_connection_type',   data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_type,   pad_value=-1))
+            f.create_dataset('my_connection_status', data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_status, pad_value=-1))
 
             f.create_dataset('day_found_infected', data=self.intervention.day_found_infected)
             f.create_dataset('coordinates', data=self.my.coordinates)

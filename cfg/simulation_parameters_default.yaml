@@ -68,7 +68,7 @@ daily_tests: 160_000 # Daily tests for the full population
 
 test_delay_in_clicks: [0, 0, 10] #clicks until test. [symptoms, random_test, tracing]
 results_delay_in_clicks: [10, 10, 5] #clicks from test until results. [symptoms, random_test, tracing]
-intervention_update_delay_in_clicks: 1
+intervention_removal_delay_in_clicks: 70
 chance_of_finding_infected: [0.0, 0.15, 0.15, 0.15] # chance of being detected in test in I_th state
 days_looking_back: 7 # When looking for local outbreaks, how many days are we looking back, e.g. number of people infected within the last 7 days
 

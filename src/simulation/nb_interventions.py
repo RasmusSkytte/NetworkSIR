@@ -297,7 +297,14 @@ def check_status_for_intervention_on_labels(my, g, intervention, day, click) :
             # Only tag, if not already tagged :
             if intervention.clicks_when_restriction_changes[sogn] < click :
                 intervention.types[sogn] = required_interventions
-                intervention.clicks_when_restriction_changes[sogn] = click + my.cfg.intervention_update_delay_in_clicks
+
+                # Set the timing of the intervention removal
+                if required_interventions == 0 :
+                    delay = my.cfg.intervention_removal_delay_in_clicks
+                else :
+                    delay = 0
+
+                intervention.clicks_when_restriction_changes[sogn] = click + delay
 
 
 @njit
@@ -306,8 +313,7 @@ def check_incidence_against_tresholds(my, intervention, day) :
     # Loop over all interventions and check if condition applies
 
     # Arrays to encode information about which sogne is above the on and off tresholds
-    sogne_above_on_treshold  = np.zeros_like(intervention.types, dtype=np.int8)
-    sogne_above_off_treshold = np.zeros_like(intervention.types, dtype=np.int8)
+    sogne_above_treshold  = np.zeros_like(intervention.types, dtype=np.int8)
 
     # Loop over possible interventions
     for ith_intervention, incidence_label in enumerate(intervention.incidence_labels) :
@@ -325,26 +331,28 @@ def check_incidence_against_tresholds(my, intervention, day) :
             if N_inhabitants == 0.0 :
                 continue
 
+            # Check against infection treshold
+            if N_infected < intervention.infection_threshold[ith_intervention] :
+                continue
+
+
             # Compute the incidence on the label
             incidence = N_infected / (N_inhabitants / 100_000)
 
-            # Loop over parishes on label
-            for sogn in intervention.inverse_incidence_label_map[incidence_label][np.uint16(ith_label)] :
+            # Check incidence against incidence treshold
+            # If conditions are met
+            if incidence > intervention.incidence_threshold[ith_intervention] :
 
-                # Check for restriction start
-                if incidence > intervention.incidence_threshold[ith_intervention][0] :
-                    sogne_above_on_treshold[sogn] += 2**ith_intervention   # Encode as binary flags
-
-                # Check for restriction start
-                if incidence > intervention.incidence_threshold[ith_intervention][1] :
-                    sogne_above_off_treshold[sogn] += 2**ith_intervention   # Encode as binary flags
+                # Loop over parishes on label
+                for sogn in intervention.inverse_incidence_label_map[incidence_label][np.uint16(ith_label)] :
+                    sogne_above_treshold[sogn] += 2**ith_intervention    # Encode as binary flags
 
 
     # Interventions are set to active if either they are active or (|) when incidence is above the on treshold
-    intervention_at_sogn = np.bitwise_or(intervention.types,    sogne_above_on_treshold)
+    intervention_at_sogn = np.bitwise_or(intervention.types,    sogne_above_treshold)
 
     # Interventions are set to inactive unless they are already active and (&) incidence is above the off treshold
-    intervention_at_sogn = np.bitwise_and(intervention_at_sogn, sogne_above_off_treshold)
+    intervention_at_sogn = np.bitwise_and(intervention_at_sogn, sogne_above_treshold)
 
 
     return intervention_at_sogn
@@ -837,6 +845,8 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose = Fals
 
                             intervention.incidence_labels              = intervention.cfg.incidence_labels[k]
                             intervention.incidence_threshold           = intervention.cfg.incidence_threshold[k]
+                            intervention.infection_threshold           = intervention.cfg.infection_threshold[k]
+                            intervention.percentage_threshold          = intervention.cfg.percentage_threshold[k]
                             intervention.incidence_intervention_effect = intervention.cfg.incidence_intervention_effect[k]
 
 

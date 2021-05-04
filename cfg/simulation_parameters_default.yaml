@@ -33,11 +33,13 @@ stratified_labels: region  # Output granularity
 
 incidence_labels:  [kommune] # Incidence restriction granularity
 incidence_threshold : [[100, 100]]
-incidence_intervention_effect : [1, 0.9, 0.9]
+incidence_intervention_effect : [[1, 0.9, 0.9]]
 
 matrix_labels:     landsdel    # Matrix restriction granularity
 matrix_label_multiplier: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Landsdelniveau
 matrix_label_frac:       [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Landsdelniveau
+
+initial_infected_label_weight : [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Landsdelniveau
 
 day_max: 35 # 5 weeks. Sets the maximum number of days the algorithm runs
 
@@ -66,13 +68,13 @@ daily_tests: 160_000 # Daily tests for the full population
 
 test_delay_in_clicks: [0, 0, 10] #clicks until test. [symptoms, random_test, tracing]
 results_delay_in_clicks: [10, 10, 5] #clicks from test until results. [symptoms, random_test, tracing]
-intervention_removal_delay_in_clicks: 1
+intervention_update_delay_in_clicks: 1
 chance_of_finding_infected: [0.0, 0.15, 0.15, 0.15] # chance of being detected in test in I_th state
 days_looking_back: 7 # When looking for local outbreaks, how many days are we looking back, e.g. number of people infected within the last 7 days
 
 # What fraction of the agegroups gets testet?
 #                      0-9, 10-19, 20-29, 30-39, 40-49, 50-59, 60-69,   70+
-testing_penetration: [0.50,  0.50,  0.48,  0.48,  0.50,  0.60,  0.75,  0.80]
+testing_penetration: [0.20,  0.35,  0.48,  0.48,  0.50,  0.60,  0.75,  0.80]
 
 
 # Reductions.

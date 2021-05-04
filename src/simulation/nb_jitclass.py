@@ -41,6 +41,7 @@ spec_cfg = {
     'matrix_labels' : nb.types.unicode_type,
     'matrix_label_multiplier' : nb.float32[:],
     'matrix_label_frac' : nb.float32[:],
+    'initial_infected_label_weight' : nb.float32[:],
     'clustering_connection_retries' : nb.uint32,
     'beta_UK_multiplier' : nb.float32,
     'outbreak_position_UK' : nb.types.unicode_type,
@@ -58,9 +59,8 @@ spec_cfg = {
 
     # lockdown-related / interventions
     'do_interventions' : nb.boolean,
-    'threshold_types' : nb.int8[:], # which thing set off restrictions : 0 : certain date. 1 : 'real' incidens rate 2 : measured incidens rate
     'incidence_interventions_to_apply' : nb.int8[:],
-    'incidence_intervention_effect' : nb.float64[:],
+    'incidence_intervention_effect' : nb.float64[:, :],
     'planned_restriction_dates' : nb.uint16[:],
     'planned_restriction_types' : nb.uint8[:],
     'continuous_interventions_to_apply' : nb.int8[:],
@@ -75,7 +75,7 @@ spec_cfg = {
     'isolation_rate_reduction' : nb.float64[:],
     'tracing_rates' : nb.float64[:],
     'tracing_delay' : nb.int64,
-    'intervention_removal_delay_in_clicks' : nb.int32,
+    'intervention_update_delay_in_clicks' : nb.int32,
     'Intervention_contact_matrices_name' : ListType(nb.types.unicode_type),
     'Intervention_vaccination_schedule_name' : nb.types.unicode_type,
     'Intervention_vaccination_effect_delays' : nb.int16[:],
@@ -108,10 +108,11 @@ class Config(object) :
         self.stratified_labels  = 'land'
         self.incidence_labels   = List(['land'])
         self.incidence_threshold = np.array([[20000.0, 20000.0]], dtype=np.float32)
-        self.incidence_intervention_effect = np.array([1.0, 0.9, 0.9], dtype=np.float64)
+        self.incidence_intervention_effect = np.array([[1.0, 0.9, 0.9]], dtype=np.float64)
         self.matrix_labels      = 'land'
         self.matrix_label_multiplier = np.array([1.0], dtype=np.float32)
         self.matrix_label_frac  = np.array([0.0], dtype=np.float32)
+        self.initial_infected_label_weight = np.array([1.0], dtype=np.float32)
         self.day_max = 0
         self.clustering_connection_retries = 0
         self.beta_UK_multiplier = 1.0
@@ -329,7 +330,7 @@ spec_g = {
     'cumulative_sum' : nb.float64,
     'cumulative_sum_of_state_changes' : nb.float64[:],
     'cumulative_sum_infection_rates' : nb.float64[:],
-    'SIR_transition_rates' : nb.float64[:],
+    'transition_rates' : nb.float64[:],
     'rates' : ListType(nb.float64[ : :1]),  # ListType[array(float64, 1d, C)] (C vs. A)
     'sum_of_rates' : nb.float64[:],
     'seasonal_model' : nb.float64[:],
@@ -364,9 +365,9 @@ class Gillespie(object) :
         self.sum_of_rates = np.zeros(my.cfg_network.N_tot, dtype=np.float64)
 
     def _initialize_SIR_rates(self, my) :
-        self.SIR_transition_rates = np.zeros(self.N_states, dtype=np.float64)
-        self.SIR_transition_rates[:self.N_infectious_states] = my.cfg.lambda_E
-        self.SIR_transition_rates[self.N_infectious_states : 2 * self.N_infectious_states] = my.cfg.lambda_I
+        self.transition_rates = np.zeros(self.N_states, dtype=np.float64)
+        self.transition_rates[:self.N_infectious_states] = my.cfg.lambda_E
+        self.transition_rates[self.N_infectious_states : 2 * self.N_infectious_states] = my.cfg.lambda_I
 
     def update_rates(self, my, rate, agent) :
         self.total_sum_infections += rate
@@ -387,7 +388,7 @@ class Gillespie(object) :
 spec_intervention = {
     'cfg' : nb_cfg_type,
     'cfg_network' : nb_cfg_network_type,
-    'agents_per_incidence_label' : ListType(nb.uint32[ : :1]), # ListType[array(uint32, 1d, C)] (C vs. A)
+    'agents_per_incidence_label' : ListType(nb.float32[ : :1]), # ListType[array(uint32, 1d, C)] (C vs. A)
     'N_incidence_labels' : nb.uint16[:],
     'N_matrix_labels' : nb.uint16,
     'freedom_impact' : nb.float64[:],
@@ -402,10 +403,9 @@ spec_intervention = {
     'clicks_when_tested' : nb.int32[:],
     'clicks_when_tested_result' : nb.int32[:],
     'clicks_when_isolated' : nb.int32[:],
-    'clicks_when_restriction_stops' : nb.int32[:],
+    'clicks_when_restriction_changes' : nb.int32[:],
     'isolated' : nb.boolean[:],
-    'types' : nb.uint8[:],
-    'started' : nb.uint8[:],
+    'types' : nb.int8[:],
     'stratified_label_map' : DictType(nb.uint16, nb.uint16),
     'matrix_label_map' : DictType(nb.uint16, nb.uint16),
     'incidence_label_map' : ListType(DictType(nb.uint16, nb.uint16)),
@@ -426,7 +426,7 @@ class Intervention(object) :
     - N_matrix_labels : Number of matrix labels. "Label" here can be sogn, kommune, landsdel, region or land.
     - agents_per_incidence_label : count how many agent belong to a particular label
 
-    - day_found_infected : -1 if not infected, otherwise the day of infection
+    - day_found_infected : -10_000 if not infected, otherwise the day of infection
 
     - reason_for_test :
          0 : symptoms
@@ -465,8 +465,6 @@ class Intervention(object) :
         # 4 : Random Testing
         # 5 : vaccinations
 
-    - started : describes whether or not an intervention has been applied. If 0, no intervention has been applied.
-
     - verbose : Prints status of interventions and removal of them
 
     """
@@ -494,42 +492,39 @@ class Intervention(object) :
 
         agents_per_incidence_label = List()
         for ith_incidence_restriction, N_labels in enumerate(N_incidence_labels) :
-            label_counter = np.zeros(N_labels, dtype=np.uint32)
+            label_counter = np.zeros(N_labels, dtype=np.float32)
             for sogn in my.sogn :
-                label_counter[incidence_label_map[ith_incidence_restriction][sogn]] += 1
+                label_counter[incidence_label_map[ith_incidence_restriction][sogn]] += 1.0
 
             agents_per_incidence_label.append(label_counter)
 
         self.agents_per_incidence_label = agents_per_incidence_label
 
-        N_labels = max(max(N_incidence_labels), N_matrix_labels)
+        self.day_found_infected              = np.full(self.cfg_network.N_tot, fill_value=-10_000, dtype=np.int32)
+        self.freedom_impact                  = np.full(self.cfg_network.N_tot, fill_value=0.0, dtype=np.float64)
+        self.freedom_impact_list             = List([0.0])
+        self.R_true_list                     = List([0.0])
+        self.R_true_list_brit                = List([0.0])
+        self.reason_for_test                 = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
+        self.result_of_test                  = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
+        self.test_counter                    = np.zeros(3, dtype=np.uint32)
+        self.positive_test_counter           = np.zeros(3, dtype=np.uint32)
+        self.clicks_when_tested              = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.clicks_when_tested_result       = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.clicks_when_isolated            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.clicks_when_restriction_changes = np.full(my.N_sogne,        fill_value=-1, dtype=np.int32)
+        self.isolated                        = np.full(self.cfg_network.N_tot, fill_value=False, dtype=nb.boolean)
+        self.types                           = np.zeros(my.N_sogne, dtype=np.int8)
 
-        self.day_found_infected            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.freedom_impact                = np.full(self.cfg_network.N_tot, fill_value=0.0, dtype=np.float64)
-        self.freedom_impact_list           = List([0.0])
-        self.R_true_list                   = List([0.0])
-        self.R_true_list_brit              = List([0.0])
-        self.reason_for_test               = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
-        self.result_of_test                = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
-        self.test_counter         = np.zeros(3, dtype=np.uint32)
-        self.positive_test_counter         = np.zeros(3, dtype=np.uint32)
-        self.clicks_when_tested            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.clicks_when_tested_result     = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.clicks_when_isolated          = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.clicks_when_restriction_stops = np.full(N_labels, fill_value=-1, dtype=np.int32)
-        self.isolated                      = np.full(self.cfg_network.N_tot, fill_value=False, dtype=nb.boolean)
-        self.types                         = np.zeros(N_labels, dtype=np.uint8)
-        self.started                       = np.zeros(N_labels, dtype=np.uint8)
+        self.matrix_label_map                = matrix_label_map
+        self.incidence_label_map             = incidence_label_map
+        self.inverse_incidence_label_map     = inverse_incidence_label_map
 
-        self.matrix_label_map              = matrix_label_map
-        self.incidence_label_map           = incidence_label_map
-        self.inverse_incidence_label_map   = inverse_incidence_label_map
-
-        self.vaccinations_per_age_group    = vaccinations_per_age_group
-        self.vaccination_schedule          = vaccination_schedule
-        self.work_matrix_restrict          = work_matrix_restrict
-        self.other_matrix_restrict         = other_matrix_restrict
-        self.event_size_max                = self.cfg.event_size_max[0]
+        self.vaccinations_per_age_group      = vaccinations_per_age_group
+        self.vaccination_schedule            = vaccination_schedule
+        self.work_matrix_restrict            = work_matrix_restrict
+        self.other_matrix_restrict           = other_matrix_restrict
+        self.event_size_max                  = self.cfg.event_size_max[0]
         self.verbose = verbose
 
 

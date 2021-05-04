@@ -8,9 +8,9 @@ from contexttimer import Timer
 
 
 if utils.is_local_computer():
-    f = 0.01
+    f = 0.1
     n_steps = 1
-    num_cores_max = 1
+    num_cores_max = 3
     N_runs = 3
 else :
     f = 0.5
@@ -30,12 +30,12 @@ if n_steps == 1 :
 else :
     noise = lambda m, d : np.round(m + np.linspace(-d, d, 2*(n_steps - 1) + 1), 5)
 
-params, start_date = utils.load_params('cfg/incidence_lockdowns.yaml', f)
+params, start_date = utils.load_params('cfg/simulation_parameters_gatherings.yaml', f)
 
 # Sweep around parameter set
-params['beta']               = noise(params['beta'], 0.005)
-params['N_init']             = noise(params['N_init'], 500 )
-params['N_init_UK_frac']     = noise(params['N_init_UK_frac'], 1)
+#params['beta']               = noise(params['beta'], 0.005)
+#params['N_init']             = noise(params['N_init'], 500 )
+#params['N_init_UK_frac']     = noise(params['N_init_UK_frac'], 1)
 
 N_files_total = 0
 if __name__ == "__main__":

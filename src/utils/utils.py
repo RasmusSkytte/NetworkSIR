@@ -1015,19 +1015,12 @@ def SDOM(x) :
     return np.std(x) / np.sqrt(len(x))
 
 
-
-
-
-# def load_df_coordinates() :
-#     GPS_filename = "Data/GPS_coordinates.feather"
-#     df_coordinates = pd.read_feather(GPS_filename)
-#     return df_coordinates
-
-
-# def load_coordinates_from_indices(coordinate_indices) :
-#     return load_df_coordinates().iloc[coordinate_indices].reset_index(drop=True)
-
-
+@njit
+def decode_binary_flags(n):
+    while n:
+        b = n & (~n+1)
+        yield int(np.log2(b))
+        n ^= b
 
 
 
@@ -1219,14 +1212,7 @@ def scale_population_parameters(cfg) :
     cfg_scaled.R_init = int(cfg.R_init * f)
     cfg_scaled.N_init = int(cfg.N_init * f)
 
-    if len(cfg.incidence_labels) > 0 :
-        for j, interventions in enumerate(cfg.incidence_threshold) :
-            for k, thresholds in enumerate(interventions) :
-                cfg_scaled['incidence_threshold'][j][k] = int(thresholds * f)
-
-
     cfg_scaled.daily_tests = int(cfg.daily_tests * f)
-
 
     return cfg_scaled
 

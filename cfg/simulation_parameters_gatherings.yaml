@@ -1,14 +1,14 @@
 N_tot: 5_800_000
 rho: 0.1
 
-N_init: 10_000
-beta: 0.0325
+N_init: 20_000
+beta: 0.033
 
 R_guess: 0.75
 
 # english type corona
 N_init_UK_frac: 1.0
-beta_UK_multiplier: 1.50
+beta_UK_multiplier: 1.47
 
 R_init : 5_800_000 * 0.065
 
@@ -22,18 +22,23 @@ lambda_I: 4 / 4.5 # Higher due to isolation
 start_date : 2021-01-01
 end_date : 2021-08-01
 
+
+stratified_labels: landsdel  # Output granularity
+
 contact_matrices_name: basis  # Target activity
 
-Intervention_contact_matrices_name : [[fase3/S2_1, fase3/S2_2, fase3/S2_3, fase3/S2_4, fase3/S2_5, fase3/S2_6, fase3/S2_7, fase3/S2_8]]
-planned_restriction_dates:           [[2021-01-01, 2021-02-08, 2021-03-01, 2021-03-15, 2021-03-22, 2021-04-01, 2021-04-06, 2021-05-01]]  # dates when new restriction begins
-planned_restriction_types:           [[1, 1, 1, 1, 1, 1, 1, 1]]
+Intervention_contact_matrices_name : [[fase3/S2_1, fase3/S2_2, fase3/S2_3, fase3/S2_4, fase3/S2_5, fase3/S2_6]] #, fase3/S2_7, fase3/S2_8]]
+planned_restriction_dates:           [[2021-01-01, 2021-02-08, 2021-03-01, 2021-03-15, 2021-03-22, 2021-04-01]] #, 2021-04-06, 2021-05-01]]  # dates when new restriction begins
+planned_restriction_types:           [[1, 1, 1, 1, 1, 1]] #, 1, 1]]
 
+                                 # 'Byen København', 'Københavns omegn', 'Nordsjælland', 'Bornholm', 'Østsjælland', 'Vest- og Sydsjælland', 'Fyn',  'Sydjylland', 'Vestjylland', 'Østjylland', 'Nordjylland'
+matrix_label_multiplier:        [[  0.8,              0.8,                0.9,            1.0,        0.9,           1.0,                    1.1,   1.1,           1.1,           0.9,         1.0]]
+matrix_label_frac:              [[0.014,            0.014,               0.01,           0.01,       0.01,          0.01,                  0.026, 0.029,         0.029,         0.047,       0.047]]
 
-matrix_label_multiplier: [[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]]
-matrix_label_frac: [[0.014, 0.014, 0.01, 0.01, 0.01, 0.01, 0.026, 0.029, 0.029, 0.047, 0.047]]
+                                 # 'Byen København', 'Københavns omegn', 'Nordsjælland', 'Bornholm', 'Østsjælland', 'Vest- og Sydsjælland', 'Fyn',  'Sydjylland', 'Vestjylland', 'Østjylland', 'Nordjylland'
+initial_infected_label_weight : [[1.7,                1.0,                1.0,            1.0,        0.9,           1.0,                    1.2,   1.1,           0.7,           1.2,         1.2]]
 
-
-incidence_interventions_to_apply: [[0]] # Do nothing
+incidence_interventions_to_apply: [[0]] # Lockdowns
 
 intervention_removal_delay_in_clicks: 0
 

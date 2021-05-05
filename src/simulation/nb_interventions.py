@@ -294,17 +294,16 @@ def check_status_for_intervention_on_labels(my, g, intervention, day, click) :
         # If required intervntions do not match the current interventions, tag sogn for updates
         if not required_interventions == intervention.types[sogn] :
 
-            # Only tag, if not already tagged :
-            if intervention.clicks_when_restriction_changes[sogn] < click :
-                intervention.types[sogn] = required_interventions
+            # Store the new restriction
+            intervention.types[sogn] = required_interventions
 
-                # Set the timing of the intervention removal
-                if required_interventions == 0 :
-                    delay = my.cfg.intervention_removal_delay_in_clicks
-                else :
-                    delay = 0
+            # Set the timing of the intervention removal
+            if required_interventions == 0 :
+                delay = my.cfg.intervention_removal_delay_in_clicks
+            else :
+                delay = 0
 
-                intervention.clicks_when_restriction_changes[sogn] = click + delay
+            intervention.clicks_when_restriction_changes[sogn] = click + delay
 
 
 @njit
@@ -320,24 +319,31 @@ def check_incidence_against_tresholds(my, intervention, day) :
 
         # Determine the number of (found) infected per label
         infected_per_label = np.zeros(intervention.N_incidence_labels[incidence_label], dtype=np.float32)
+        tests_per_label    = np.zeros(intervention.N_incidence_labels[incidence_label], dtype=np.float32)
 
-        for agent, day_found in enumerate(intervention.day_found_infected) :
+        for agent, (day_found, click_tested) in enumerate(zip(intervention.day_found_infected, intervention.clicks_when_tested_result)) :
             if day_found > day - intervention.cfg.days_looking_back :
                 infected_per_label[intervention.incidence_label_map[incidence_label][my.sogn[agent]]] += 1.0
 
-        # Loop over labels
-        for ith_label, (N_infected, N_inhabitants) in enumerate(zip(infected_per_label, intervention.agents_per_incidence_label[incidence_label])) :
+            if click_tested > day - intervention.clicks_looking_back :
+                tests_per_label[intervention.incidence_label_map[incidence_label][my.sogn[agent]]] += 1.0
 
-            if N_inhabitants == 0.0 :
-                continue
+        # Loop over labels
+        for ith_label, (N_tests, N_infected, N_inhabitants) in enumerate(zip(tests_per_label, infected_per_label, intervention.agents_per_incidence_label[incidence_label])) :
 
             # Check against infection treshold
-            if N_infected < intervention.infection_threshold[ith_intervention] :
+            if N_infected <= intervention.infection_threshold[ith_intervention] :
                 continue
 
+            # Check against percentage tresholds
+            if N_infected / N_tests <= intervention.percentage_threshold[ith_intervention] :
+                continue
 
             # Compute the incidence on the label
-            incidence = N_infected / (N_inhabitants / 100_000)
+            incidence = N_infected / (N_inhabitants / intervention.cfg.incidence_reference)
+
+            if incidence_label.lower() == 'kommune' :
+                incidence *= (intervention.cfg.test_reference * N_inhabitants / N_tests) ** intervention.cfg.testing_exponent
 
             # Check incidence against incidence treshold
             # If conditions are met

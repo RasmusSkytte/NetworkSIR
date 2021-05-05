@@ -36,11 +36,15 @@ spec_cfg = {
     'weighted_random_initial_infections' : nb.boolean,
     'initialize_at_kommune_level' : nb.boolean,
     'stratified_labels' : nb.types.unicode_type,
+    'simulated_tests' : nb.boolean,
     'incidence_labels' : ListType(ListType(nb.types.unicode_type)),
     'incidence_threshold' : ListType(nb.float64[: :1]), # to make the type C instead of A
     'infection_threshold' : ListType(nb.int64[: :1]), # to make the type C instead of A
     'percentage_threshold' : ListType(nb.float64[: :1]), # to make the type C instead of A
     'incidence_intervention_effect' : ListType(nb.float64[:, : :1]), # to make the type C instead of A
+    'test_reference' : nb.float64,
+    'incidence_reference' : nb.float64,
+    'testing_exponent' : nb.float64,
     'matrix_labels' : nb.types.unicode_type,
     'matrix_label_multiplier' : nb.float32[:],
     'matrix_label_frac' : nb.float32[:],
@@ -110,9 +114,12 @@ class Config(object) :
         self.stratified_labels                  = 'land'
         self.incidence_labels                   = List([List(['land'])])
         self.incidence_threshold                = List([np.array( [2_000.0],        dtype=np.float64)])
-        self.infection_threshold                 = List([np.array( [0],              dtype=np.int64)])
+        self.infection_threshold                = List([np.array( [0],              dtype=np.int64)])
         self.percentage_threshold               = List([np.array( [0.0],            dtype=np.float64)])
         self.incidence_intervention_effect      = List([np.array([[1.0, 0.9, 0.9]], dtype=np.float64)])
+        self.test_reference                     = 0.017         # 1.7 % percent of the population is tested daily
+        self.incidence_reference                = 100_000
+        self.testing_exponent                   = 0.55
         self.matrix_labels                      = 'land'
         self.matrix_label_multiplier            = np.array([1.0], dtype=np.float32)
         self.matrix_label_frac                  = np.array([0.0], dtype=np.float32)
@@ -419,12 +426,14 @@ spec_intervention = {
     'incidence_labels' : ListType(nb.types.unicode_type),
     'incidence_threshold' : nb.float64[:],
     'infection_threshold' : nb.int64[:],
+    'percentage_threshold' : nb.float64[:],
     'incidence_intervention_effect' : nb.float64[:, :],
     'incidence_label_map' : DictType(nb.types.unicode_type, DictType(nb.uint16, nb.uint16)),
     'inverse_incidence_label_map' : DictType(nb.types.unicode_type, DictType(nb.uint16, nb.uint16[:])),
     'agents_per_incidence_label' : DictType(nb.types.unicode_type, nb.float32[:]),
     'types' : nb.int8[:],
     'clicks_when_restriction_changes' : nb.int32[:],
+    'clicks_looking_back' : nb.int64,
     # Vaccinations
     'vaccinations_per_age_group' : nb.int64[:, :, :],
     'vaccination_schedule' : nb.int32[:, :],
@@ -503,6 +512,7 @@ class Intervention(object) :
         vaccination_schedule,
         work_matrix_restrict,
         other_matrix_restrict,
+        nts,
         verbose=False) :
 
         self.cfg         = my.cfg
@@ -526,19 +536,19 @@ class Intervention(object) :
         self.isolated                        = np.full(self.cfg_network.N_tot, fill_value=False, dtype=nb.boolean)
 
 
-        self.N_incidence_labels            = N_incidence_labels
-        self.incidence_labels              = self.cfg.incidence_labels[0]
-        self.incidence_threshold           = self.cfg.incidence_threshold[0]
-        self.infection_threshold            = self.cfg.infection_threshold[0]
-        self.percentage_threshold          = self.cfg.percentage_threshold[0]
-        self.incidence_intervention_effect = self.cfg.incidence_intervention_effect[0]
-        self.incidence_label_map           = incidence_label_map
-        self.inverse_incidence_label_map   = inverse_incidence_label_map
+        self.N_incidence_labels              = N_incidence_labels
+        self.incidence_labels                = self.cfg.incidence_labels[0]
+        self.incidence_threshold             = self.cfg.incidence_threshold[0]
+        self.infection_threshold             = self.cfg.infection_threshold[0]
+        self.percentage_threshold            = self.cfg.percentage_threshold[0]
+        self.incidence_intervention_effect   = self.cfg.incidence_intervention_effect[0]
+        self.incidence_label_map             = incidence_label_map
+        self.inverse_incidence_label_map     = inverse_incidence_label_map
 
         self.agents_per_incidence_label      = agents_per_incidence_label
         self.types                           = np.zeros(my.N_sogne, dtype=np.int8)
         self.clicks_when_restriction_changes = np.full(my.N_sogne,  fill_value=-1, dtype=np.int32)
-
+        self.clicks_looking_back             = int(self.cfg.days_looking_back / nts)
 
         self.N_matrix_labels = N_matrix_labels
         self.matrix_label_map                = matrix_label_map

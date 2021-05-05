@@ -113,7 +113,7 @@ def load_from_file(filename, network_filename, start_date) :
     T_uk_week    = aggregate_array(T_uk[I:],    chunk_size=7)
 
     # Get the fraction of UK variants
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide='ignore', invalid='ignore') :
         f = T_uk_week / T_total_week
         f[np.isnan(f)] = -1
 

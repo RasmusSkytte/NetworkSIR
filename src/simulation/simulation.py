@@ -78,6 +78,8 @@ class Simulation :
                           'sogn_idx_to_kommune_idx' :     pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map.index),
                           'sogn_idx_to_landsdel_idx' :    pd.Series(data=self.raw_label_map['landsdel_idx'].values,                  index=self.raw_label_map.index)}
 
+        self.nts = 0.1  # Time step (0.1 - ten times a day)
+
         if self.cfg.version == 1 :
             if self.cfg.do_interventions :
                 raise AssertionError("interventions not yet implemented for version 1")
@@ -400,6 +402,7 @@ class Simulation :
             vaccination_schedule        = vaccination_schedule,
             work_matrix_restrict        = wm,
             other_matrix_restrict       = om,
+            nts                         = self.nts,
             verbose                     = verbose_interventions)
 
 
@@ -414,7 +417,6 @@ class Simulation :
         self.N_states = 9  # number of states
         self.N_infectious_states = 4  # This means the 5'th state
 
-        self.nts = 0.1  # Time step (0.1 - ten times a day)
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
         self.state_total_counts            = np.zeros(self.N_states, dtype=np.uint32)
@@ -662,8 +664,6 @@ class Simulation :
                 f.create_dataset('df', data=utils.dataframe_to_hdf5_format(self.df))
                 self._add_cfg_to_hdf5_file(f)
 
-            print(utils.read_cfg_from_hdf5_file(filename_hdf5))
-            x = X
 
     def _save_simulation_results(self, save_only_ID_0=False, time_elapsed=None) :
 
@@ -679,8 +679,8 @@ class Simulation :
             f.create_dataset('my_age', data=self.my.age)
 
             f.create_dataset('my_number_of_contacts', data=self.my.number_of_contacts)
-            f.create_dataset('my_connection_type',   data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_type,   pad_value=-1))
-            f.create_dataset('my_connection_status', data=utils.nested_numba_list_to_rectangular_numpy_array(self.my.connection_status, pad_value=-1))
+            f.create_dataset('my_connection_type',   data=utils.nested_list_to_rectangular_numpy_array(self.my.connection_type,   pad_value=-1))
+            f.create_dataset('my_connection_status', data=utils.nested_list_to_rectangular_numpy_array(self.my.connection_status, pad_value=-1))
 
             f.create_dataset('day_found_infected', data=self.intervention.day_found_infected)
             f.create_dataset('coordinates', data=self.my.coordinates)

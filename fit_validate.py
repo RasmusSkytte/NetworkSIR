@@ -13,8 +13,8 @@ from src.analysis.helpers  import *
 from src.analysis.plotters import *
 
 # Define the subset to plot on
-#subsets = [ {'Intervention_contact_matrices_name' : ['fase3/S2_1', 'fase3/S2_2', 'fase3/S2_3', 'fase3/S2_4', 'fase3/S2_5', 'fase3/S2_6', 'fase3/S2_7', 'fase3/S2_8']} ]
-subsets = [ {'Intervention_contact_matrices_name' : ['fase3/S2_1', 'fase3/S2_2', 'fase3/S2_3', 'fase3/S2_4', 'fase3/S2_5', 'fase3/S2_6']} ]
+subsets = [ {'Intervention_contact_matrices_name' : ['fase3/S2_1', 'fase3/S2_2', 'fase3/S2_3', 'fase3/S2_4', 'fase3/S2_5', 'fase3/S2_6', 'fase3/S2_7', 'fase3/S2_8']} ]
+#subsets = [ {'Intervention_contact_matrices_name' : ['fase3/S2_1', 'fase3/S2_2', 'fase3/S2_3', 'fase3/S2_4', 'fase3/S2_5', 'fase3/S2_6']} ]
 
 for subset in subsets :
     fig_name = Path('Figures/' + subset['Intervention_contact_matrices_name'][-1].replace('/','_') + '.png')
@@ -334,6 +334,7 @@ for subset in subsets :
     tests_per_day = np.sum(tests_per_label, axis=1)
 
     tests_per_label_adjusted  = tests_per_label * ref_tests / np.repeat(tests_per_day.reshape(-1, 1), tests_per_label.shape[1], axis=1)
+    print(tests_per_label_adjusted)
 
     incidence_per_label = np.array(cases_per_label) #* (np.array(tests_per_label_adjusted) / np.array(tests_per_label)) ** beta
     t = pd.to_datetime(intersection)

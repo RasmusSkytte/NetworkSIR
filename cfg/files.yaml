@@ -8,6 +8,7 @@ wgsDistribution: Data/wgs_data/2021_03_04.csv
 ageCasesFolder: Data/age_cases
 municipalityCasesFolder: Data/municipality_cases
 municipalityTestsFolder: Data/municipality_tests
+municipalitySummery: Data/municipality_summery
 contactMatrixFolder: Data/contact_matrices
 seasonalFolder: Data/seasonal_effects
 

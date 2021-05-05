@@ -1214,6 +1214,11 @@ def scale_population_parameters(cfg) :
 
     cfg_scaled.daily_tests = int(cfg.daily_tests * f)
 
+    if len(cfg.infection_threshold) > 0 :
+        for j, interventions in enumerate(cfg.infection_threshold) :
+            for k, thresholds in enumerate(interventions) :
+                cfg_scaled['infection_threshold'][j][k] = int(thresholds * f)
+
     return cfg_scaled
 
 def cfg_to_hash(cfg, N=10, exclude_ID=True, exclude_hash=True) :
@@ -1930,11 +1935,12 @@ def add_cfg_to_hdf5_file_recursively(f, cfg, path = 'cfg') :
             if key == 'incidence_labels' :
                 val = nested_list_to_rectangular_numpy_array(val, pad_value='').astype('S')
 
-            if key in  ['incidence_threshold', 'incidence_intervention_effect'] :
+            if key in ['incidence_threshold', 'infection_threshold', 'percentage_threshold'] :
                 val = nested_list_to_rectangular_numpy_array(val, pad_value=-1)
 
-            print(key)
-            print(val)
+            if key == 'incidence_intervention_effect' :
+                val = nested_list_to_rectangular_numpy_array(val, pad_value=[-1, -1, -1])
+
             d.attrs[key] = val
 
         elif isinstance(val, dict) :
@@ -1959,10 +1965,13 @@ def read_cfg_from_hdf5_file_recursively(f, path='cfg') :
         val = f[path].attrs[key]
 
         if key == 'incidence_labels' :
-            val = rectangular_numpy_array_to_nested_list(val, pad_value='')# .astype(str)
+            val = rectangular_numpy_array_to_nested_list(val.astype(str), pad_value='')
 
-        if key == 'incidence_threshold' :
-            val = rectangular_numpy_array_to_nested_list(val, pad_value=-1)# .astype(str)
+        if key in ['incidence_threshold', 'infection_threshold', 'percentage_threshold'] :
+            val = rectangular_numpy_array_to_nested_list(val, pad_value=-1)
+
+        if key == 'incidence_intervention_effect' :
+            val = rectangular_numpy_array_to_nested_list(val, pad_value=[-1, -1, -1])
 
         tmp[key] = val
 
@@ -2166,5 +2175,10 @@ def nested_list_to_rectangular_numpy_array(nested_list, pad_value) :
 def rectangular_numpy_array_to_nested_list(rectangular_array, pad_value) :
 
     nested_list = []
-    for item in rectangular_array :
-        nested_list.append(item.tolist()) #.remove(pad_value)
+    for sublist in rectangular_array.tolist() :
+        for k, item in reversed(list(enumerate(sublist))) :
+            if item == pad_value :
+                sublist.pop(k)
+        nested_list.append(sublist)
+
+    return nested_list

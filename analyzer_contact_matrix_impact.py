@@ -21,14 +21,22 @@ from tqdm import tqdm
 
 # 1) Define network to generate
 f = 0.01
-verbose = True
+verbose = False
 
 
-Intervention_contact_matrices_name = ['ned2021jan', 'fase3_S3_0A_1']
+Intervention_contact_matrices_name = ['fase3/S2_1', 'fase3/S2_3','fase3/S2_5','fase3/S2_7']
 
+
+params = {'N_tot' : int(5_800_000 * f),
+          'day_max' : 0,
+          'contact_matrices_name' : 'basis',
+          'initial_infection_distribution' : 'random',
+          'Intervention_contact_matrices_name' : [[m] for m in Intervention_contact_matrices_name],
+          'planned_restriction_dates' : [[0]],
+          'planned_restriction_types' : [[1]]}
 
 # 2) Generate networks
-simulation.run_simulations({'N_tot' : int(5_800_000 * f), 'day_max' : 0, 'initial_infection_distribution' : 'random', 'Intervention_contact_matrices_name' : [[m] for m in Intervention_contact_matrices_name]}, num_cores_max=1, verbose=verbose)
+simulation.run_simulations(params, num_cores_max=1, verbose=verbose)
 
 # 3) Plot the contact distribution
 data = file_loaders.ABM_simulations(subset={'day_max' : 0})
@@ -132,4 +140,4 @@ for ax in axes :
     ylim = ax.get_ylim()
     ax.set_ylim(0, .1 * (np.floor(ylim[1]/.1) + 1))
 
-fig.savefig('Figures/contacts_' + '_'.join(Intervention_contact_matrices_name) + '.png')
+fig.savefig('Figures/contacts_' + '_'.join(Intervention_contact_matrices_name).replace('/','_') + '.png')

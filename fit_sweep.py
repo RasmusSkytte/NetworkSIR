@@ -8,10 +8,10 @@ from contexttimer import Timer
 
 
 if utils.is_local_computer():
-    f = 0.1
+    f = 0.2
     n_steps = 1
-    num_cores_max = 1
-    N_runs = 1
+    num_cores_max = 3
+    N_runs = 3
 else :
     f = 0.5
     n_steps = 3

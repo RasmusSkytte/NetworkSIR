@@ -37,7 +37,7 @@ infection_threshold :           [[ 0             ]]
 percentage_threshold :          [[ 0.0           ]]
 incidence_intervention_effect : [[ [1, 0.9, 0.9] ]]
 
-test_reference :      100_000
+test_reference :      0.017   # 1.7 % percent daily
 incidence_reference : 100_000
 testing_exponent :    0.55
 

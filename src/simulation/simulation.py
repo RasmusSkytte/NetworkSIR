@@ -447,7 +447,7 @@ class Simulation :
         # Set the probability to choose agents
         if self.cfg.initialize_at_kommune_level :
 
-            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.label_map['kommune_to_kommune_idx'])
+            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.label_map, test_reference = self.cfg.test_reference, beta = self.cfg.testing_exponent)
 
             n_kommuner = len(self.label_map['kommune_to_kommune_idx'])
             w_kommune = np.ones(n_kommuner)

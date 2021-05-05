@@ -618,7 +618,7 @@ def download_SSI_data(date=None,
 
     s = re.search(search_string, html, re.IGNORECASE)
     if s is None :
-        raise ValueError(f'No data found for date: {date}')
+        raise ValueError('No data found for date : ' + date.strftime('%Y_%m_%d'))
 
     data_url = html[s.start()-90:s.end()+10]
     data_url = data_url.split('href="')[1]
@@ -652,10 +652,10 @@ def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False)
 
     filename = date + '.csv'
 
-    f_municipality_tests   = os.path.join(load_yaml('cfg/files.yaml')['municipalityTestsFolder'], filename)
-    f_municipality_cases   = os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'], filename)
-    f_municipality_summery = os.path.join(load_yaml('cfg/files.yaml')['municipalitySummery'],     filename)
-    f_age                  = os.path.join(load_yaml('cfg/files.yaml')['ageCasesFolder'],          filename)
+    f_municipality_tests   = os.path.join(load_yaml('cfg/files.yaml')['municipalityTestsFolder'],   filename)
+    f_municipality_cases   = os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'],   filename)
+    f_municipality_summery = os.path.join(load_yaml('cfg/files.yaml')['municipalitySummeryFolder'], filename)
+    f_age                  = os.path.join(load_yaml('cfg/files.yaml')['ageCasesFolder'],            filename)
 
     download_municipality_tests   = SSI_data_missing(f_municipality_tests)
     download_municipality_cases   = SSI_data_missing(f_municipality_cases)
@@ -708,8 +708,8 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
         date_delayed = datetime.datetime.strptime(date_current, '%Y_%m_%d') - datetime.timedelta(days=7)
         date_delayed = date_delayed.strftime('%Y_%m_%d')
 
-        _, _, df_current = get_SSI_data(date=date_current, return_data=True)
-        _, _, df_delayed = get_SSI_data(date=date_delayed, return_data=True)
+        _, _, _, df_current = get_SSI_data(date=date_current, return_data=True)
+        _, _, _, df_delayed = get_SSI_data(date=date_delayed, return_data=True)
 
         age_distribution_current_raw = df_current.to_numpy().flatten()
         age_distribution_delayed_raw = df_delayed.to_numpy().flatten()
@@ -731,70 +731,84 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
     return age_distribution_infected, age_distribution_immunized
 
 
-def load_kommune_infection_distribution(initial_distribution_file, label_map, beta = 0.55) :
+def load_incidence_per_label(initial_distribution_file, label_map, test_reference = 0.017, beta = 0.55) :
 
-    N_kommuner = len(label_map)
-    infected_per_kommune  = np.zeros(N_kommuner)
-    immunized_per_kommune = np.zeros(N_kommuner)
+    N_labels = len(label_map.unique())
+
+    if initial_distribution_file.lower() == 'newest' :
+        df_cases, df_tests, df_summery, _ = get_SSI_data(date='newest', return_data=True)
+    else :
+        df_cases   = pd.read_csv(os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'],   initial_distribution_file + '.csv'), index_col=0)
+        df_tests   = pd.read_csv(os.path.join(load_yaml('cfg/files.yaml')['municipalityTestsFolder'],   initial_distribution_file + '.csv'), index_col=0)
+        df_summery = pd.read_csv(os.path.join(load_yaml('cfg/files.yaml')['municipalitySummeryFolder'], initial_distribution_file + '.csv'), index_col=0)
+
+    df_cases   = df_cases.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA'])
+    df_tests   = df_tests.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA', 'Christiansø'])
+    df_summery = df_summery.drop('Christiansø')
+
+    names_c  = df_cases.columns
+    values_c = df_cases.to_numpy()
+
+    names_t  = df_tests.columns
+    values_t = df_tests.to_numpy()
+
+    names_s  = df_summery.index
+    values_s = df_summery.values
+
+    # Must have same dates in both datasets
+    intersection = df_cases.index.intersection(df_tests.index)[:-2]
+    idx_c = np.isin(df_cases.index, intersection)
+    idx_t = np.isin(df_tests.index, intersection)
+
+    values_c = values_c[idx_c, :]
+    values_t = values_t[idx_t, :]
+
+    tests_per_label      = np.zeros((len(values_t), N_labels))
+    cases_per_label      = np.zeros((len(values_c), N_labels))
+    population_per_label = np.zeros(N_labels)
+
+
+    for i, (name_t, name_c, name_s) in enumerate(zip(names_t, names_c, names_s)) :
+        tests_per_label[:, label_map[name_t]]   += values_t[:, i]
+        cases_per_label[:, label_map[name_c]]   += values_c[:, i]
+        population_per_label[label_map[name_s]] += values_s[i]
+
+    # Divide and correct for nans
+    with np.errstate(divide='ignore', invalid='ignore') :
+        label_adjustment_factor = (test_reference * population_per_label / tests_per_label) ** beta
+        incidence_per_label     = cases_per_label * label_adjustment_factor
+        incidence_per_label[tests_per_label == 0] = 0
+
+    t = pd.to_datetime(intersection)
+
+    return t, incidence_per_label
+
+def load_kommune_infection_distribution(initial_distribution_file, label_map, test_reference = 0.017, beta = 0.55) :
 
     if initial_distribution_file.lower() == 'random' :
-        infected_per_kommune  = np.ones(np.shape(infected_per_kommune))
-        immunized_per_kommune = np.ones(np.shape(immunized_per_kommune))
+        N_kommuner = len(label_map)
+
+        infected_per_kommune  = np.zeros(N_kommuner)
+        immunized_per_kommune = np.zeros(N_kommuner)
 
     else :
 
-        if initial_distribution_file.lower() == 'newest' :
-            df_cases, df_tests, _ = get_SSI_data(date='newest', return_data=True)
-        else :
-            df_cases = pd.read_csv(os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'], initial_distribution_file + '.csv'), index_col=0)
-            df_tests = pd.read_csv(os.path.join(load_yaml('cfg/files.yaml')['municipalityTestsFolder'], initial_distribution_file + '.csv'), index_col=0)
-
-        df_cases = df_cases.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA'])
-        df_tests = df_tests.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA', 'Christiansø'])
-
-        names_c  = df_cases.columns
-        values_c = df_cases.to_numpy()
-
-        names_t  = df_tests.columns
-        values_t = df_tests.to_numpy()
-
-        # Must have same dates in both datasets
-        intersection = df_cases.index.intersection(df_tests.index)
-        idx_c = np.isin(df_cases.index, intersection)
-        idx_t = np.isin(df_tests.index, intersection)
-
-        values_c = values_c[idx_c, :]
-        values_t = values_t[idx_t, :]
-
-        test_per_kommune   = np.zeros((len(values_t), N_kommuner))
-        cases_per_kommune  = np.zeros((len(values_c), N_kommuner))
-
-
-        # Match the columns indicies
-        i_out_c = label_map[names_c]
-        i_out_t = label_map[names_t]
-
-        cases_per_kommune[:, i_out_c] = values_c
-        test_per_kommune[:,  i_out_t] = values_t
-
-        # Divide and correct for nans
-        with np.errstate(divide="ignore", invalid="ignore") :
-            incidence_per_kommune = cases_per_kommune / test_per_kommune ** beta
-            incidence_per_kommune[test_per_kommune == 0] = 0
+        # Load the incidence per kommune
+        _, incidence_per_kommune = load_incidence_per_label(initial_distribution_file, label_map['kommune_to_kommune_idx'], test_reference = test_reference, beta = beta)
 
         # Swap arrays for the last 7 days
-        I = len(df_cases.index) - 7
+        I = incidence_per_kommune.shape[0] - 7
 
         # Fill the arrays
-        immunized_per_kommune += np.sum(incidence_per_kommune[:I, :], axis=0)
-        infected_per_kommune  += np.sum(incidence_per_kommune[I:, :], axis=0)
+        immunized_per_kommune = np.sum(incidence_per_kommune[:I, :], axis=0)
+        infected_per_kommune  = np.sum(incidence_per_kommune[I:, :], axis=0)
 
     return infected_per_kommune, immunized_per_kommune
 
 
 def load_UK_fraction(start_date) :
 
-    raw_data = pd.read_csv(load_yaml("cfg/files.yaml")["wgsDistribution"], sep=";")
+    raw_data = pd.read_csv(load_yaml('cfg/files.yaml')['wgsDistribution'], sep=';')
 
     raw_data['percent'] = raw_data['yes'] / raw_data['total']
 

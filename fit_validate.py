@@ -2,6 +2,7 @@ import numpy as np
 from datetime import datetime
 
 import matplotlib.pyplot as plt
+from numpy.core.defchararray import multiply
 
 from tqdm import tqdm
 from pathlib import Path
@@ -293,51 +294,13 @@ for subset in subsets :
 
 
     stratification = cfg.stratified_labels
-    label_map = {'stratification_idx_to_stratification' :    raw_label_map[[stratification + '_idx',  stratification ]].drop_duplicates().set_index(stratification + '_idx')[stratification],
-                 'stratification_idx_to_kommune' :   raw_label_map[[stratification + '_idx',  'kommune' ]].drop_duplicates().set_index(stratification + '_idx')['kommune'],
-                 'kommune_to_stratification_idx' :   raw_label_map[[stratification + '_idx',  'kommune' ]].drop_duplicates().set_index('kommune')[stratification + '_idx'],
-                 'kommune_to_kommune_idx' :  raw_label_map[['kommune',     'kommune_idx']].drop_duplicates().set_index('kommune')['kommune_idx']}
+    label_map = {'stratification_idx_to_stratification' : raw_label_map[[stratification + '_idx',  stratification ]].drop_duplicates().set_index(stratification + '_idx')[stratification],
+                 'kommune_to_stratification_idx' : raw_label_map[[stratification + '_idx',  'kommune' ]].drop_duplicates().set_index('kommune')[stratification + '_idx']}
 
 
-    N_kommuner        = len(label_map['kommune_to_kommune_idx'])
     N_stratifications = len(label_map['stratification_idx_to_stratification'])
+    t, incidence_per_label = file_loaders.load_incidence_per_label('2021_05_04', label_map['kommune_to_stratification_idx'], test_reference = cfg.test_reference, beta = cfg.testing_exponent)
 
-    infected_per_kommune  = np.zeros(N_kommuner)
-    immunized_per_kommune = np.zeros(N_kommuner)
-
-    df_cases, df_tests, _ = file_loaders.get_SSI_data(date='2021_04_27', return_data=True)
-
-    df_cases = df_cases.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA'])
-    df_tests = df_tests.rename(columns={'Copenhagen' : 'København'}).drop(columns=['NA', 'Christiansø'])
-
-    names_c  = df_cases.columns
-    values_c = df_cases.to_numpy()
-
-    names_t  = df_tests.columns
-    values_t = df_tests.to_numpy()
-
-    # Must have same dates in both datasets
-    intersection = df_cases.index.intersection(df_tests.index)
-    idx_c = np.isin(df_cases.index, intersection)
-    idx_t = np.isin(df_tests.index, intersection)
-
-    values_c = values_c[idx_c, :]
-    values_t = values_t[idx_t, :]
-
-    tests_per_label = np.zeros((len(values_t), N_stratifications))
-    cases_per_label = np.zeros((len(values_c), N_stratifications))
-
-    for i, (name_t, name_c) in enumerate(zip(names_t, names_c)) :
-        tests_per_label[:, label_map['kommune_to_stratification_idx'][name_t]] += values_t[:, i]
-        cases_per_label[:, label_map['kommune_to_stratification_idx'][name_c]] += values_c[:, i]
-
-    tests_per_day = np.sum(tests_per_label, axis=1)
-
-    tests_per_label_adjusted  = tests_per_label * ref_tests / np.repeat(tests_per_day.reshape(-1, 1), tests_per_label.shape[1], axis=1)
-    print(tests_per_label_adjusted)
-
-    incidence_per_label = np.array(cases_per_label) #* (np.array(tests_per_label_adjusted) / np.array(tests_per_label)) ** beta
-    t = pd.to_datetime(intersection)
 
     for i in range(len(axes4)) :
 

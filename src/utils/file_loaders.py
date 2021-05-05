@@ -554,6 +554,11 @@ def load_municipality_case_data(zfile) :
     return pd.read_csv(zfile.open('Municipality_cases_time_series.csv'), sep=';', index_col=0)
 
 
+def load_municipality_summery_data(zfile) :
+    D = pd.read_csv(zfile.open('Municipality_test_pos.csv'), sep = ';', index_col=0, usecols=['Kommune_(navn)','Befolkningstal'], dtype={'Befolkningstal': 'str'})
+    return D['Befolkningstal'].str.replace('.','', regex=False).astype(int)
+
+
 def load_age_data(zfile) :
     df = pd.read_csv(zfile.open('Cases_by_age.csv'), usecols=['Aldersgruppe', 'Antal_bekræftede_COVID-19'], dtype={'Aldersgruppe' : str, 'Antal_bekræftede_COVID-19' : str}, sep=';', index_col=0)
 
@@ -590,6 +595,8 @@ def download_SSI_data(date=None,
                       path_municipality_tests=None,
                       download_municipality_cases=True,
                       path_municipality_cases=None,
+                      download_municipality_summery=True,
+                      path_municipality_summery=None,
                       download_age=True,
                       path_age=None) :
     # Parse date
@@ -629,6 +636,10 @@ def download_SSI_data(date=None,
             df = load_municipality_case_data(zfile)
             save_dataframe(df, path_municipality_cases, filename)
 
+        if download_municipality_summery :
+            df = load_municipality_summery_data(zfile)
+            save_dataframe(df, path_municipality_summery, filename)
+
         if download_age :
             df = load_age_data(zfile)
             save_dataframe(df, path_age, filename)
@@ -641,16 +652,18 @@ def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False)
 
     filename = date + '.csv'
 
-    f_municipality_tests = os.path.join(load_yaml('cfg/files.yaml')['municipalityTestsFolder'], filename)
-    f_municipality_cases = os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'], filename)
-    f_age                = os.path.join(load_yaml('cfg/files.yaml')['ageCasesFolder'], filename)
+    f_municipality_tests   = os.path.join(load_yaml('cfg/files.yaml')['municipalityTestsFolder'], filename)
+    f_municipality_cases   = os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'], filename)
+    f_municipality_summery = os.path.join(load_yaml('cfg/files.yaml')['municipalitySummery'],     filename)
+    f_age                  = os.path.join(load_yaml('cfg/files.yaml')['ageCasesFolder'],          filename)
 
-    download_municipality_tests = SSI_data_missing(f_municipality_tests)
-    download_municipality_cases = SSI_data_missing(f_municipality_cases)
-    download_age                = SSI_data_missing(f_age)
+    download_municipality_tests   = SSI_data_missing(f_municipality_tests)
+    download_municipality_cases   = SSI_data_missing(f_municipality_cases)
+    download_municipality_summery = SSI_data_missing(f_municipality_summery)
+    download_age                  = SSI_data_missing(f_age)
 
 
-    if download_municipality_tests or download_municipality_cases or download_age:
+    if download_municipality_tests or download_municipality_cases or download_municipality_summery or download_age :
 
         if verbose:
             print("Downloading new data")
@@ -660,16 +673,19 @@ def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False)
                           path_municipality_tests=os.path.dirname(f_municipality_tests),
                           download_municipality_cases=download_municipality_cases,
                           path_municipality_cases=os.path.dirname(f_municipality_cases),
+                          download_municipality_summery=download_municipality_summery,
+                          path_municipality_summery=os.path.dirname(f_municipality_summery),
                           download_age=download_age,
                           path_age=os.path.dirname(f_age))
 
     if return_data :
         # Load the dataframes
-        df_municipality_tests = pd.read_csv(f_municipality_tests, index_col=0)
-        df_municipality_cases = pd.read_csv(f_municipality_cases, index_col=0)
-        df_age                = pd.read_csv(f_age,                index_col=0)
+        df_municipality_tests   = pd.read_csv(f_municipality_tests,   index_col=0)
+        df_municipality_cases   = pd.read_csv(f_municipality_cases,   index_col=0)
+        df_municipality_summery = pd.read_csv(f_municipality_summery, index_col=0)
+        df_age                  = pd.read_csv(f_age,                  index_col=0)
 
-        return df_municipality_cases, df_municipality_tests, df_age
+        return df_municipality_cases, df_municipality_tests, df_municipality_summery, df_age
 
     if return_name :
         return date

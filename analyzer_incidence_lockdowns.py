@@ -13,9 +13,9 @@ from src.analysis.plotters import *
 
 
 if utils.is_local_computer():
-    f = 0.1
+    f = 0.01
     n_steps = 1
-    num_cores_max = 1
+    num_cores_max = 2
     N_runs = 1
 else :
     f = 0.5
@@ -29,7 +29,7 @@ if num_cores_max == 1 :
 else :
     verbose = False
 
-params, start_date = utils.load_params('cfg/analyzers/vaccinations.yaml', f)
+params, start_date = utils.load_params('cfg/analyzers/incidence_lockdowns.yaml', f)
 
 
 
@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
 
     # Load the simulations
-    subset = {'matrix_labels' : 'land', 'stratified_labels' : 'land', 'incidence_interventions_to_apply' : [0]}
+    subset = {'matrix_labels' : 'land', 'stratified_labels' : 'land', 'incidence_interventions_to_apply' : [1]}
     data = file_loaders.ABM_simulations(subset=subset)
 
     if len(data.filenames) == 0 :
@@ -59,18 +59,15 @@ if __name__ == '__main__':
     t_day, _ = parse_time_ranges(start_date, end_date)
 
     # Prepare output file
-    fig_names = ['Figures/vaccination_effect.png', 'Figures/vaccination_breakdown.png']
-
-    for fig_name in fig_names :
-        file_loaders.make_sure_folder_exist(fig_name)
+    fig_name = 'Figures/incidence_lockdowns.png'
+    file_loaders.make_sure_folder_exist(fig_name)
 
 
-    # Prepare figures
-    fig1 = plt.figure(figsize=(12, 12))
-    axes1 = plt.gca()
+    # Prepare figure
+    fig = plt.figure(figsize=(12, 12))
+    axes = plt.gca()
 
-    fig2, axes2 = plt.subplots(nrows=3, ncols=3, sharex=True, sharey=True, figsize=(12, 12))
-    axes2 = axes2.flatten()
+    handles = []
 
     print('Plotting the individual ABM simulations. Please wait', flush=True)
     for (filename, network_filename) in tqdm(zip(data.iter_files(), data.iter_network_files()), total=len(data.filenames)) :
@@ -78,16 +75,10 @@ if __name__ == '__main__':
         cfg = file_loaders.filename_to_cfg(filename)
 
         # Load
-        total_tests, _, _, _, _, vaccinations_by_age_group = load_from_file(filename, network_filename, start_date)
+        total_tests, _, _, _, _, _ = load_from_file(filename, network_filename, start_date)
 
         # Create the plots
-        if cfg.start_date_offset == 4 :
-            d = 0
-            linestyle = '-'
-        else :
-            d = 1
-            linestyle = '--'
-
+        d = 0 if cfg.start_date_offset == 4 else 1
         if 5 in cfg.continuous_interventions_to_apply :
             color = plt.cm.tab10(0 + d)
             label = f'+ V (start = {cfg.start_date_offset})'
@@ -95,36 +86,14 @@ if __name__ == '__main__':
             color = plt.cm.tab10(2 + d)
             label = f'- V (start = {cfg.start_date_offset})'
 
-        plot_simulation_cases(total_tests, t_day, axes1, color=color, label=label)
-
-        plot_simulation_category(vaccinations_by_age_group, t_day, axes2, linestyle=linestyle)
+        handles.append(plot_simulation_cases(total_tests, t_day, axes, label=label))
 
 
-    axes1.set_ylim(0, 4000)
-    axes1.set_ylabel('Daglige positive')
+    axes.set_ylim(0, 4000)
+    axes.set_ylabel('Daglige positive')
 
-    set_date_xaxis(axes1, start_date, end_date)
+    set_date_xaxis(axes, start_date, end_date)
 
-    fig1.legend()
+    plt.legend()
 
-    fig1.savefig(fig_names[0])
-
-
-
-
-
-    for i in range(len(axes2)) :
-
-        set_date_xaxis(axes2[i], start_date, end_date, interval=2)
-
-        axes2[i].set_title(f'{10*i}-{10*(i+1)-1}', fontsize=24, pad=5)
-
-        axes2[i].tick_params(axis='x', labelsize=24)
-        axes2[i].tick_params(axis='y', labelsize=24)
-
-    # Adjust the last title
-    axes2[-2].set_title(f'{10*(i-1)}+', fontsize=24, pad=5)
-    axes2[-1].set_title('all', fontsize=24, pad=5)
-
-
-    fig2.savefig(fig_names[1])
+    plt.savefig(fig_name)

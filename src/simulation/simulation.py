@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import numba as nb
 
-from numba.typed import List, Dict
+from numba.typed import Dict
 from numba.types import DictType
 from numba.core.errors import NumbaTypeSafetyWarning, NumbaExperimentalFeatureWarning
 
@@ -92,7 +92,7 @@ class Simulation :
 
         # Load demographic information
         household_size_distribution_sogn, age_distribution_in_households = file_loaders.load_household_data_sogn(kommune_name_to_idx)
-        people_in_sogn = np.array(utils.people_per_sogn(household_size_distribution_sogn))
+        household_sizes = np.arange(1, 7)
 
         # Create map for the outdated sogne
         g_sogn_code = household_size_distribution_sogn.index.values
@@ -109,12 +109,13 @@ class Simulation :
         all_indices = np.arange(N_tot, dtype=np.uint32)
         np.random.shuffle(all_indices)
 
-        people_index_to_value = np.arange(1, 7)
-
-        #initialize lists to keep track of number of agents in each age group
+        # initialize lists to keep track of number of agents in each age group
         counter_ages = np.zeros(self.N_ages, dtype=np.uint32)
         agents_in_age_group = utils.initialize_nested_lists(self.N_ages, dtype=np.uint32)
-        house_sizes = np.zeros(len(people_index_to_value), dtype=np.int64)
+        generated_household_sizes = np.zeros(len(household_sizes), dtype=np.int64)
+
+        # compute distribution of houses per sogn
+        houses_per_sogn = household_size_distribution_sogn[household_sizes].sum(axis=1).values
 
         mu_counter = 0
         agent = 0
@@ -123,8 +124,8 @@ class Simulation :
 
             agent0 = agent
 
-            # Choose location
-            g_code  = nb_helpers.nb_random_choice(g_sogn_code, prob=people_in_sogn)[0] # Draw random sogn (data has old codes)
+            # Choose location (sogn) based on the number of houses in each sogn
+            g_code  = nb_helpers.nb_random_choice(g_sogn_code, prob=houses_per_sogn)[0] # Draw random sogn (data has old codes)
             sogn    = sogne_map[g_code] # Convert to new code
 
             sogn_idx    = self.label_map['sogn_to_sogn_idx'][sogn]
@@ -133,32 +134,41 @@ class Simulation :
             coordinates = utils.generate_coordinate(sogn, sogne)
             coordinates = (coordinates.x, coordinates.y)
 
-            # Draw size of household form distribution
-            people_in_household_sogn = np.array(household_size_distribution_sogn.loc[g_code].iloc[:6])
+            # Draw a household size from distribution
+            probability_of_household_size = np.array(household_size_distribution_sogn.loc[g_code][household_sizes])
 
-            agent, do_continue, mu_counter = nb_network.generate_one_household(people_in_household_sogn,
+            N_people_in_house_index = utils.rand_choice_nb(probability_of_household_size)
+            N_people_in_house  = household_sizes[N_people_in_house_index]
+            generated_household_sizes[N_people_in_house_index] += 1
+
+            # Determine the age distribution within the household
+            age_distribution_in_household = age_distribution_in_households[kommune_idx][N_people_in_house_index]
+
+            # Populate the household
+            agent, do_continue, mu_counter = nb_network.generate_one_household(N_people_in_house,
                                                                     agent,
                                                                     agent0,
                                                                     do_continue,
                                                                     N_tot,
                                                                     self.my,
-                                                                    age_distribution_in_households,
+                                                                    age_distribution_in_household,
                                                                     counter_ages,
                                                                     agents_in_age_group,
                                                                     coordinates,
                                                                     mu_counter,
-                                                                    people_index_to_value,
-                                                                    house_sizes,
-                                                                    sogn_idx,
-                                                                    kommune_idx)
+                                                                    sogn_idx)
 
         agents_in_age_group = utils.nested_lists_to_list_of_array(agents_in_age_group)
 
-        if self.verbose:
-            print("House sizes :")
-            print(house_sizes)
+        if check_distributions:
+            print('House sizes :')
+            print(generated_household_sizes)
 
-        return mu_counter, counter_ages, agents_in_age_group
+            print('Age distribution :')
+            print(counter_ages)
+
+
+        return mu_counter, agents_in_age_group
 
     def _initialize_network(self) :
         """ Initializing the network for the simulation
@@ -175,10 +185,8 @@ class Simulation :
 
         (
             mu_counter,
-            counter_ages,
             agents_in_age_group,
         ) = self._place_and_connect_families_sogne_specific()
-
 
         if self.verbose :
             print("Connecting work and others, currently slow, please wait")
@@ -337,28 +345,33 @@ class Simulation :
 
         # Load the restriction contact matrices
         # TODO: This should properably be done at cfg generation for consistent hashes
-        work_matrix_restrict  = []
-        other_matrix_restrict = []
+        if 'Intervention_contact_matrices_name' in self.cfg.keys() :    # If restriction matrices are set, load the here
 
-        for scenario in self.cfg.Intervention_contact_matrices_name :
-            tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=self.N_matrix_labels)
+            work_matrix_restrict  = []
+            other_matrix_restrict = []
 
-            # Check the loaded contact matrices have the right size
-            if not len(tmp_other_matrix_restrict) == self.N_matrix_labels :
-                raise ValueError(f'Number of labels ({self.N_matrix_labels}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for scenario: {scenario} and label: {self.cfg.labels}')
+            for scenario in self.cfg.Intervention_contact_matrices_name :
+                tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=self.N_matrix_labels)
 
-            work_matrix_restrict.append(tmp_work_matrix_restrict)
-            other_matrix_restrict.append(tmp_other_matrix_restrict)
+                # Check the loaded contact matrices have the right size
+                if not len(tmp_other_matrix_restrict) == self.N_matrix_labels :
+                    raise ValueError(f'Number of labels ({self.N_matrix_labels}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for scenario: {scenario} and label: {self.cfg.labels}')
 
-        # Rescale the restriction matrices
-        wm = np.array(work_matrix_restrict)
-        om = np.array(other_matrix_restrict)
+                work_matrix_restrict.append(tmp_work_matrix_restrict)
+                other_matrix_restrict.append(tmp_other_matrix_restrict)
 
-        for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
-            for l in range(len(np.unique(self.N_matrix_labels))) :
-                wm[s, l, :, :] *= self.cfg.matrix_label_multiplier[l]
-                om[s, l, :, :] *= self.cfg.matrix_label_multiplier[l]
+            # Rescale the restriction matrices
+            wm = np.array(work_matrix_restrict)
+            om = np.array(other_matrix_restrict)
 
+            for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
+                for l in range(len(np.unique(self.N_matrix_labels))) :
+                    wm[s, l, :, :] *= self.cfg.matrix_label_multiplier[l]
+                    om[s, l, :, :] *= self.cfg.matrix_label_multiplier[l]
+
+        else : # Set the default values
+            wm = np.zeros((1, self.N_matrix_labels, self.my.cfg_network.work_matrix.shape[0], self.my.cfg_network.work_matrix.shape[1]))
+            om = np.zeros((1, self.N_matrix_labels, self.my.cfg_network.other_matrix.shape[0], self.my.cfg_network.other_matrix.shape[1]))
 
         # Convert maps to numba dicts
         matrix_label_map = Dict.empty(key_type=nb.uint16, value_type=nb.uint16)
@@ -619,11 +632,11 @@ class Simulation :
             self.nts,
             self.verbose)
 
-        out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_my_state, intervention = res
+        out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_daily_tests, out_my_state, intervention = res
 
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
-        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, self.cfg)
+        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_daily_tests, self.cfg)
         self.intervention = intervention
 
         return self.df

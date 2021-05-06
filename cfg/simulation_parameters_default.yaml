@@ -37,13 +37,19 @@ infection_threshold :           [[ 0             ]]
 percentage_threshold :          [[ 0.0           ]]
 incidence_intervention_effect : [[ [1, 0.9, 0.9] ]]
 
+incidence_interventions_to_apply: [1]
+  # 0: Do nothing
+  # 1: Rate reductions
+
+
 test_reference :      0.017   # 1.7 % percent daily
 incidence_reference : 100_000
 testing_exponent :    0.55
 
+
 matrix_labels: landsdel    # Matrix restriction granularity
 matrix_label_multiplier: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Landsdelniveau
-matrix_label_frac:       [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Landsdelniveau
+matrix_label_frac:       [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # Landsdelniveau
 
 initial_infected_label_weight : [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Landsdelniveau
 
@@ -57,9 +63,6 @@ start_date_offset: 0 # Number of days between start date and vaccination start
 #  Define default intervention parameters
 do_interventions: True
 
-incidence_interventions_to_apply: [1]
-  # 0: Do nothing
-  # 1: Rate reductions
 
 continuous_interventions_to_apply: [1, 2, 3, 4, 5]
   # 0: Do nothing

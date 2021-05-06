@@ -32,7 +32,12 @@ contact_matrices_name: basis  # Target activity
 # land, region, landsdel, kommune, sogne
 stratified_labels: land  # Output granularity
 
-incidence_interventions_to_apply: [[0]] #  Disable
+incidence_labels:               [[[ land            ]]] # Incidence restriction granularity
+infection_threshold :           [[[ 0               ]]]
+percentage_threshold :          [[[ 0.0             ]]]
+incidence_intervention_effect : [[[ [0.1, 0.1, 0.1] ]]]
+
+incidence_threshold :           [[[ 1000000.0 ]], [[ 10.0 ]]]
 
 matrix_labels:            land  # Matrix restriction granularity
 matrix_label_multiplier: [[1.0]]  # Landsniveau
@@ -42,7 +47,6 @@ initial_infected_label_weight : [[1.0]]  # Landsniveau
 
 
 start_date_offset: 2020-12-28 # Start date for vaccinations
-start_date_offset: [2019-12-28, 2020-12-28] # Start date for vaccinations
 Intervention_vaccination_schedule_name : 2021_apr_26
 Intervention_vaccination_effect_delays : [[ 21,  28]]
 Intervention_vaccination_efficacies :    [[0.9, 0.6]]

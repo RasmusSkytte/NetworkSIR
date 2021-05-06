@@ -481,7 +481,8 @@ def run_simulation(
     out_time = List()                            # Sampled times
     out_state_counts = List()                    # Tne counts of the SEIR states
     out_stratified_infection_counts = List()     # The counts of infected per age group
-    out_stratified_vaccination_counts = List()   # The counts of infected per age group
+    out_stratified_vaccination_counts = List()   # The counts of vaccinations per age group
+    out_daily_tests = List()                     # The counts of daily tests
     out_my_state = List()
 
     daily_counter = 0
@@ -664,6 +665,7 @@ def run_simulation(
                     out_state_counts.append(state_total_counts.copy())
                     out_stratified_infection_counts.append(stratified_infection_counts.copy())
                     out_stratified_vaccination_counts.append(stratified_vaccination_counts.copy())
+                    out_daily_tests.append(intervention.daily_tests)
                     out_my_state.append(my.state.copy())
 
                     intervention.R_true_list.append(calculate_R_True(my, g, day))
@@ -687,6 +689,10 @@ def run_simulation(
 
                 # Apply interventions for the new day
                 if intervention.apply_interventions :
+                    # Reset the test counter
+                    intervention.daily_tests = 0
+
+                    # Apply interventions for the new day
                     apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
 
                 # Apply events for the new day
@@ -744,4 +750,4 @@ def run_simulation(
         # print("N_daily_tests", intervention.N_daily_tests)
         # print("N_positive_tested", N_positive_tested)
 
-    return out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_my_state, intervention
+    return out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_daily_tests, out_my_state, intervention

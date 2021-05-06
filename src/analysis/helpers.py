@@ -46,8 +46,8 @@ def load_from_file(filename, network_filename, start_date) :
     ages = plotters._load_data_from_network_file(network_filename, ['my_age'], cfg=cfg)[0]
     ages = [np.sum(ages == age) for age in range(np.max(ages) + 1)]
 
-    # Find all columns with "T_"
-    test_cols = [col for col in df.columns if 'T_l' in col]
+    # Find all columns with "P_"
+    test_cols = [col for col in df.columns if 'P_l' in col]
 
     # Determine the output dimension
     N_labels     = len(np.unique(np.array([int(col.split('_')[2]) for col in test_cols])))
@@ -82,25 +82,25 @@ def load_from_file(filename, network_filename, start_date) :
 
 
     # Convert to observables
-    T_total      = np.sum(stratified_infections, axis=(1, 2, 3))
+    P_total      = np.sum(stratified_infections, axis=(1, 2, 3))
 
-    T_variants   = np.sum(stratified_infections, axis=(1, 3))
-    T_uk         = T_variants[:, 1]
+    P_variants   = np.sum(stratified_infections, axis=(1, 3))
+    P_uk         = P_variants[:, 1]
 
-    T_age_groups = np.sum(stratified_infections, axis=(1, 2))
+    P_age_groups = np.sum(stratified_infections, axis=(1, 2))
 
-    T_labels    = np.sum(stratified_infections, axis=(2, 3))
+    P_labels    = np.sum(stratified_infections, axis=(2, 3))
 
     V_age_groups = stratified_vaccinations
     V_age_groups = np.concatenate((V_age_groups, np.sum(V_age_groups, axis=1).reshape(-1, 1)), axis=1) # Add vaccine summery graph
     V_age_groups /= np.append(ages, np.sum(ages))  # Convert to fraction of population
 
     # Get daily values
-    T_total      = T_total
-    T_variants   = T_variants
-    T_uk         = T_uk
-    T_age_groups = T_age_groups
-    T_labels     = T_labels
+    P_total      = P_total
+    P_variants   = P_variants
+    P_uk         = P_uk
+    P_age_groups = P_age_groups
+    P_labels     = P_labels
 
     # Get weekly values
     # Remove days if not starting on a monday
@@ -109,15 +109,15 @@ def load_from_file(filename, network_filename, start_date) :
     else :
         I = 0
 
-    T_total_week = aggregate_array(T_total[I:], chunk_size=7)
-    T_uk_week    = aggregate_array(T_uk[I:],    chunk_size=7)
+    P_total_week = aggregate_array(P_total[I:], chunk_size=7)
+    P_uk_week    = aggregate_array(P_uk[I:],    chunk_size=7)
 
     # Get the fraction of UK variants
     with np.errstate(divide='ignore', invalid='ignore') :
-        f = T_uk_week / T_total_week
+        f = P_uk_week / P_total_week
         f[np.isnan(f)] = -1
 
-    return T_total, f, T_age_groups, T_variants, T_labels, V_age_groups
+    return P_total, f, P_age_groups, P_variants, P_labels, V_age_groups
 
 
 def parse_time_ranges(start_date, end_date) :

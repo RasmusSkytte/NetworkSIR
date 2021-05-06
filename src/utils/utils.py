@@ -1416,19 +1416,19 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
 
 
 
-def counts_to_df(time, state_counts, stratified_infected, stratified_vaccination, cfg) :  #
+def counts_to_df(time, state_counts, stratified_infected, stratified_vaccination, daily_tests, cfg) :  #
 
     time = np.array(time)
     state_counts = np.array(state_counts)
     stratified_infected = np.array(stratified_infected)
     stratified_vaccination = np.array(stratified_vaccination)
+    daily_tests = np.array(daily_tests).reshape(-1, 1)
 
-
-    N_states     = np.size(state_counts, 1)
-    N_labels     = np.size(stratified_infected, 1)
-    N_variants   = np.size(stratified_infected, 2)
-    N_age_groups = np.size(stratified_infected, 3)
-
+    N_states      = np.size(state_counts, 1)
+    N_labels      = np.size(stratified_infected, 1)
+    N_variants    = np.size(stratified_infected, 2)
+    N_age_groups  = np.size(stratified_infected, 3)
+    N_daily_tests = np.size(daily_tests, 1)
 
     header = [
         'Time',
@@ -1450,7 +1450,7 @@ def counts_to_df(time, state_counts, stratified_infected, stratified_vaccination
     for l in range(N_labels) :
         for v in range(N_variants) :
 
-            headers = ['T_l_' + str(l) + '_v_' + str(v) + '_A_' + str(i) for i in range(N_age_groups)]
+            headers = ['P_l_' + str(l) + '_v_' + str(v) + '_A_' + str(i) for i in range(N_age_groups)]
 
             df_age_group = pd.DataFrame(stratified_infected[:, l, v, :] * cfg.testing_penetration, columns=headers)
 
@@ -1460,6 +1460,11 @@ def counts_to_df(time, state_counts, stratified_infected, stratified_vaccination
     headers = ['V_A_' + str(i) for i in range(N_age_groups)]
     df_age_group = pd.DataFrame(stratified_vaccination, columns=headers)
     df = pd.concat([df, df_age_group], axis=1)  # .convert_dtypes()
+
+    # Add the daily tests
+    headers = ['T_' + str(i) for i in range(N_daily_tests)]
+    df_tests = pd.DataFrame(daily_tests, columns=headers)
+    df = pd.concat([df, df_tests], axis=1)  # .convert_dtypes()
 
     return df
 
@@ -2088,25 +2093,34 @@ def load_params(filename, f) :
 
     params['day_max'] = (end_date - start_date).days
 
+
     if 'start_date_offset' in params :
-        params['start_date_offset'] = (start_date - params['start_date_offset']).days
+        start_dates = []
+        for offset in params['start_date_offset'] :
+            start_dates.append((start_date - offset).days)
 
-    if isinstance(params['planned_restriction_dates'], list) :
+        params['start_date_offset'] = start_dates
 
-        restriction_dates = [date for date in params['planned_restriction_dates'][0]]
 
-        dates = [0]
-        for i in range(1, len(restriction_dates)) :
-            date = restriction_dates[i]
-            dates.append((date - start_date).days)
+    if 'planned_restriction_dates' in params :
+        if isinstance(params['planned_restriction_dates'], list) :
 
-    else :
-        dates = [(params['planned_restriction_dates'] - start_date).days]
+            restriction_dates = [date for date in params['planned_restriction_dates'][0]]
 
-    params['planned_restriction_dates'] =  [dates]
+            dates = [0]
+            for i in range(1, len(restriction_dates)) :
+                date = restriction_dates[i]
+                dates.append((date - start_date).days)
+
+        else :
+            dates = [(params['planned_restriction_dates'] - start_date).days]
+
+        params['planned_restriction_dates'] =  [dates]
+
 
     if 'initial_infection_distribution' in params.keys() and isinstance(params['initial_infection_distribution'], datetime.date) :
         params['initial_infection_distribution'] = params['initial_infection_distribution'].strftime('%Y_%m_%d')
+
 
     # Scale the total population
     params['N_tot']  = int(params['N_tot']  * f)
@@ -2131,10 +2145,10 @@ def sort_nested_list(arr) :
     return arr
 
 
-def people_per_sogn(df):
+def people_per_sogn(df, people_index_to_value):
     people_in_sogn = []
     for sogn in df.index:
-        people_in_sogn.append(sum(df.loc[sogn][1:6]))
+        people_in_sogn.append(np.dot(df.loc[sogn][people_index_to_value], people_index_to_value))
     return people_in_sogn
 
 

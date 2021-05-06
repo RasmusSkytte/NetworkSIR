@@ -49,41 +49,50 @@ def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=F
     for i in range(len(intervention.vaccination_schedule)) :
 
         # Check if all vaccines have been given
-        if day > intervention.vaccination_schedule[i][-1] :
+        if day > intervention.vaccination_schedule[i][1] :
             continue
 
         # Check if any vaccines are effective yet :
         if day >= intervention.vaccination_schedule[i][0] :
 
             # Get the number of new effective vaccines
-            N = intervention.vaccinations_per_age_group[i][day - intervention.vaccination_schedule[i][0]]
+            vaccines_to_give = intervention.vaccinations_per_age_group[i][day - intervention.vaccination_schedule[i][0]]
 
-            # Determine which agents can be vaccinated
-            possible_agents_to_vaccinate = np.array( [ agent
-                                                    for agent in np.arange(my.cfg_network.N_tot, dtype=np.uint32)
-                                                    if N[my.age[agent]] > 0 and my.vaccination_type[agent] == 0], dtype=np.uint32)
+            # Loop over age groups and vaccinate
+            for age_group, N_in_age_group in enumerate(vaccines_to_give) :
 
-            if len(possible_agents_to_vaccinate) > 0 :
+                # Skip empty age groups
+                if N_in_age_group == 0 :
+                    continue
 
-                # Compute probability for each agent being infected
-                probabilities = np.array( [ N[my.age[agent]] for agent in possible_agents_to_vaccinate ] )
+                # Determine which agents can be vaccinated
+                possible_agents_to_vaccinate = np.array( [ agent for agent in np.arange(my.cfg_network.N_tot, dtype=np.uint32)
+                                                    if my.age[agent] == age_group and not my.agent_is_vaccinated(agent)], dtype=np.uint32)
 
-                # Distribute the effective vaccines among the population
-                agents = nb_random_choice(possible_agents_to_vaccinate, probabilities, size = int(np.sum(N)), verbose=verbose)
-                for agent in agents :
+                if len(possible_agents_to_vaccinate) > 0 :
 
-                    # pick agent if it is susceptible (in S state)
-                    if my.agent_is_susceptible(agent) :
-                        # "vaccinate agent"
-                        if np.random.rand() < my.cfg.Intervention_vaccination_efficacies[i] :
-                            multiply_incoming_rates_of_agent(my, g, agent, np.array([0.0, 0.0, 0.0]))  # Reduce rates to zero
-                            my.vaccination_type[agent] = i
+                    # Distribute the effective vaccines among the age_group
+                    if N_in_age_group > len(possible_agents_to_vaccinate) :
+                        agents = possible_agents_to_vaccinate
+                    else :
+                        agents = nb_random_choice(possible_agents_to_vaccinate, np.ones_like(possible_agents_to_vaccinate), size = N_in_age_group, verbose=verbose)
 
-                        else :
-                            my.vaccination_type[agent] = -i
+                    # Implement the vaccination
+                    for agent in agents :
 
-                    # Update counter
-                    stratified_vaccination_counts[my.age[agent]] += 1
+                        # pick agent if it is susceptible (in S state)
+                        if my.agent_is_susceptible(agent) or my.agent_is_recovered(agent) :
+
+                            # "vaccinate agent"
+                            if np.random.rand() < my.cfg.Intervention_vaccination_efficacies[i] :
+                                multiply_incoming_rates_of_agent(my, g, agent, np.array([0.0, 0.0, 0.0]))  # Reduce rates to zero
+                                my.vaccination_type[agent] = i
+
+                            else :
+                                my.vaccination_type[agent] = -i
+
+                        # Update counter
+                        stratified_vaccination_counts[my.age[agent]] += 1
 
 
 @njit
@@ -171,6 +180,9 @@ def open_connection(my, g, agent, ith_contact, intervention, two_way=True) :
 @njit
 def close_connection(my, g, agent, ith_contact, intervention, two_way=True) :
 
+    if not my.agent_is_connected(agent, ith_contact) :
+        return
+
     contact = my.connections[agent][ith_contact]
 
     # zero the g rates
@@ -189,9 +201,6 @@ def close_connection(my, g, agent, ith_contact, intervention, two_way=True) :
 @njit
 def reset_rates_of_connection(my, g, agent, ith_contact, intervention, two_way=True) :
 
-    if not my.agent_is_connected(agent, ith_contact) :
-        return
-
     contact = my.connections[agent][ith_contact]
 
     # Compute the infection rate
@@ -200,8 +209,6 @@ def reset_rates_of_connection(my, g, agent, ith_contact, intervention, two_way=T
 
     if my.corona_type[agent] == 1 :
         infection_rate *= my.cfg.beta_UK_multiplier
-
-    # TODO: Here we should implement transmission risk for vaccinted persons
 
     # Account for self-isolation
     if intervention.isolated[agent] or intervention.isolated[contact] :
@@ -217,7 +224,7 @@ def reset_rates_of_connection(my, g, agent, ith_contact, intervention, two_way=T
     rate = target_rate - g.rates[agent][ith_contact]
     g.rates[agent][ith_contact] = target_rate
 
-    if my.agent_is_infectious(agent) and my.agent_is_susceptible(contact) :
+    if my.agent_is_connected(agent, ith_contact) and my.agent_is_infectious(agent) and my.agent_is_susceptible(contact) :
         g.update_rates(my, +rate, agent)
 
     if two_way :
@@ -864,6 +871,7 @@ def testing_intervention(my, g, intervention, day, click) :
 
         # testing everybody who should be tested
         if intervention.clicks_when_tested[agent] == click:
+            intervention.daily_tests += 1
             test_agent(my, g, intervention, agent, click)
 
         # check for test results

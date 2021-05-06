@@ -537,24 +537,21 @@ def connect_work_and_others(
 
 
 @njit
-def generate_one_household(people_in_household_sogn, agent, agent0, do_continue, N_tot, my, age_distribution_per_people_in_household, counter_ages, agents_in_age_group, coordinates, mu_counter, people_index_to_value, house_sizes, sogn, kommune):
-    N_people_in_house_index = utils.rand_choice_nb(people_in_household_sogn)
-    N_people_in_house = people_index_to_value[N_people_in_house_index]
-    house_sizes[N_people_in_house_index] += 1
+def generate_one_household(N_people_in_house, agent, agent0, do_continue, N_tot, my, age_distribution_in_household, counter_ages, agents_in_age_group, coordinates, mu_counter, sogn):
+
     # if N_in_house would increase agent to over N_tot,
     # set N_people_in_house such that it fits and break loop
     if agent + N_people_in_house >= N_tot :
         N_people_in_house = N_tot - agent
         do_continue = False
 
-    # Initilaze the agents and assign them to households
-    age_dist = age_distribution_per_people_in_household[kommune, N_people_in_house_index, :]
+    # Initilaze the agents and assign them to the household
     for _ in range(N_people_in_house) :
-        age_index = utils.rand_choice_nb(age_dist)
 
-        #set age for agent
-        age = age_index  # just use age index as substitute for age
-        my.age[agent] = age
+        # set age for agent
+        age_index = utils.rand_choice_nb(age_distribution_in_household)
+
+        my.age[agent] = age_index # just use age index as substitute for age
         my.sogn[agent] = np.uint16(sogn)
         counter_ages[age_index] += 1
         agents_in_age_group[age_index].append(np.uint32(agent))
@@ -581,4 +578,5 @@ def generate_one_household(people_in_household_sogn, agent, agent0, do_continue,
                 my.number_of_contacts[agent1] += 1
                 my.number_of_contacts[agent2] += 1
                 mu_counter += 1
+
     return agent, do_continue, mu_counter

@@ -143,7 +143,7 @@ class ABM_simulations :
         if self.subset is None:
             self.filenames   = get_all_filenames(os.path.join(base_dir, 'ABM'), filetype)
             self.networks    = get_all_filenames(os.path.join(base_dir, 'network'), filetype)
-            self.all_folders = get_all_ABM_folders(self.all_filenames)
+            self.all_folders = get_all_ABM_folders(self.filenames)
             self.cfgs        = get_cfgs(self.all_folders)
 
         else :
@@ -216,12 +216,6 @@ class ABM_simulations :
             return self.d[cfg_list[0].hash]
         except KeyError :
             return None
-
-    # def __getitem__(self, key) :
-    #     if isinstance(key, int) :
-    #         return self.all_files[key]
-    #     # elif isinstance(key, int) :
-    #     #     return self.all_files[key]
 
     def __len__(self) :
         return len(self.filenames)

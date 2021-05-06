@@ -11,20 +11,32 @@ import matplotlib.dates  as mdates
 
 from src.utils import utils
 
+def plot_simulation_cases(total_tests, t_day, axes, color='k', label='') :
+
+    # Create the plots
+    return axes.plot(t_day[:len(total_tests)], total_tests, lw=4, c=color, label=label)[0]
+
+
+def plot_variant_fraction(f, t_week, axes, color='k', label='') :
+
+    # Create the plots
+    return axes.plot(t_week[:len(f)], f, lw=4, c=color, label=label)[0]
+
+
 def plot_simulation_cases_and_variant_fraction(total_tests, f, t_day, t_week, axes, color='k') :
 
     # Create the plots
-    tmp_handles_0 = axes[0].plot(t_day[:len(total_tests)],  total_tests, lw=4, c=color)[0]
-    tmp_handles_1 = axes[1].plot(t_week[:len(f)],           f,           lw=4, c=color)[0]
+    handle_0 = plot_simulation_cases(total_tests, t_day, axes[0], color=color)
+    handle_1 = plot_variant_fraction(f, t_week, axes[1], color=color)
 
-    return [tmp_handles_0, tmp_handles_1]
+    return [handle_0, handle_1]
 
-def plot_simulation_category(tests_by_category, t, axes) :
+def plot_simulation_category(tests_by_category, t, axes, linestyle = '-') :
 
     tmp_handles = []
     # Create the plots
     for i in range(np.size(tests_by_category, 1)) :
-        tmp_handle = axes[i].plot(t[:np.size(tests_by_category, 0)], tests_by_category[:, i], lw=4, c=plt.cm.tab10(i % 10))[0]
+        tmp_handle = axes[i].plot(t[:np.size(tests_by_category, 0)], tests_by_category[:, i], lw=4, linestyle=linestyle, c=plt.cm.tab10(i % 10))[0]
         tmp_handles.append(tmp_handle)
 
     return tmp_handles

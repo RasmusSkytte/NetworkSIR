@@ -39,7 +39,7 @@ spec_cfg = {
     'simulated_tests' : nb.boolean,
     'incidence_labels' : ListType(ListType(nb.types.unicode_type)),
     'incidence_threshold' : ListType(nb.float64[: :1]), # to make the type C instead of A
-    'infection_threshold' : ListType(nb.int64[: :1]), # to make the type C instead of A
+    'infection_threshold' : ListType(nb.int32[: :1]), # to make the type C instead of A
     'percentage_threshold' : ListType(nb.float64[: :1]), # to make the type C instead of A
     'incidence_intervention_effect' : ListType(nb.float64[:, : :1]), # to make the type C instead of A
     'test_reference' : nb.float64,
@@ -114,7 +114,7 @@ class Config(object) :
         self.stratified_labels                  = 'land'
         self.incidence_labels                   = List([List(['land'])])
         self.incidence_threshold                = List([np.array( [2_000.0],        dtype=np.float64)])
-        self.infection_threshold                = List([np.array( [0],              dtype=np.int64)])
+        self.infection_threshold                = List([np.array( [0],              dtype=np.int32)])
         self.percentage_threshold               = List([np.array( [0.0],            dtype=np.float64)])
         self.incidence_intervention_effect      = List([np.array([[1.0, 0.9, 0.9]], dtype=np.float64)])
         self.test_reference                     = 0.017         # 1.7 % percent of the population is tested daily
@@ -142,6 +142,12 @@ class Config(object) :
         # Interventions / Lockdown
         self.do_interventions = True
         self.planned_restriction_types = np.arange(0, dtype=np.uint8) # Trick to yield empty list
+
+        self.Intervention_contact_matrices_name = List(['' for x in range(0)]) # Trick to yield empty list
+
+        self.Intervention_vaccination_schedule_name = 'None'
+        self.Intervention_vaccination_effect_delays = np.array([0.0], dtype=np.int16)
+        self.Intervention_vaccination_efficacies    = np.array([0.0], dtype=np.float32)
 
         # Season effects
         self.seasonal_list_name = 'None'
@@ -306,7 +312,16 @@ class My(object) :
             return False
 
     def agent_is_susceptible(self, agent) :
-        return (self.state[agent] == -1) and (self.vaccination_type[agent] <= 0)
+        return (self.state[agent] == -1) and (not self.agent_is_protected_by_vaccine[agent])
+
+    def agent_is_recovered(self, agent) :
+        return self.state[agent] == 8
+
+    def agent_is_vaccinated(self, agent) :
+        return not self.vaccination_type[agent] == 0
+
+    def agent_is_protected_by_vaccine(self, agent) :
+        return self.vaccination_type[agent] > 0
 
     def agent_is_infectious(self, agent) :
         return self.state[agent] in self.infectious_states
@@ -412,6 +427,7 @@ spec_intervention = {
     'R_true_list' : ListType(nb.float64),
     'R_true_list_brit' : ListType(nb.float64),
     # Testing
+    'daily_tests' : nb.int32,
     'day_found_infected' : nb.int32[:],
     'reason_for_test' : nb.int8[:],
     'result_of_test' : nb.int8[:],
@@ -425,7 +441,7 @@ spec_intervention = {
     'N_incidence_labels' : DictType(nb.types.unicode_type, nb.uint16),
     'incidence_labels' : ListType(nb.types.unicode_type),
     'incidence_threshold' : nb.float64[:],
-    'infection_threshold' : nb.int64[:],
+    'infection_threshold' : nb.int32[:],
     'percentage_threshold' : nb.float64[:],
     'incidence_intervention_effect' : nb.float64[:, :],
     'incidence_label_map' : DictType(nb.types.unicode_type, DictType(nb.uint16, nb.uint16)),
@@ -525,6 +541,7 @@ class Intervention(object) :
         self.R_true_list_brit                = List([0.0])
 
 
+        self.daily_tests                     = 0
         self.day_found_infected              = np.full(self.cfg_network.N_tot, fill_value=-10_000, dtype=np.int32)
         self.reason_for_test                 = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
         self.result_of_test                  = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)

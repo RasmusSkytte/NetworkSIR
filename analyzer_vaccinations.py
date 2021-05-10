@@ -13,9 +13,9 @@ from src.analysis.plotters import *
 
 
 if utils.is_local_computer():
-    f = 0.1
+    f = 0.01
     n_steps = 1
-    num_cores_max = 1
+    num_cores_max = 2
     N_runs = 1
 else :
     f = 0.5
@@ -78,34 +78,36 @@ if __name__ == '__main__':
         cfg = file_loaders.filename_to_cfg(filename)
 
         # Load
-        total_tests, _, _, _, _, vaccinations_by_age_group = load_from_file(filename, network_filename, start_date)
+        total_tests, _, _, _, _, vaccinations_by_age_group, _ = load_from_file(filename, network_filename, start_date)
 
         # Create the plots
         if cfg.start_date_offset == 4 :
-            d = 0
-            linestyle = '-'
+            color = plt.cm.tab10(0)
+        elif cfg.start_date_offset == 187 :
+            color = plt.cm.tab10(1)
         else :
-            d = 1
-            linestyle = '--'
+            color = plt.cm.tab10(2)
+
+
 
         if 5 in cfg.continuous_interventions_to_apply :
-            color = plt.cm.tab10(0 + d)
+            linestyle = '-'
             label = f'+ V (start = {cfg.start_date_offset})'
         else :
-            color = plt.cm.tab10(2 + d)
+            linestyle = '--'
             label = f'- V (start = {cfg.start_date_offset})'
 
-        plot_simulation_cases(total_tests, t_day, axes1, color=color, label=label)
+        plot_simulation_cases(total_tests, t_day, axes1, color=color, linestyle=linestyle, label=label)
 
-        plot_simulation_category(vaccinations_by_age_group, t_day, axes2, linestyle=linestyle)
+        #plot_simulation_category(vaccinations_by_age_group, t_day, axes2)
 
 
-    axes1.set_ylim(0, 4000)
+    axes1.set_ylim(0, 5000)
     axes1.set_ylabel('Daglige positive')
 
     set_date_xaxis(axes1, start_date, end_date)
 
-    fig1.legend()
+    fig1.legend(bbox_to_anchor=(0.95, 0.9), loc='upper left')
 
     fig1.savefig(fig_names[0])
 
@@ -113,18 +115,20 @@ if __name__ == '__main__':
 
 
 
-    for i in range(len(axes2)) :
+    # for i in range(len(axes2)) :
 
-        set_date_xaxis(axes2[i], start_date, end_date, interval=2)
+    #     set_date_xaxis(axes2[i], start_date, end_date, interval=2)
 
-        axes2[i].set_title(f'{10*i}-{10*(i+1)-1}', fontsize=24, pad=5)
+    #     axes2[i].set_title(f'{10*i}-{10*(i+1)-1}', fontsize=24, pad=5)
+    #     axes2[i].set_ylim(0, 1)
 
-        axes2[i].tick_params(axis='x', labelsize=24)
-        axes2[i].tick_params(axis='y', labelsize=24)
-
-    # Adjust the last title
-    axes2[-2].set_title(f'{10*(i-1)}+', fontsize=24, pad=5)
-    axes2[-1].set_title('all', fontsize=24, pad=5)
+    #     axes2[i].tick_params(axis='x', labelsize=24)
+    #     axes2[i].tick_params(axis='y', labelsize=24)
 
 
-    fig2.savefig(fig_names[1])
+    # # Adjust the last title
+    # axes2[-2].set_title(f'{10*(i-1)}+', fontsize=24, pad=5)
+    # axes2[-1].set_title('all', fontsize=24, pad=5)
+
+
+    # fig2.savefig(fig_names[1])

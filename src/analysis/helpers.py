@@ -47,17 +47,17 @@ def load_from_file(filename, network_filename, start_date) :
     ages = [np.sum(ages == age) for age in range(np.max(ages) + 1)]
 
     # Find all columns with "P_"
-    test_cols = [col for col in df.columns if 'P_l' in col]
+    positive_cols = [col for col in df.columns if 'P_l' in col]
 
     # Determine the output dimension
-    N_labels     = len(np.unique(np.array([int(col.split('_')[2]) for col in test_cols])))
-    N_variants   = len(np.unique(np.array([int(col.split('_')[4]) for col in test_cols])))
-    N_age_groups = len(np.unique(np.array([int(col.split('_')[6]) for col in test_cols])))
+    N_labels     = len(np.unique(np.array([int(col.split('_')[2]) for col in positive_cols])))
+    N_variants   = len(np.unique(np.array([int(col.split('_')[4]) for col in positive_cols])))
+    N_age_groups = len(np.unique(np.array([int(col.split('_')[6]) for col in positive_cols])))
 
     # Load into a multidimensional array
     stratified_infections = np.zeros((len(df), N_labels, N_variants, N_age_groups))
 
-    for col in test_cols :
+    for col in positive_cols :
         l, v, a = (int(col.split('_')[2]), int(col.split('_')[4]), int(col.split('_')[6]))
 
         stratified_infections[:, l, v, a] = df[col]
@@ -80,6 +80,16 @@ def load_from_file(filename, network_filename, start_date) :
         stratified_vaccinations[:, a] = df[col]
 
 
+     # Find all columns with "T_"
+    test_cols = [col for col in df.columns if 'T_' in col]
+    N_test_types = len(test_cols)
+
+    # Load into a multidimensional array
+    N_daily_tests = np.zeros((len(df), N_test_types))
+
+    for i, col in enumerate(test_cols) :
+        N_daily_tests[:, i] = df[col]
+
 
     # Convert to observables
     P_total      = np.sum(stratified_infections, axis=(1, 2, 3))
@@ -89,7 +99,7 @@ def load_from_file(filename, network_filename, start_date) :
 
     P_age_groups = np.sum(stratified_infections, axis=(1, 2))
 
-    P_labels    = np.sum(stratified_infections, axis=(2, 3))
+    P_labels    = np.sum(stratified_infections,  axis=(2, 3))
 
     V_age_groups = stratified_vaccinations
     V_age_groups = np.concatenate((V_age_groups, np.sum(V_age_groups, axis=1).reshape(-1, 1)), axis=1) # Add vaccine summery graph
@@ -105,7 +115,7 @@ def load_from_file(filename, network_filename, start_date) :
     # Get weekly values
     # Remove days if not starting on a monday
     if start_date.weekday() > 0 :
-        I = 7-start_date.weekday()
+        I = 7 - start_date.weekday()
     else :
         I = 0
 
@@ -117,7 +127,7 @@ def load_from_file(filename, network_filename, start_date) :
         f = P_uk_week / P_total_week
         f[np.isnan(f)] = -1
 
-    return P_total, f, P_age_groups, P_variants, P_labels, V_age_groups
+    return P_total, f, P_age_groups, P_variants, P_labels, V_age_groups, N_daily_tests
 
 
 def parse_time_ranges(start_date, end_date) :

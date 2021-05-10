@@ -66,6 +66,8 @@ for subset in subsets :
     fig5, axes5 = plt.subplots(nrows=3, ncols=3, sharex=True, sharey=True, figsize=(12, 12))
     axes5 = axes5.flatten()
 
+    fig6, axes6 = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True, figsize=(12, 12))
+    axes6 = axes6.flatten()
 
     print('Plotting the individual ABM simulations. Please wait', flush=True)
     for (filename, network_filename) in tqdm(
@@ -73,27 +75,30 @@ for subset in subsets :
         total=len(abm_files.filenames)) :
 
         # Load
-        (   total_tests,
-            f,
-            tests_per_age_group,
-            tests_by_variant,
-            tests_by_region,
-            vaccinations_by_age_group) = load_from_file(filename, network_filename, start_date)
+        ( positve_tests,
+          f,
+          positive_per_age_group,
+          positive_by_variant,
+          positive_by_region,
+          vaccinations_by_age_group,
+          daily_tests) = load_from_file(filename, network_filename, start_date)
 
         # Plot
-        h  = plot_simulation_cases_and_variant_fraction(total_tests, f, t_day, t_week, axes1)
-        h2 = plot_simulation_growth_rates(tests_by_variant, t_day, axes2)
-        h3 = plot_simulation_category(tests_per_age_group, t_day, axes3)
-        h4 = plot_simulation_category(tests_by_region, t_day, axes4)
+        h  = plot_simulation_cases_and_variant_fraction(positve_tests, f, t_day, t_week, axes1)
+        h2 = plot_simulation_growth_rates(positive_by_variant, t_day, axes2)
+        h3 = plot_simulation_category(positive_per_age_group, t_day, axes3)
+        h4 = plot_simulation_category(positive_by_region, t_day, axes4)
         h5 = plot_simulation_category(vaccinations_by_age_group, t_day, axes5)
+        h6 = plot_simulation_category(daily_tests, t_day, axes6)
 
         h.extend(h2)
         h.extend(h3)
         h.extend(h4)
         h.extend(h5)
+        h.extend(h6)
 
         # Evaluate
-        ll =  compute_loglikelihood((total_tests, t_day), (logK,         logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
+        ll =  compute_loglikelihood((positve_tests, t_day), (logK,         logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
         ll += compute_loglikelihood((f, t_week),          (fraction, fraction_sigma, t_fraction))
 
         # Store the plot handles and loglikelihoods
@@ -290,6 +295,7 @@ for subset in subsets :
     ##   ##   ##       ##    ##   ##  ##     ## ##  ####       ##
     ##    ##  ##       ##    ##   ##  ##     ## ##   ### ##    ##
     ##     ## ########  ######   ####  #######  ##    ##  ######
+
     raw_label_map = pd.read_csv('Data/label_map.csv')
 
 
@@ -299,7 +305,7 @@ for subset in subsets :
 
 
     N_stratifications = len(label_map['stratification_idx_to_stratification'])
-    t, incidence_per_label = file_loaders.load_incidence_per_label('2021_05_04', label_map['kommune_to_stratification_idx'], test_reference = cfg.test_reference, beta = cfg.testing_exponent)
+    t, _, _, cases_adjusted_per_label = file_loaders.load_label_data('newest', label_map['kommune_to_stratification_idx'], test_reference = cfg.test_reference, beta = cfg.testing_exponent)
 
 
     for i in range(len(axes4)) :
@@ -310,7 +316,7 @@ for subset in subsets :
                 ax.remove()
             break
 
-        axes4[i].scatter(t, incidence_per_label[:, i], color='k', s=10, zorder=100)
+        axes4[i].scatter(t, cases_adjusted_per_label[:, i], color='k', s=10, zorder=100)
 
         axes4[i].set_ylim(0, 500)
 
@@ -359,3 +365,18 @@ for subset in subsets :
 
 
     fig5.savefig(os.path.splitext(fig_name)[0] + '_vaccinations.png')
+
+
+
+
+    ######## ########  ######  ######## #### ##    ##  ######
+       ##    ##       ##    ##    ##     ##  ###   ## ##    ##
+       ##    ##       ##          ##     ##  ####  ## ##
+       ##    ######    ######     ##     ##  ## ## ## ##   ####
+       ##    ##             ##    ##     ##  ##  #### ##    ##
+       ##    ##       ##    ##    ##     ##  ##   ### ##    ##
+       ##    ########  ######     ##    #### ##    ##  ######¨
+
+    t, tests_per_label, _, _ = file_loaders.load_label_data('newest', label_map['kommune_to_stratification_idx'], test_reference = cfg.test_reference, beta = cfg.testing_exponent)
+
+    fig6.savefig(os.path.splitext(fig_name)[0] + '_testing.png')

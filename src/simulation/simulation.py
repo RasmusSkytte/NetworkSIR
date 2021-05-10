@@ -341,7 +341,7 @@ class Simulation :
 
         # Load the projected vaccination schedule
         # TODO: This should properably be done at cfg generation for consistent hashes
-        vaccinations_per_age_group, vaccination_schedule = file_loaders.load_vaccination_schedule(self.cfg)
+        vaccinations_per_age_group, vaccination_schedule = file_loaders.load_vaccination_schedule(self.my, self.cfg)
 
         # Load the restriction contact matrices
         # TODO: This should properably be done at cfg generation for consistent hashes

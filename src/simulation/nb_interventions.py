@@ -67,7 +67,7 @@ def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=F
 
                 # Determine which agents can be vaccinated
                 possible_agents_to_vaccinate = np.array( [ agent for agent in np.arange(my.cfg_network.N_tot, dtype=np.uint32)
-                                                    if my.age[agent] == age_group and not my.agent_is_vaccinated(agent)], dtype=np.uint32)
+                                                    if my.age[agent] == age_group and my.agent_is_not_vaccinated(agent)])
 
                 if len(possible_agents_to_vaccinate) > 0 :
 
@@ -80,16 +80,13 @@ def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=F
                     # Implement the vaccination
                     for agent in agents :
 
-                        # pick agent if it is susceptible (in S state)
-                        if my.agent_is_susceptible(agent) or my.agent_is_recovered(agent) :
+                        # "vaccinate agent"
+                        if np.random.rand() < my.cfg.Intervention_vaccination_efficacies[i] :
+                            multiply_incoming_rates_of_agent(my, g, agent, np.array([0.0, 0.0, 0.0]))  # Reduce rates to zero
+                            my.vaccination_type[agent] =   i+1
 
-                            # "vaccinate agent"
-                            if np.random.rand() < my.cfg.Intervention_vaccination_efficacies[i] :
-                                multiply_incoming_rates_of_agent(my, g, agent, np.array([0.0, 0.0, 0.0]))  # Reduce rates to zero
-                                my.vaccination_type[agent] = i
-
-                            else :
-                                my.vaccination_type[agent] = -i
+                        else :
+                            my.vaccination_type[agent] = -(i+1)
 
                         # Update counter
                         stratified_vaccination_counts[my.age[agent]] += 1
@@ -214,19 +211,25 @@ def reset_rates_of_connection(my, g, agent, ith_contact, intervention, two_way=T
     if intervention.isolated[agent] or intervention.isolated[contact] :
         infection_rate *= intervention.cfg.isolation_rate_reduction[my.connection_type[agent][ith_contact]]
 
-    # Reset the g.rates if agent is not susceptible or recovered
-    if my.agent_is_susceptible(contact) :
-        target_rate = infection_rate
-    else :
-        target_rate = 0
+    # Account for vaccinations
+    if my.agent_is_protected_by_vaccine(contact) :
+        infection_rate *= 0
 
-    # Compute the new rate
-    rate = target_rate - g.rates[agent][ith_contact]
-    g.rates[agent][ith_contact] = target_rate
+    # Store the current rate
+    old_rate = g.rates[agent][ith_contact]
 
+    # Reset the rate
+    g.rates[agent][ith_contact] = infection_rate
+
+    # Update the gillespie rates
     if my.agent_is_connected(agent, ith_contact) and my.agent_is_infectious(agent) and my.agent_is_susceptible(contact) :
-        g.update_rates(my, +rate, agent)
 
+        # Reset the g.rates if agent is not susceptible or recovered
+        rate = infection_rate - old_rate
+        g.update_rates(my, rate, agent)
+
+
+    # Update the connection the other way
     if two_way :
         ith_contact_of_contact, _ = find_reverse_connection(my, agent, ith_contact)
         reset_rates_of_connection(my, g, contact, ith_contact_of_contact, intervention, two_way=False)
@@ -254,7 +257,7 @@ def multiply_incoming_rates_of_agent(my, g, agent, rate_multiplication) :
         g.rates[contact][ith_contact_of_contact] = target_rate
 
         # Updates to gillespie sums
-        if my.agent_is_infectious(contact) and my.agent_is_susceptible(agent):
+        if my.agent_is_connected(agent, ith_contact) and my.agent_is_infectious(contact) and my.agent_is_susceptible(agent):
             g.update_rates(my, rate, contact)
 
 @njit
@@ -270,7 +273,7 @@ def multiply_outgoing_rates_of_agent(my, g, agent, rate_multiplication) :
         g.rates[agent][ith_contact] = target_rate
 
         # Updates to gillespie sums
-        if my.agent_is_infectious(agent) and my.agent_is_susceptible(contact):
+        if my.agent_is_connected(agent, ith_contact) and my.agent_is_infectious(agent) and my.agent_is_susceptible(contact):
             g.update_rates(my, rate, agent)
 
 @njit

@@ -117,15 +117,10 @@ for network in tqdm(data.iter_network_files(), total=len(data.networks)) :
 
 
     # How does rho translate to distance?
-    #print(conection_status[0])
-    #print(conection_status[0] == True)
 
     connections = utils.NestedArray.from_dict(my['connections']).to_nested_numba_lists()
 
     coordinates = my['coordinates']
-
-    #distances = []
-    #for agent in range(len(connections)) :
 
     agent_distances = lambda agent : [utils.haversine_scipy(coordinates[agent], coordinates[contact]) for contact in np.array(connections[agent])]
 

@@ -2,7 +2,7 @@ N_tot: 5_800_000
 rho: 0.1
 
 N_init: 20_000
-beta: 0.0085
+beta: 0.01
 
 R_guess: 0.75
 
@@ -41,9 +41,9 @@ matrix_label_frac:       [[0.0]]  # Landsniveau
 initial_infected_label_weight : [[1.0]]  # Landsniveau
 
 
-start_date_offset: 2020-12-28 # Start date for vaccinations
-start_date_offset: [2019-12-28, 2020-12-28] # Start date for vaccinations
-Intervention_vaccination_schedule_name : 2021_apr_26
+#start_date_offset: 2019-12-28 # Start date for vaccinations
+start_date_offset: [2020-06-28, 2020-09-28, 2020-12-28] # Start date for vaccinations
+Intervention_vaccination_schedule_name : 2021_may_06
 Intervention_vaccination_effect_delays : [[ 21,  28]]
 Intervention_vaccination_efficacies :    [[0.9, 0.6]]
 

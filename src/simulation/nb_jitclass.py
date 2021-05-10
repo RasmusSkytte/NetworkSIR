@@ -312,13 +312,13 @@ class My(object) :
             return False
 
     def agent_is_susceptible(self, agent) :
-        return (self.state[agent] == -1) and (not self.agent_is_protected_by_vaccine[agent])
+        return (self.state[agent] == -1) and (not self.agent_is_protected_by_vaccine(agent))
 
     def agent_is_recovered(self, agent) :
         return self.state[agent] == 8
 
-    def agent_is_vaccinated(self, agent) :
-        return not self.vaccination_type[agent] == 0
+    def agent_is_not_vaccinated(self, agent) :
+        return self.vaccination_type[agent] == 0
 
     def agent_is_protected_by_vaccine(self, agent) :
         return self.vaccination_type[agent] > 0

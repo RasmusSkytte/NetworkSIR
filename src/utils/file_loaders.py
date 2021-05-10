@@ -454,7 +454,7 @@ def load_contact_matrix_set(matrix_path) :
 
 
 
-def load_vaccination_schedule(cfg) :
+def load_vaccination_schedule(my, cfg) :
     """ Loads and parses the vaccination schedule corresponding to the chosen scenario.
         This includes scaling the number of infections and adjusting the effective start dates
         Parameters :
@@ -471,11 +471,14 @@ def load_vaccination_schedule(cfg) :
     utils.test_length(vaccinations_per_age_group, cfg.Intervention_vaccination_effect_delays, "Loaded vaccination schedules does not match with the length of vaccination_effect_delays")
     utils.test_length(vaccinations_per_age_group[0][0], cfg.network.work_matrix, "Number of age groups in vaccination schedule does not match the number of age groups in contact matrices")
 
+    # Get the age distribution in the simulaiton
+    age_distribution = np.array([np.sum(my.age==a) for a in np.unique(my.age)])
+
     # Scale and adjust the vaccination schedules
     for i in range(len(vaccinations_per_age_group)) :
 
-        # Scale the number of vaccines
-        np.multiply(vaccinations_per_age_group[i], cfg.network.N_tot / 5_800_000, out=vaccinations_per_age_group[i], casting='unsafe')
+        # Scale the number of vaccines to the realized age distribution
+        vaccinations_per_age_group[i] = np.round(vaccinations_per_age_group[i] * age_distribution).astype(np.int64)
 
         # Determine the timing of effective vaccines
         vaccination_schedule[i] = np.array([0, (vaccination_schedule[i][-1] - vaccination_schedule[i][0]).days]) + cfg.Intervention_vaccination_effect_delays[i] - cfg.start_date_offset
@@ -725,7 +728,7 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
     return age_distribution_infected, age_distribution_immunized
 
 
-def load_incidence_per_label(initial_distribution_file, label_map, test_reference = 0.017, beta = 0.55) :
+def load_label_data(initial_distribution_file, label_map, test_reference = 0.017, beta = 0.55) :
 
     N_labels = len(label_map.unique())
 
@@ -754,6 +757,8 @@ def load_incidence_per_label(initial_distribution_file, label_map, test_referenc
     idx_c = np.isin(df_cases.index, intersection)
     idx_t = np.isin(df_tests.index, intersection)
 
+    t = pd.to_datetime(intersection)
+
     values_c = values_c[idx_c, :]
     values_t = values_t[idx_t, :]
 
@@ -769,13 +774,12 @@ def load_incidence_per_label(initial_distribution_file, label_map, test_referenc
 
     # Divide and correct for nans
     with np.errstate(divide='ignore', invalid='ignore') :
-        label_adjustment_factor = (test_reference * population_per_label / tests_per_label) ** beta
-        incidence_per_label     = cases_per_label * label_adjustment_factor
-        incidence_per_label[tests_per_label == 0] = 0
+        label_adjustment_factor  = (test_reference * population_per_label / tests_per_label) ** beta
+        cases_adjusted_per_label = cases_per_label * label_adjustment_factor
+        cases_adjusted_per_label[tests_per_label == 0] = 0
 
-    t = pd.to_datetime(intersection)
+    return t, tests_per_label, cases_per_label, cases_adjusted_per_label
 
-    return t, incidence_per_label
 
 def load_kommune_infection_distribution(initial_distribution_file, label_map, test_reference = 0.017, beta = 0.55) :
 
@@ -788,14 +792,14 @@ def load_kommune_infection_distribution(initial_distribution_file, label_map, te
     else :
 
         # Load the incidence per kommune
-        _, incidence_per_kommune = load_incidence_per_label(initial_distribution_file, label_map['kommune_to_kommune_idx'], test_reference = test_reference, beta = beta)
+        _, _, _, cases_adjusted_per_kommune = load_label_data(initial_distribution_file, label_map['kommune_to_kommune_idx'], test_reference = test_reference, beta = beta)
 
         # Swap arrays for the last 7 days
-        I = incidence_per_kommune.shape[0] - 7
+        I = cases_adjusted_per_kommune.shape[0] - 7
 
         # Fill the arrays
-        immunized_per_kommune = np.sum(incidence_per_kommune[:I, :], axis=0)
-        infected_per_kommune  = np.sum(incidence_per_kommune[I:, :], axis=0)
+        immunized_per_kommune = np.sum(cases_adjusted_per_kommune[:I, :], axis=0)
+        infected_per_kommune  = np.sum(cases_adjusted_per_kommune[I:, :], axis=0)
 
     return infected_per_kommune, immunized_per_kommune
 

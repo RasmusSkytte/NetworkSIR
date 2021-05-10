@@ -500,9 +500,10 @@ def run_simulation(
     if intervention.apply_interventions :
         apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
 
-        if my.cfg.start_date_offset > 0 :
-            for d in range(-my.cfg.start_date_offset, 1) :
-                vaccinate(my, g, intervention, d, stratified_vaccination_counts, verbose=verbose)
+        if intervention.apply_vaccinations :
+            if my.cfg.start_date_offset > 0 :
+                for d in range(-my.cfg.start_date_offset, 0) :
+                    vaccinate(my, g, intervention, d, stratified_vaccination_counts, verbose=verbose)
 
     # Run the simulation ################################
     continue_run = True
@@ -726,15 +727,18 @@ def run_simulation(
         s_counter[s] += 1
 
     if verbose :
-        print('Simulation step_number, ', step_number)
-        print('s_counter', s_counter)
-        print('Where', where_infections_happened_counter)
+        print('Simulation step_number : ', step_number)
+        print('s_counter : ', s_counter)
+        print('Where : ', where_infections_happened_counter)
         f = 5_800_000 / my.cfg_network.N_tot
-        print('daily_tests', int(f * intervention.test_counter.sum() / day))
-        print('daily_test_counter', [int(f * tests / day) for tests in intervention.test_counter])
+        print('daily_tests : ', int(f * intervention.test_counter.sum() / day))
+        print('daily_test_counter : ', [int(f * tests / day) for tests in intervention.test_counter])
         # Smitteopspringen kontakter ca. 1250 + 600 = 1850 personer pr dag.
-        print('positive_test_counter', intervention.positive_test_counter)
-        print('n_found', np.sum(np.array([1 for day_found in intervention.day_found_infected if day_found>=0])))
+        print('positive_test_counter : ', intervention.positive_test_counter)
+        print('n_found_infected : ', np.sum(np.array([1 for day_found in intervention.day_found_infected if day_found>=0])))
+        print('fraction_vaccinated : ',        np.round(np.sum(np.array([1 for vaccination_type in my.vaccination_type if vaccination_type > 0]))  / my.cfg_network.N_tot, 2) )
+        print('fraction_failed_vaccinated : ', np.round(np.sum(np.array([1 for vaccination_type in my.vaccination_type if vaccination_type < 0]))  / my.cfg_network.N_tot, 2) )
+        print('fraction_not_vaccinated : ',    np.round(np.sum(np.array([1 for vaccination_type in my.vaccination_type if vaccination_type == 0])) / my.cfg_network.N_tot, 2) )
         #label_contacts, label_infected, label_people = calculate_contact_distribution_label(my, intervention)
         #print(list(label_contacts))
         #print(list(label_infected))

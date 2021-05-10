@@ -1813,17 +1813,6 @@ def nb_load_coordinates_Nordjylland(all_coordinates, N_tot=150_000, verbose=Fals
     return coordinates
 
 
-# def load_coordinates_Nordjylland(N_tot=150_000, verbose=False) :
-#     all_coordinates = np.load("../Data/GPS_coordinates.npy")
-#     coordinates = nb_load_coordinates_Nordjylland(all_coordinates, N_tot, verbose)
-#     return np.array(coordinates)
-
-
-
-
-#import geopandas as gpd  # conda install -c conda-forge geopandas
-
-# Shapefiles
 def load_kommune_shapefiles(shapefile_size, verbose=False) :
 
     shp_file = {}
@@ -2095,9 +2084,14 @@ def load_params(filename, f) :
 
 
     if 'start_date_offset' in params :
-        start_dates = []
-        for offset in params['start_date_offset'] :
-            start_dates.append((start_date - offset).days)
+
+        if isinstance(params['start_date_offset'], list) :
+            start_dates = []
+            for offset in params['start_date_offset'] :
+                start_dates.append((start_date - offset).days)
+
+        else :
+            start_dates = (start_date - params['start_date_offset']).days
 
         params['start_date_offset'] = start_dates
 

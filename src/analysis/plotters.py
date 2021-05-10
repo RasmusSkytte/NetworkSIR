@@ -11,10 +11,10 @@ import matplotlib.dates  as mdates
 
 from src.utils import utils
 
-def plot_simulation_cases(total_tests, t_day, axes, color='k', label='') :
+def plot_simulation_cases(total_tests, t_day, axes, color='k', linestyle='-', label='') :
 
     # Create the plots
-    return axes.plot(t_day[:len(total_tests)], total_tests, lw=4, c=color, label=label)[0]
+    return axes.plot(t_day[:len(total_tests)], total_tests, lw=4, linestyle=linestyle, c=color, label=label)[0]
 
 
 def plot_variant_fraction(f, t_week, axes, color='k', label='') :

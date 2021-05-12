@@ -760,7 +760,7 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
         exclude.append("days_looking_back")
         exclude.append("masking_rate_reduction")
         exclude.append("lockdown_rate_reduction")
-        exclude.append("isolation_rate_reduction")
+        exclude.append("isolation_rate_multiplier")
         exclude.append("tracking_rates")
         exclude.append("tracking_delay")
 
@@ -801,7 +801,7 @@ def dict_to_title(d, N=None, exclude="hash", in_two_line=True, remove_rates=True
     if remove_rates :
         exclude.append("masking_rate_reduction")
         exclude.append("lockdown_rate_reduction")
-        exclude.append("isolation_rate_reduction")
+        exclude.append("isolation_rate_multiplier")
         exclude.append("tracking_rates")
 
     title = "$"

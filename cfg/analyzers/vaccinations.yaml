@@ -2,7 +2,7 @@ N_tot: 5_800_000
 rho: 0.1
 
 N_init: 20_000
-beta: 0.01
+beta: 0.008
 
 R_guess: 0.75
 
@@ -16,7 +16,7 @@ lambda_E: 4 / 2.5
 lambda_I: 4 / 4.5 # Higher due to isolation
 
 start_date : 2021-01-01
-end_date : 2021-05-01
+end_date : 2021-07-01
 
 
 stratified_labels: land  # Output granularity
@@ -30,8 +30,6 @@ contact_matrices_name: basis  # Target activity
 
 # Set label information:
 # land, region, landsdel, kommune, sogne
-stratified_labels: land  # Output granularity
-
 incidence_interventions_to_apply: [[0]] #  Disable
 
 matrix_labels:            land  # Matrix restriction granularity

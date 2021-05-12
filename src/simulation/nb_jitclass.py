@@ -1,7 +1,8 @@
+
 import numpy as np
 import numba as nb
 from numba.experimental import jitclass
-from numba.typed import List, Dict
+from numba.typed import List
 from numba.types import ListType, DictType
 
 from src.utils import utils
@@ -39,7 +40,7 @@ spec_cfg = {
     'simulated_tests' : nb.boolean,
     'incidence_labels' : ListType(ListType(nb.types.unicode_type)),
     'incidence_threshold' : ListType(nb.float64[: :1]), # to make the type C instead of A
-    'infection_threshold' : ListType(nb.int32[: :1]), # to make the type C instead of A
+    'infection_threshold' : ListType(nb.int64[: :1]), # to make the type C instead of A
     'percentage_threshold' : ListType(nb.float64[: :1]), # to make the type C instead of A
     'incidence_intervention_effect' : ListType(nb.float64[:, : :1]), # to make the type C instead of A
     'test_reference' : nb.float64,
@@ -78,7 +79,7 @@ spec_cfg = {
     'testing_penetration' : nb.float32[:],
     #'masking_rate_reduction' : nb.float64[ :, : :1],  # to make the type C instead if A
     #'lockdown_rate_reduction' : nb.float64[ :, : :1],  # to make the type C instead if A
-    'isolation_rate_reduction' : nb.float64[:],
+    'isolation_rate_multiplier' : nb.float64[:],
     'tracing_rates' : nb.float64[:],
     'tracing_delay' : nb.int64,
     'intervention_removal_delay_in_clicks' : nb.int32,
@@ -114,7 +115,7 @@ class Config(object) :
         self.stratified_labels                  = 'land'
         self.incidence_labels                   = List([List(['land'])])
         self.incidence_threshold                = List([np.array( [2_000.0],        dtype=np.float64)])
-        self.infection_threshold                = List([np.array( [0],              dtype=np.int32)])
+        self.infection_threshold                = List([np.array( [0],              dtype=np.int64)])
         self.percentage_threshold               = List([np.array( [0.0],            dtype=np.float64)])
         self.incidence_intervention_effect      = List([np.array([[1.0, 0.9, 0.9]], dtype=np.float64)])
         self.test_reference                     = 0.017         # 1.7 % percent of the population is tested daily
@@ -261,6 +262,7 @@ spec_my = {
     'infectious_states' : ListType(nb.int64),
     'corona_type' : nb.uint8[:],
     'vaccination_type' : nb.int8[:],
+    'testing_probability' : nb.float32[:],
     'restricted_status' : nb.uint8[:],
     'cfg' : nb_cfg_type,
     'cfg_network' : nb_cfg_network_type,
@@ -287,6 +289,7 @@ class My(object) :
         self.infectious_states = List([4, 5, 6, 7])
         self.corona_type = np.zeros(N_tot, dtype=np.uint8)
         self.vaccination_type = np.zeros(N_tot, dtype=np.uint8)
+        self.testing_probability = np.zeros(N_tot, dtype=nb.float32)
         self.restricted_status = np.zeros(N_tot, dtype=np.uint8)
         self.cfg = nb_cfg
         self.cfg_network = nb_cfg_network
@@ -379,7 +382,7 @@ class Gillespie(object) :
         self.total_sum_of_state_changes = 0.0
         self.cumulative_sum = 0.0
         self.cumulative_sum_of_state_changes = np.zeros(N_states, dtype=np.float64)
-        self.cumulative_sum_infection_rates = np.zeros(N_states, dtype=np.float64)
+        self.cumulative_sum_infection_rates  = np.zeros(N_states, dtype=np.float64)
         self.seasonal_model = seasonal_model
         self.seasonal_strength = seasonal_strength
         self._initialize_rates(my)
@@ -441,7 +444,7 @@ spec_intervention = {
     'N_incidence_labels' : DictType(nb.types.unicode_type, nb.uint16),
     'incidence_labels' : ListType(nb.types.unicode_type),
     'incidence_threshold' : nb.float64[:],
-    'infection_threshold' : nb.int32[:],
+    'infection_threshold' : nb.int64[:],
     'percentage_threshold' : nb.float64[:],
     'incidence_intervention_effect' : nb.float64[:, :],
     'incidence_label_map' : DictType(nb.types.unicode_type, DictType(nb.uint16, nb.uint16)),
@@ -547,9 +550,9 @@ class Intervention(object) :
         self.result_of_test                  = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
         self.positive_test_counter           = np.zeros(3, dtype=np.uint32)
         self.test_counter                    = np.zeros(3, dtype=np.uint32)
-        self.clicks_when_tested              = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.clicks_when_tested_result       = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
-        self.clicks_when_isolated            = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int32)
+        self.clicks_when_tested              = np.full(self.cfg_network.N_tot, fill_value=-10_000, dtype=np.int32)
+        self.clicks_when_tested_result       = np.full(self.cfg_network.N_tot, fill_value=-10_000, dtype=np.int32)
+        self.clicks_when_isolated            = np.full(self.cfg_network.N_tot, fill_value=-10_000, dtype=np.int32)
         self.isolated                        = np.full(self.cfg_network.N_tot, fill_value=False, dtype=nb.boolean)
 
 
@@ -626,3 +629,10 @@ class Intervention(object) :
     def start_interventions_by_incidence(self) :
         return 0 not in self.cfg.incidence_interventions_to_apply
 
+    @property
+    def apply_lockdowns(self) :
+        return 1 in self.cfg.incidence_interventions_to_apply
+
+    @property
+    def apply_increased_testing(self) :
+        return 2 in self.cfg.incidence_interventions_to_apply

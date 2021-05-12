@@ -13,9 +13,9 @@ from src.analysis.plotters import *
 
 
 if utils.is_local_computer():
-    f = 0.01
+    f = 0.1
     n_steps = 1
-    num_cores_max = 2
+    num_cores_max = 3
     N_runs = 1
 else :
     f = 0.5
@@ -102,7 +102,7 @@ if __name__ == '__main__':
         #plot_simulation_category(vaccinations_by_age_group, t_day, axes2)
 
 
-    axes1.set_ylim(0, 5000)
+    axes1.set_ylim(0, 8000)
     axes1.set_ylabel('Daglige positive')
 
     set_date_xaxis(axes1, start_date, end_date)

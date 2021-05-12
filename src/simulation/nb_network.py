@@ -553,6 +553,7 @@ def generate_one_household(N_people_in_house, agent, agent0, do_continue, N_tot,
 
         my.age[agent] = age_index # just use age index as substitute for age
         my.sogn[agent] = np.uint16(sogn)
+        my.testing_probability[agent] = my.cfg.testing_penetration[age_index]
         counter_ages[age_index] += 1
         agents_in_age_group[age_index].append(np.uint32(agent))
 

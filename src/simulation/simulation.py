@@ -457,6 +457,7 @@ class Simulation :
         age_distribution_infected  /= age_distribution_infected.sum()
         age_distribution_immunized /= age_distribution_immunized.sum()
 
+
         # Set the probability to choose agents
         if self.cfg.initialize_at_kommune_level :
 
@@ -572,7 +573,6 @@ class Simulation :
             self.intervention,
             self.nts
         )
-
 
         if check_distributions:
             ages = [self.my.age[agent] for agent in possible_agents if self.my.agent_is_infectious(agent)]

@@ -7,7 +7,7 @@ from numba.typed import List
 from src.utils import utils
 
 from src.simulation.nb_interventions   import testing_intervention, vaccinate, apply_daily_interventions
-from src.simulation.nb_interventions   import apply_symptom_testing, apply_random_testing
+from src.simulation.nb_interventions   import apply_symptom_testing
 from src.simulation.nb_interventions   import calculate_R_True, calculate_R_True_brit, calculate_population_freedom_impact
 from src.simulation.nb_events          import add_daily_events
 from src.simulation.nb_helpers         import nb_random_choice, single_random_choice
@@ -267,23 +267,23 @@ def initialize_states(
             g.total_sum_of_state_changes += g.transition_rates[new_state]
             g.cumulative_sum_of_state_changes[new_state :] += g.transition_rates[new_state]
 
-            if intervention.apply_interventions and intervention.apply_symptom_testing :
+            # if intervention.apply_interventions and intervention.apply_symptom_testing :
 
-                for i in range(4, new_state) :
+            #     for i in range(4, new_state) :
 
-                    apply_symptom_testing(my, intervention, agent, i, 0)
+            #         apply_symptom_testing(my, intervention, agent, i, 0)
 
-                    if intervention.result_of_test[agent] == 1 :
+            #         if intervention.result_of_test[agent] == 1 :
 
-                        # Randomize the time of the test
-                        day_when_symptom_testing = np.random.rand() * (i - new_state) / (my.cfg.lambda_I)
-                        click_when_symptom_testing = np.int32(day_when_symptom_testing / nts)
+            #             # Randomize the time of the test
+            #             day_when_symptom_testing = np.random.rand() * (i - new_state) / (my.cfg.lambda_I)
+            #             click_when_symptom_testing = np.int32(day_when_symptom_testing / nts)
 
-                        intervention.clicks_when_tested[agent]   = click_when_symptom_testing + intervention.cfg.test_delay_in_clicks[0]
-                        intervention.clicks_when_isolated[agent] = click_when_symptom_testing
+            #             intervention.clicks_when_tested[agent]   = click_when_symptom_testing + intervention.cfg.test_delay_in_clicks[0]
+            #             intervention.clicks_when_isolated[agent] = click_when_symptom_testing
 
-                        # Break the symptom testing loop
-                        break
+            #             # Break the symptom testing loop
+            #             break
 
 
             # Moves into a infectious State
@@ -536,8 +536,6 @@ def run_simulation(
             agents_in_state[state_after].append(agent)
             agents_in_state[state_now].remove(agent)
 
-            my.state[agent] += 1
-
             state_total_counts[state_now]   -= 1
             state_total_counts[state_after] += 1
 
@@ -551,13 +549,32 @@ def run_simulation(
 
             g.cumulative_sum_infection_rates[state_now] -= g.sum_of_rates[agent]
 
+            # Update the state
+            my.state[agent] = state_after
+
             accept = True
 
+            # Allow for symptom testing
             if intervention.apply_interventions and intervention.apply_symptom_testing and day >= 0 :
                 apply_symptom_testing(my, intervention, agent, my.state[agent], click)
 
+            # If this moves to Recovered state
+            if state_after == g.N_states - 1 :
+
+                for ith_contact, contact in enumerate(my.connections[agent]) :
+
+                    # update rates if contact is susceptible
+                    if my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact) :
+
+                        rate = g.rates[agent][ith_contact]
+                        g.update_rates(my, -rate, agent)
+
+                # Update counters
+                stratified_infection_counts[stratified_label_map[my.sogn[agent]]][my.corona_type[agent]][my.age[agent]] -= 1
+
+
             # Moves TO infectious State from non-infectious
-            if my.state[agent] == g.N_infectious_states :
+            if state_after == g.N_infectious_states :
 
                 for ith_contact, contact in enumerate(my.connections[agent]) :
 
@@ -573,16 +590,6 @@ def run_simulation(
                 # Update the counters
                 stratified_infection_counts[stratified_label_map[my.sogn[agent]]][my.corona_type[agent]][my.age[agent]] += 1
 
-            # If this moves to Recovered state
-            if my.state[agent] == g.N_states - 1 :
-                for ith_contact, contact in enumerate(my.connections[agent]) :
-                    # update rates if contact is susceptible
-                    if my.agent_is_connected(agent, ith_contact) and my.agent_is_susceptible(contact) :
-                        rate = g.rates[agent][ith_contact]
-                        g.update_rates(my, -rate, agent)
-
-                # Update counters
-                stratified_infection_counts[stratified_label_map[my.sogn[agent]]][my.corona_type[agent]][my.age[agent]] -= 1
 
         #######/ Here we infect new states
         else :
@@ -683,7 +690,6 @@ def run_simulation(
                     print('R_true_list_brit : ',  np.round(intervention.R_true_list_brit[-1],    3))
                     print('Season multiplier : ', np.round(g.seasonality(day),                   2))
 
-
                 # Advance day
                 day += 1
                 daily_counter = 0
@@ -732,26 +738,12 @@ def run_simulation(
         print('Where : ', where_infections_happened_counter)
         f = 5_800_000 / my.cfg_network.N_tot
         print('daily_tests : ', int(f * intervention.test_counter.sum() / day))
-        print('daily_test_counter : ', [int(f * tests / day) for tests in intervention.test_counter])
+        print('daily_test_counter : ', [int(f * T / day) for T in intervention.test_counter])
         # Smitteopspringen kontakter ca. 1250 + 600 = 1850 personer pr dag.
-        print('positive_test_counter : ', intervention.positive_test_counter)
-        print('n_found_infected : ', np.sum(np.array([1 for day_found in intervention.day_found_infected if day_found>=0])))
+        print('positive_test_counter : ', [int(f * P / day) for P in intervention.positive_test_counter])
+        print('n_found_infected : ', np.sum(np.array([1 for day_found in intervention.day_found_infected if day_found > -10_000])))
         print('fraction_vaccinated : ',        np.round(np.sum(np.array([1 for vaccination_type in my.vaccination_type if vaccination_type > 0]))  / my.cfg_network.N_tot, 2) )
         print('fraction_failed_vaccinated : ', np.round(np.sum(np.array([1 for vaccination_type in my.vaccination_type if vaccination_type < 0]))  / my.cfg_network.N_tot, 2) )
         print('fraction_not_vaccinated : ',    np.round(np.sum(np.array([1 for vaccination_type in my.vaccination_type if vaccination_type == 0])) / my.cfg_network.N_tot, 2) )
-        #label_contacts, label_infected, label_people = calculate_contact_distribution_label(my, intervention)
-        #print(list(label_contacts))
-        #print(list(label_infected))
-        #print(list(label_people))
-
-        # frac_inf = np.zeros((2,200))
-        # for agent in range(my.cfg_network.N_tot) :
-        #     n_con = my.number_of_contacts[agent]
-        #     frac_inf[1,n_con] +=1
-        #     if my.state[agent]>=0 and my.state[agent] < 8 :
-        #         frac_inf[0,n_con] +=1
-        #print(frac_inf[0, :]/frac_inf[1, :])
-        # print("N_daily_tests", intervention.N_daily_tests)
-        # print("N_positive_tested", N_positive_tested)
 
     return out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_daily_tests, out_my_state, intervention

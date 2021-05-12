@@ -67,7 +67,6 @@ for subset in subsets :
     axes5 = axes5.flatten()
 
     fig6, axes6 = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True, figsize=(12, 12))
-    axes6 = axes6.flatten()
 
     print('Plotting the individual ABM simulations. Please wait', flush=True)
     for (filename, network_filename) in tqdm(
@@ -89,7 +88,7 @@ for subset in subsets :
         h3 = plot_simulation_category(positive_per_age_group, t_day, axes3)
         h4 = plot_simulation_category(positive_by_region, t_day, axes4)
         h5 = plot_simulation_category(vaccinations_by_age_group, t_day, axes5)
-        h6 = plot_simulation_category(daily_tests, t_day, axes6)
+        h6 = plot_simulation_category(daily_tests, t_day, [axes6])
 
         h.extend(h2)
         h.extend(h3)

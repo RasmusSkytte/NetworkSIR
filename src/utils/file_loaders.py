@@ -908,7 +908,6 @@ def load_My_from_dict(d_in, cfg):
 
 
 def pandas_load_file(filename) :
-    # df_raw = pd.read_csv(file)  # .convert_dtypes()
 
     with h5py.File(filename, "r") as f :
         df_raw = pd.DataFrame(f["df"][()])

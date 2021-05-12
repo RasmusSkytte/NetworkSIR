@@ -2,7 +2,7 @@ N_tot: 5_800_000
 rho: 0.1
 
 N_init: 20_000
-beta: 0.0085
+beta: 0.008
 
 R_guess: 0.75
 
@@ -16,7 +16,7 @@ lambda_E: 4 / 2.5
 lambda_I: 4 / 4.5 # Higher due to isolation
 
 start_date : 2021-01-01
-end_date : 2021-05-01
+end_date : 2021-07-01
 
 
 stratified_labels: land  # Output granularity
@@ -30,14 +30,15 @@ contact_matrices_name: basis  # Target activity
 
 # Set label information:
 # land, region, landsdel, kommune, sogne
-stratified_labels: land  # Output granularity
 
 incidence_labels:               [[[ land            ]]] # Incidence restriction granularity
 infection_threshold :           [[[ 0               ]]]
 percentage_threshold :          [[[ 0.0             ]]]
 incidence_intervention_effect : [[[ [0.1, 0.1, 0.1] ]]]
 
-incidence_threshold :           [[[ 1000000.0 ]], [[ 10.0 ]]]
+incidence_threshold :           [[[ 30.0 ]], [[ 20.0 ]], [[ 10.0 ]]]
+
+incidence_interventions_to_apply: [[1, 2]]
 
 matrix_labels:            land  # Matrix restriction granularity
 matrix_label_multiplier: [[1.0]]  # Landsniveau
@@ -51,4 +52,4 @@ Intervention_vaccination_schedule_name : 2021_apr_26
 Intervention_vaccination_effect_delays : [[ 21,  28]]
 Intervention_vaccination_efficacies :    [[0.9, 0.6]]
 
-continuous_interventions_to_apply: [[1, 2, 3, 4, 5], [1, 2, 3, 4]]
+continuous_interventions_to_apply: [[1, 2, 3, 4]]

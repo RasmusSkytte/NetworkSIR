@@ -13,9 +13,9 @@ from src.analysis.plotters import *
 
 
 if utils.is_local_computer():
-    f = 0.01
+    f = 0.1
     n_steps = 1
-    num_cores_max = 2
+    num_cores_max = 3
     N_runs = 1
 else :
     f = 0.5
@@ -32,7 +32,6 @@ else :
 params, start_date = utils.load_params('cfg/analyzers/incidence_lockdowns.yaml', f)
 
 
-
 N_files_total = 0
 if __name__ == '__main__':
     with Timer() as t:
@@ -45,7 +44,7 @@ if __name__ == '__main__':
 
 
     # Load the simulations
-    subset = {'matrix_labels' : 'land', 'stratified_labels' : 'land', 'incidence_interventions_to_apply' : [1]}
+    subset = {'matrix_labels' : 'land', 'stratified_labels' : 'land'}
     data = file_loaders.ABM_simulations(subset=subset)
 
     if len(data.filenames) == 0 :
@@ -75,21 +74,23 @@ if __name__ == '__main__':
         cfg = file_loaders.filename_to_cfg(filename)
 
         # Load
-        total_tests, _, _, _, _, _ = load_from_file(filename, network_filename, start_date)
+        total_tests, _, _, _, _, _, _ = load_from_file(filename, network_filename, start_date)
 
         # Create the plots
-        d = 0 if cfg.start_date_offset == 4 else 1
-        if 5 in cfg.continuous_interventions_to_apply :
-            color = plt.cm.tab10(0 + d)
-            label = f'+ V (start = {cfg.start_date_offset})'
+        d = np.argmax(np.array(params['incidence_threshold']).flatten() == cfg['incidence_threshold'][0])
+        I_tresh = cfg['incidence_threshold'][0][0]
+
+        if 1 in cfg.incidence_interventions_to_apply :
+            linestyle = '-'
+            label = f'+ lockdown (I = {I_tresh})'
         else :
-            color = plt.cm.tab10(2 + d)
-            label = f'- V (start = {cfg.start_date_offset})'
+            linestyle = '--'
+            label = f'- lockdown (I = {I_tresh})'
 
-        handles.append(plot_simulation_cases(total_tests, t_day, axes, label=label))
+        handles.append(plot_simulation_cases(total_tests, t_day, axes, color=plt.cm.tab10(d), linestyle=linestyle, label=label))
 
 
-    axes.set_ylim(0, 4000)
+    axes.set_ylim(0, 10_000)
     axes.set_ylabel('Daglige positive')
 
     set_date_xaxis(axes, start_date, end_date)

@@ -63,7 +63,7 @@ def load_from_file(filename, network_filename, start_date) :
         stratified_infections[:, l, v, a] = df[col]
 
     # Scale the tests
-    stratified_infections *= (5_800_000 / cfg.network.N_tot) / 2.7
+    stratified_infections *= (5_800_000 / cfg.network.N_tot) * (cfg.lambda_I / 4)
 
 
 
@@ -89,6 +89,9 @@ def load_from_file(filename, network_filename, start_date) :
 
     for i, col in enumerate(test_cols) :
         N_daily_tests[:, i] = df[col]
+
+    # Scale the tests
+    N_daily_tests *= (5_800_000 / cfg.network.N_tot)
 
 
     # Convert to observables

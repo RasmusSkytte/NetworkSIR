@@ -1,0 +1,59 @@
+N_tot: 5_800_000
+rho: 0.1
+
+N_init: 20_000
+beta: 0.015
+
+R_guess: 0.75
+
+N_init_UK_frac: 1.0
+beta_UK_multiplier: 1.55
+
+R_init : 5_800_000 * 0.065
+
+
+lambda_E: 4 / 2.5
+lambda_I: 4 / 4.5 # Higher due to isolation
+
+start_date : 2021-01-01
+end_date : 2021-07-01
+
+
+stratified_labels: land  # Output granularity
+
+
+initialize_at_kommune_level: False
+initial_infection_distribution : 2020-12-31
+weighted_random_initial_infections: False
+
+contact_matrices_name: basis  # Target activity
+
+# Set label information:
+# land, region, landsdel, kommune, sogne
+
+incidence_labels:               [[ [ land            ], [ land,             sogn           ] ]] # Incidence restriction granularity
+incidence_threshold :           [[ [ 100000.0        ], [ 100000.0,         10.0           ] ]]
+infection_threshold :           [[ [ 0               ], [ 0,                20             ] ]]
+percentage_threshold :          [[ [ 0.0             ], [ 0.0,              0.02           ] ]]
+incidence_intervention_effect : [[ [ [1.0, 1.0, 1.0] ], [ [1.0, 1.0, 1.0], [0.8, 0.7, 0.7] ] ]]
+
+incidence_interventions_to_apply: [[0], [1, 2]]
+
+
+planned_restriction_dates:      [[2021-03-01]]  # dates when new restriction begins
+planned_restriction_types:      [[3         ]]
+
+
+matrix_labels:            land  # Matrix restriction granularity
+matrix_label_multiplier: [[1.0]]  # Landsniveau
+matrix_label_frac:       [[0.0]]  # Landsniveau
+
+initial_infected_label_weight : [[1.0]]  # Landsniveau
+
+
+start_date_offset: 2020-12-28 # Start date for vaccinations
+Intervention_vaccination_schedule_name : 2021_apr_26
+Intervention_vaccination_effect_delays : [[ 21,  28]]
+Intervention_vaccination_efficacies :    [[0.9, 0.6]]
+
+continuous_interventions_to_apply: [[1, 2, 3, 4]]

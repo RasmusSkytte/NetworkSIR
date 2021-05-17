@@ -24,7 +24,7 @@ f = 0.01
 verbose = False
 
 
-Intervention_contact_matrices_name = ['fase3/S2_1', 'fase3/S2_3','fase3/S2_5','fase3/S2_7']
+Intervention_contact_matrices_name = ['basis', 'fase3/S2_1', 'fase3/S2_3','fase3/S2_5','fase3/S2_7']
 
 
 params = {'N_tot' : int(5_800_000 * f),

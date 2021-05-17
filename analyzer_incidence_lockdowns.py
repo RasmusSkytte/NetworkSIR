@@ -15,7 +15,7 @@ from src.analysis.plotters import *
 if utils.is_local_computer():
     f = 0.1
     n_steps = 1
-    num_cores_max = 3
+    num_cores_max = 1
     N_runs = 1
 else :
     f = 0.5
@@ -29,7 +29,9 @@ if num_cores_max == 1 :
 else :
     verbose = False
 
-params, start_date = utils.load_params('cfg/analyzers/incidence_lockdowns.yaml', f)
+filename = 'incidence_lockdowns_3'
+
+params, start_date = utils.load_params('cfg/analyzers/' + filename + '.yaml', f)
 
 
 N_files_total = 0
@@ -58,7 +60,7 @@ if __name__ == '__main__':
     t_day, _ = parse_time_ranges(start_date, end_date)
 
     # Prepare output file
-    fig_name = 'Figures/incidence_lockdowns.png'
+    fig_name = 'Figures/' + filename + '.png'
     file_loaders.make_sure_folder_exist(fig_name)
 
 
@@ -74,7 +76,7 @@ if __name__ == '__main__':
         cfg = file_loaders.filename_to_cfg(filename)
 
         # Load
-        total_tests, _, _, _, _, _, _ = load_from_file(filename, network_filename, start_date)
+        total_tests, _, _, _, _, _, _, _ = load_from_file(filename, network_filename, start_date)
 
         # Create the plots
         d = np.argmax(np.array(params['incidence_threshold']).flatten() == cfg['incidence_threshold'][0])
@@ -90,7 +92,7 @@ if __name__ == '__main__':
         handles.append(plot_simulation_cases(total_tests, t_day, axes, color=plt.cm.tab10(d), linestyle=linestyle, label=label))
 
 
-    axes.set_ylim(0, 10_000)
+    axes.set_ylim(0, 5_000)
     axes.set_ylabel('Daglige positive')
 
     set_date_xaxis(axes, start_date, end_date)

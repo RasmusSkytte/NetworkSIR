@@ -46,6 +46,8 @@ def load_from_file(filename, network_filename, start_date) :
     ages = plotters._load_data_from_network_file(network_filename, ['my_age'], cfg=cfg)[0]
     ages = [np.sum(ages == age) for age in range(np.max(ages) + 1)]
 
+    sogn = plotters._load_data_from_network_file(network_filename, ['my_sogn'], cfg=cfg)[0]
+
     # Find all columns with "P_"
     positive_cols = [col for col in df.columns if 'P_l' in col]
 
@@ -55,18 +57,19 @@ def load_from_file(filename, network_filename, start_date) :
     N_age_groups = len(np.unique(np.array([int(col.split('_')[6]) for col in positive_cols])))
 
     # Load into a multidimensional array
-    stratified_infections = np.zeros((len(df), N_labels, N_variants, N_age_groups))
+    stratified_positive = np.zeros((len(df), N_labels, N_variants, N_age_groups))
 
     for col in positive_cols :
         l, v, a = (int(col.split('_')[2]), int(col.split('_')[4]), int(col.split('_')[6]))
 
-        stratified_infections[:, l, v, a] = df[col]
+        stratified_positive[:, l, v, a] = df[col]
 
     # Scale the tests
-    stratified_infections *= (5_800_000 / cfg.network.N_tot) * (cfg.lambda_I / 4)
+    stratified_positive *= (5_800_000 / cfg.network.N_tot) #* (cfg.lambda_I / 4)
 
 
-
+    # Load the total number of infected and scale
+    total_infections = df['I'] * (5_800_000 / cfg.network.N_tot) * (cfg.lambda_I / 4)
 
     # Find all columns with "V_"
     vaccine_cols = [col for col in df.columns if 'V_' in col]
@@ -95,14 +98,14 @@ def load_from_file(filename, network_filename, start_date) :
 
 
     # Convert to observables
-    P_total      = np.sum(stratified_infections, axis=(1, 2, 3))
+    P_total      = np.sum(stratified_positive, axis=(1, 2, 3))
 
-    P_variants   = np.sum(stratified_infections, axis=(1, 3))
+    P_variants   = np.sum(stratified_positive, axis=(1, 3))
     P_uk         = P_variants[:, 1]
 
-    P_age_groups = np.sum(stratified_infections, axis=(1, 2))
+    P_age_groups = np.sum(stratified_positive, axis=(1, 2))
 
-    P_labels    = np.sum(stratified_infections,  axis=(2, 3))
+    P_labels     = np.sum(stratified_positive,  axis=(2, 3))
 
     V_age_groups = stratified_vaccinations
     V_age_groups = np.concatenate((V_age_groups, np.sum(V_age_groups, axis=1).reshape(-1, 1)), axis=1) # Add vaccine summery graph
@@ -130,7 +133,7 @@ def load_from_file(filename, network_filename, start_date) :
         f = P_uk_week / P_total_week
         f[np.isnan(f)] = -1
 
-    return P_total, f, P_age_groups, P_variants, P_labels, V_age_groups, N_daily_tests
+    return P_total, f, P_age_groups, P_variants, P_labels, V_age_groups, N_daily_tests, total_infections
 
 
 def parse_time_ranges(start_date, end_date) :

@@ -411,6 +411,7 @@ class Simulation :
             agents_per_incidence_label  = agents_per_incidence_label,
             matrix_label_map            = matrix_label_map,
             N_matrix_labels             = self.N_matrix_labels,
+            stratified_label_map        = self.numba_stratified_label_map,
             vaccinations_per_age_group  = vaccinations_per_age_group,
             vaccination_schedule        = vaccination_schedule,
             work_matrix_restrict        = wm,
@@ -433,7 +434,7 @@ class Simulation :
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
 
         self.state_total_counts            = np.zeros(self.N_states, dtype=np.uint32)
-        self.stratified_infection_counts   = np.zeros((len(set(self.stratified_label_map.values())), 2, self.N_ages), dtype=np.uint32)
+        self.stratified_positive           = np.zeros((len(set(self.stratified_label_map.values())), 2, self.N_ages), dtype=np.uint32)
         self.stratified_vaccination_counts = np.zeros(self.N_ages, dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
@@ -487,6 +488,21 @@ class Simulation :
             R_kommune[R_inds] += R_counts
 
             initialization_subgroups = []
+
+            # Compute the relative risk for each kommune (based on infection history)
+            risk_per_kommune = immunized_per_kommune / np.mean(immunized_per_kommune)
+
+            contacts_per_kommune = np.zeros(n_kommuner)
+            for agent in possible_agents :
+                contacts_per_kommune[self.label_map['sogn_idx_to_kommune_idx'][self.my.sogn[agent]]] += self.my.number_of_contacts[agent]
+
+            relative_risk_per_kommune = risk_per_kommune / contacts_per_kommune
+            relative_risk_per_kommune /= np.mean(relative_risk_per_kommune)
+
+            # Adjust the infection_weight based on the relative risk
+            for agent in possible_agents :
+                self.my.infection_weight[agent] *= relative_risk_per_kommune[self.label_map['sogn_idx_to_kommune_idx'][self.my.sogn[agent]]]
+
 
             # Loop over kommuner
             for kommune_id, N, R in zip(kommune_ids, N_kommune, R_kommune) :
@@ -554,8 +570,6 @@ class Simulation :
                 self.g,
                 self.intervention,
                 self.state_total_counts,
-                self.stratified_infection_counts,
-                self.numba_stratified_label_map,
                 self.agents_in_state,
                 subgroup_UK_frac,
                 agents_in_subgroup,
@@ -571,8 +585,12 @@ class Simulation :
             self.my,
             self.g,
             self.intervention,
-            self.nts
+            self.nts,
+            self.stratified_positive,
         )
+
+        # Reset the test counters
+        self.stratified_positive = np.zeros_like(self.stratified_positive)
 
         if check_distributions:
             ages = [self.my.age[agent] for agent in possible_agents if self.my.agent_is_infectious(agent)]
@@ -625,18 +643,17 @@ class Simulation :
             self.g,
             self.intervention,
             self.state_total_counts,
-            self.stratified_infection_counts,
-            self.numba_stratified_label_map,
+            self.stratified_positive,
             self.stratified_vaccination_counts,
             self.agents_in_state,
             self.nts,
             self.verbose)
 
-        out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_daily_tests, out_my_state, intervention = res
+        out_time, out_state_counts, out_stratified_positive, out_stratified_vaccination_counts, out_daily_tests, out_my_state, intervention = res
 
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
-        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_daily_tests, self.cfg)
+        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_positive, out_stratified_vaccination_counts, out_daily_tests, self.cfg)
         self.intervention = intervention
 
         return self.df
@@ -690,6 +707,7 @@ class Simulation :
             f.create_dataset('my_state', data=self.my_state)
             f.create_dataset('my_corona_type', data=self.my.corona_type)
             f.create_dataset('my_age', data=self.my.age)
+            f.create_dataset('my_sogn', data=self.my.sogn)
 
             f.create_dataset('my_number_of_contacts', data=self.my.number_of_contacts)
             f.create_dataset('my_connection_type',   data=utils.nested_list_to_rectangular_numpy_array(self.my.connection_type,   pad_value=-1))

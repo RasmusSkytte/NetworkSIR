@@ -2,7 +2,7 @@ N_tot: 5_800_000
 rho: 0.1
 
 N_init: 20_000
-beta: 0.008
+beta: 0.015
 
 R_guess: 0.75
 
@@ -31,14 +31,18 @@ contact_matrices_name: basis  # Target activity
 # Set label information:
 # land, region, landsdel, kommune, sogne
 
-incidence_labels:               [[[ land            ]]] # Incidence restriction granularity
-infection_threshold :           [[[ 0               ]]]
-percentage_threshold :          [[[ 0.0             ]]]
-incidence_intervention_effect : [[[ [0.1, 0.1, 0.1] ]]]
+incidence_labels:               [[ [ land            ], [ land            ] ]] # Incidence restriction granularity
+incidence_threshold :           [[ [ 100000.0        ], [ 10.0            ] ]]
+infection_threshold :           [[ [ 0               ], [ 0               ] ]]
+percentage_threshold :          [[ [ 0.0             ], [ 0.0             ] ]]
+incidence_intervention_effect : [[ [ [1.0, 1.0, 1.0] ], [ [1.0, 0.8, 0.8] ] ]]
 
-incidence_threshold :           [[[ 30.0 ]], [[ 20.0 ]], [[ 10.0 ]]]
+incidence_interventions_to_apply: [[0], [1, 2]]
 
-incidence_interventions_to_apply: [[1, 2]]
+
+planned_restriction_dates:      [[2021-03-01]]  # dates when new restriction begins
+planned_restriction_types:      [[3         ]]
+
 
 matrix_labels:            land  # Matrix restriction granularity
 matrix_label_multiplier: [[1.0]]  # Landsniveau

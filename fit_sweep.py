@@ -8,10 +8,10 @@ from contexttimer import Timer
 
 
 if utils.is_local_computer():
-    f = 0.1
+    f = 0.2
     n_steps = 1
     num_cores_max = 3
-    N_runs = 1
+    N_runs = 3
 else :
     f = 0.5
     n_steps = 3
@@ -36,6 +36,7 @@ params, start_date = utils.load_params('cfg/simulation_parameters_local_lockdown
 #params['beta']               = noise(params['beta'], 0.005)
 #params['N_init']             = noise(params['N_init'], 500 )
 #params['N_init_UK_frac']     = noise(params['N_init_UK_frac'], 1)
+
 
 N_files_total = 0
 if __name__ == '__main__':

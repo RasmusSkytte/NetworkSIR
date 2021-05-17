@@ -88,6 +88,9 @@ def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=F
                         else :
                             my.vaccination_type[agent] = -(i+1)
 
+                        # No longer willing to test
+                        my.testing_probability[agent] = 0
+
                         # Update counter
                         stratified_vaccination_counts[my.age[agent]] += 1
 
@@ -300,7 +303,7 @@ def remove_intervention_at_sogn(my, g, intervention, ith_sogn) :
                 my.restricted_status[agent] = 0
 
             if intervention.apply_increased_testing :
-                my.testing_probability[agent] = my.cfg.testing_penetration[my.age[agent]]
+                my.testing_probability[agent] = my.testing_probability[agent] / 2
 
 
 @njit
@@ -318,7 +321,7 @@ def add_intervention_at_sogn(my, g, intervention, sogn, rate_multiplier) :
                 multiply_rates_of_agent(my, g, agent, rate_multiplier)
 
             if intervention.apply_increased_testing :
-                my.testing_probability[agent] = 2 * my.cfg.testing_penetration[my.age[agent]]
+                my.testing_probability[agent] = 2 * my.testing_probability[agent]
 
 
 @njit
@@ -669,7 +672,7 @@ def masking_on_label(my, g, intervention, label, rate_reduction) :
     # loop over all agents
     for agent in range(my.cfg_network.N_tot) :
         if intervention.incidence_label_map[my.sogn[agent]] == label :
-            my.restricted_status[agent] = 1
+            #my.restricted_status[agent] = 1
             reduce_frac_rates_of_agent(my, g, intervention, agent, rate_reduction)
 
 
@@ -680,29 +683,9 @@ def matrix_restriction_on_label(my, g, intervention, label, n, verbose=False) :
     # ie : [[0,0.2,0.2],[0,0.8,0.8]] means that your wear mask when around 20% of job and other contacts, and your rates to those is reduced by 80%
     # loop over all agents
 
-    if verbose :
-        prev = 0
-        for agent in range(my.cfg_network.N_tot) :
-            for i in range(my.number_of_contacts[agent]) :
-                if my.agent_is_connected(agent, i) :
-                    prev += 1
-
     for agent in range(my.cfg_network.N_tot) :
         if intervention.matrix_label_map[my.sogn[agent]] == label :
             remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label)
-
-    if verbose :
-        after = 0
-        for agent in range(my.cfg_network.N_tot) :
-            for i in range(my.number_of_contacts[agent]) :
-                if my.agent_is_connected(agent, i) :
-                    after += 1
-
-        print("--------------")
-        print("Contacts before")
-        print(prev)
-        print("Contacts after")
-        print(after)
 
 @njit
 def test_agent(my, g, intervention, agent, click) :
@@ -719,7 +702,7 @@ def test_agent(my, g, intervention, agent, click) :
         intervention.result_of_test[agent] = 0
 
 @njit
-def check_test_results(my, g, intervention, agent, day, click) :
+def check_test_results(my, g, intervention, agent, day, click, stratified_positive) :
 
     # If agent receives positive test result
     if intervention.result_of_test[agent] == 1 :
@@ -730,21 +713,28 @@ def check_test_results(my, g, intervention, agent, day, click) :
         # Go into self-isolation
         intervention.clicks_when_isolated[agent] = click
 
+        # No longer willing to test
+        my.testing_probability[agent] = 0.0
+
         # Count the tests
         intervention.positive_test_counter[intervention.reason_for_test[agent]] += 1
+
+        stratified_positive[intervention.stratified_label_map[my.sogn[agent]]][my.corona_type[agent]][my.age[agent]] += 1
+
 
         # Check if tracing is on
         if intervention.apply_tracing :
 
             # loop over contacts
             for ith_contact, contact in enumerate(my.connections[agent]) :
-                if (
-                    np.random.rand() < intervention.cfg.tracing_rates[my.connection_type[agent][ith_contact]]    # Not all will be traced
-                    and np.random.rand() < my.testing_probability[agent]
-                    and intervention.day_found_infected[contact] == -10_000                                      # The contact should not have tested positive before
-                    and intervention.clicks_when_tested[contact] < click                                         # The contact should not be waiting for test
-                    and intervention.clicks_when_tested_result[contact] < click                                  # The contact should not be waiting for test result
-                ) :
+
+                # Must be connected
+                if not my.agent_is_connected(agent, ith_contact) :
+                    continue
+
+                # Not all will be traced
+                if np.random.rand() < intervention.cfg.tracing_rates[my.connection_type[agent][ith_contact]] * my.testing_probability[contact] :
+
                     # Book new test
                     intervention.reason_for_test[contact] = 2
                     intervention.clicks_when_tested[contact] = click + my.cfg.tracing_delay + intervention.cfg.test_delay_in_clicks[2]
@@ -752,8 +742,19 @@ def check_test_results(my, g, intervention, agent, day, click) :
                     # Isolate while waiting
                     intervention.clicks_when_isolated[contact] = click + my.cfg.tracing_delay
 
+                    # No longer willing to test
+                    my.testing_probability[contact] = 0.0
+
 
     else : # They recieve negative test result
+
+        # Again willing to test
+        my.testing_probability[agent] = my.cfg.testing_penetration[my.age[agent]]
+
+        # Check for lockdown
+        if intervention.apply_increased_testing and my.restricted_status[agent] == 1 :
+            my.testing_probability[agent] = 2 * my.testing_probability[agent]
+
         intervention.isolated[agent] = False
         intervention.clicks_when_isolated[agent] = np.nan
         reset_rates_of_agent(my, g, agent, intervention)
@@ -765,13 +766,8 @@ def apply_symptom_testing(my, intervention, agent, state, click) :
     # Infectious agents may test due to symptopns
     if my.agent_is_infectious(agent) :
 
-        if (
-            np.random.rand() < intervention.cfg.chance_of_finding_infected[state - 4]   # TODO: Fjern hardcoded 4
-            and np.random.rand() < my.testing_probability[agent]
-            and intervention.day_found_infected[agent] == -10_000                       # The contact should not have tested positive before
-            and intervention.clicks_when_tested[agent] < click                          # The agent should not be waiting for test
-            and intervention.clicks_when_tested_result[agent] < click                   # The agent should not be waiting for test result
-        ) :
+        # Only thest with probabaility
+        if np.random.rand() < intervention.cfg.chance_of_finding_infected[state - 4] * my.testing_probability[agent] :   # TODO: Fjern hardcoded 4
 
             # Testing in n_clicks for symptom checking
             intervention.clicks_when_tested[agent] = click + intervention.cfg.test_delay_in_clicks[0]
@@ -783,39 +779,27 @@ def apply_symptom_testing(my, intervention, agent, state, click) :
             # Isolate while waiting
             intervention.clicks_when_isolated[agent] = click
 
+            # No longer willing to test
+            my.testing_probability[agent] = 0.0
+
 
 @njit
 def apply_random_testing(my, intervention, click) :
 
     # choose N_daily_test people at random to test
-    agents = np.arange(my.cfg_network.N_tot, dtype = np.uint32)
+    agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
 
-    # TODO: Weight by testing_penetration (Implement my.p_test)
     # Choose the agents
-    random_agents_to_be_tested = nb_random_choice(agents, my.testing_probability, size=my.cfg.daily_tests, replace=False)
-
-    # Filter out those who have been tested before
-    I_not_found = intervention.day_found_infected[random_agents_to_be_tested] == -10_000
-
-    # Filter out those who are vaccinated
-    I_not_vaccinated = my.vaccination_type[random_agents_to_be_tested] == 0
-
-    # Combine filter
-    I = np.logical_and(I_not_found, I_not_vaccinated)
-
-    # Filter out those waitng for tests
-    I_waiting_for_tests = intervention.clicks_when_tested[random_agents_to_be_tested] < click
-    I = np.logical_and(I_not_found, I_waiting_for_tests)
-
-    # Filter out those waiting for results
-    I_waiting_for_results = intervention.clicks_when_tested_result[random_agents_to_be_tested] < click                                  # The contact should not be waiting for test result
-    I = np.logical_and(I_not_found, I_waiting_for_results)
+    random_agents_to_be_tested = nb_random_choice(agents, my.testing_probability, size=my.cfg.daily_tests, replace=True)    # Replace = True makes it faster and the probability of choosing people twice should be low enough
 
     # Book test
-    intervention.clicks_when_tested[random_agents_to_be_tested[I]] = click + intervention.cfg.test_delay_in_clicks[1]
+    intervention.clicks_when_tested[random_agents_to_be_tested] = click + intervention.cfg.test_delay_in_clicks[1]
 
     # specify that random test is the reason for test
-    intervention.reason_for_test[random_agents_to_be_tested[I]] = 1
+    intervention.reason_for_test[random_agents_to_be_tested] = 1
+
+    # No longer willing to test
+    my.testing_probability[random_agents_to_be_tested] = 0.0
 
 
 
@@ -866,7 +850,29 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose = Fals
                                 else :
                                     print('Intervention type : matrix restriction, name:', intervention.cfg.Intervention_contact_matrices_name[k])
 
+                            if verbose and ith_label == 0 :
+                                prev = 0
+                                for agent in range(my.cfg_network.N_tot) :
+                                    for ith_contact in range(my.number_of_contacts[agent]) :
+                                        if my.agent_is_connected(agent, ith_contact) :
+                                            prev += 1
+
                             matrix_restriction_on_label(my, g, intervention, ith_label, k, verbose = verbose)
+
+                            if verbose and ith_label == intervention.N_matrix_labels - 1:
+                                after = 0
+                                for agent in range(my.cfg_network.N_tot) :
+                                    for ith_contact in range(my.number_of_contacts[agent]) :
+                                        if my.agent_is_connected(agent, ith_contact) :
+                                            after += 1
+
+                                print("--------------")
+                                print("Contacts before")
+                                print(prev)
+                                print("Contacts after")
+                                print(after)
+
+
 
                         # if event restrictions
                         elif intervention.cfg.planned_restriction_types[k] == 2 :
@@ -874,7 +880,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose = Fals
                             if ith_label >= 1 :
                                 break
 
-                            k = np.sum(intervention.cfg.planned_restriction_types[:i] == 2)
+                            k = np.sum(intervention.cfg.planned_restriction_types[:i] == 2) + 1
 
                             if verbose :
                                 print('Intervention type : event restriction:', intervention.cfg.event_size_max[k])
@@ -888,7 +894,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose = Fals
                             if ith_label >= 1 :
                                 break
 
-                            k = np.sum(intervention.cfg.planned_restriction_types[:i] == 3)
+                            k = np.sum(intervention.cfg.planned_restriction_types[:i] == 3) + 1
 
                             if verbose :
                                 print('Intervention type : incidence restriction:', intervention.cfg.incidence_labels[k])
@@ -901,7 +907,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose = Fals
 
 
 @njit
-def testing_intervention(my, g, intervention, day, click) :
+def testing_intervention(my, g, intervention, day, click, stratified_positive) :
 
     # test everybody whose counter say we should test
     for agent in range(my.cfg_network.N_tot) :
@@ -913,7 +919,7 @@ def testing_intervention(my, g, intervention, day, click) :
 
         # check for test results
         if intervention.clicks_when_tested_result[agent] == click :
-            check_test_results(my, g, intervention, agent, day, click)
+            check_test_results(my, g, intervention, agent, day, click, stratified_positive)
 
         # check for isolation
         if intervention.clicks_when_isolated[agent] == click and intervention.apply_isolation :

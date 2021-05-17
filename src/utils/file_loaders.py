@@ -576,6 +576,23 @@ def newest_SSI_filename() :
     while date.isoweekday() > 5 :
         date -= datetime.timedelta(days=1)
 
+    # Check file is there
+    url = 'https://covid19.ssi.dk/overvagningsdata/download-fil-med-overvaagningdata'
+
+    s = None
+    while s is None :
+
+        with urllib.request.urlopen(url) as response :
+            html = str(response.read())
+
+        date_SSI = date.strftime('%d%m%Y')
+
+        s = re.search(f'overvaagningsdata-covid19-{date_SSI}', html, re.IGNORECASE)
+
+        # Go back one day
+        if s is None :
+            date -= datetime.timedelta(days=1)
+
     return date.strftime('%Y_%m_%d')
 
 def SSI_data_missing(filename) :

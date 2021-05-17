@@ -23,13 +23,14 @@ def plot_variant_fraction(f, t_week, axes, color='k', label='') :
     return axes.plot(t_week[:len(f)], f, lw=4, c=color, label=label)[0]
 
 
-def plot_simulation_cases_and_variant_fraction(total_tests, f, t_day, t_week, axes, color='k') :
+def plot_simulation_cases_and_variant_fraction(total_tests, f, total_infections, daily_tests, t_day, t_week, axes, color='k') :
 
     # Create the plots
     handle_0 = plot_simulation_cases(total_tests, t_day, axes[0], color=color)
-    handle_1 = plot_variant_fraction(f, t_week, axes[1], color=color)
+    handle_1 = plot_simulation_cases(total_infections, t_day, axes[0], linestyle=':', color=color)
+    handle_2 = plot_variant_fraction(f, t_week, axes[1], color=color)
 
-    return [handle_0, handle_1]
+    return [handle_0, handle_1, handle_2]
 
 def plot_simulation_category(tests_by_category, t, axes, linestyle = '-') :
 

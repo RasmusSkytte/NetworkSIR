@@ -48,7 +48,7 @@ def nb_random_choice(arr, prob, size=1, replace=False, verbose=False) :
     prob = prob / np.sum(prob)
     if replace :
         ra = np.random.random(size=size)
-        idx = np.searchsorted(np.cumsum(prob), ra, side="right")
+        idx = np.searchsorted(np.cumsum(prob), ra, side='right')
         return arr[idx]
     else :
         if size / len(arr) > 0.5 and verbose :
@@ -57,7 +57,8 @@ def nb_random_choice(arr, prob, size=1, replace=False, verbose=False) :
         out = set()
         while len(out) < size :
             ra = np.random.random()
-            idx = np.searchsorted(np.cumsum(prob), ra, side="right")
+            idx = np.searchsorted(np.cumsum(prob), ra, side='right')
+
             x = arr[idx]
 
             if not x in out :

@@ -80,17 +80,21 @@ for subset in subsets :
           positive_by_variant,
           positive_by_region,
           vaccinations_by_age_group,
-          daily_tests) = load_from_file(filename, network_filename, start_date)
+          daily_tests,
+          total_infections) = load_from_file(filename, network_filename, start_date)
+
+        # Perform test correction
+        positve_tests *= (daily_tests.T[0] / ref_tests) ** beta
 
         # Plot
-        h  = plot_simulation_cases_and_variant_fraction(positve_tests, f, t_day, t_week, axes1)
-        h2 = plot_simulation_growth_rates(positive_by_variant, t_day, axes2)
+        h  = plot_simulation_cases_and_variant_fraction(positve_tests, f, total_infections, daily_tests, t_day, t_week, axes1)
+        #h2 = plot_simulation_growth_rates(positive_by_variant, t_day, axes2)
         h3 = plot_simulation_category(positive_per_age_group, t_day, axes3)
         h4 = plot_simulation_category(positive_by_region, t_day, axes4)
         h5 = plot_simulation_category(vaccinations_by_age_group, t_day, axes5)
         h6 = plot_simulation_category(daily_tests, t_day, [axes6])
 
-        h.extend(h2)
+        #h.extend(h2)
         h.extend(h3)
         h.extend(h4)
         h.extend(h5)
@@ -163,6 +167,7 @@ for subset in subsets :
 
     # Get restriction_thresholds from a cfg
     planned_restriction_dates = abm_files.cfgs[0].planned_restriction_dates
+    planned_restriction_types = abm_files.cfgs[0].planned_restriction_types
 
     axes1[0].set_ylim(0, 4000)
     axes1[0].set_ylabel('Daglige positive')

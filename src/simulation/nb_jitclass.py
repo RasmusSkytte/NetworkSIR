@@ -262,7 +262,7 @@ spec_my = {
     'infectious_states' : ListType(nb.int64),
     'corona_type' : nb.uint8[:],
     'vaccination_type' : nb.int8[:],
-    'testing_probability' : nb.float32[:],
+    'testing_probability' : nb.float64[:],
     'restricted_status' : nb.uint8[:],
     'cfg' : nb_cfg_type,
     'cfg_network' : nb_cfg_network_type,
@@ -279,7 +279,7 @@ class My(object) :
         self.connections = utils.initialize_nested_lists(N_tot, np.uint32)
         self.connection_status = utils.initialize_nested_lists(N_tot, nb.boolean)
         self.connection_type = utils.initialize_nested_lists(N_tot, np.uint8)
-        self.beta_connection_type = np.array([3.0, 1.0, 1.0, 1.0], dtype=np.float32)  # beta multiplier for [House, work, others, events]
+        self.beta_connection_type = np.array([1.5, 1.0, 0.8, 1.0], dtype=np.float32)  # beta multiplier for [House, work, others, events]
         self.connection_weight = np.ones(N_tot, dtype=np.float32)
         self.infection_weight = np.ones(N_tot, dtype=np.float64)
         self.number_of_contacts = np.zeros(N_tot, dtype=nb.uint16)
@@ -289,7 +289,7 @@ class My(object) :
         self.infectious_states = List([4, 5, 6, 7])
         self.corona_type = np.zeros(N_tot, dtype=np.uint8)
         self.vaccination_type = np.zeros(N_tot, dtype=np.uint8)
-        self.testing_probability = np.zeros(N_tot, dtype=nb.float32)
+        self.testing_probability = np.zeros(N_tot, dtype=nb.float64)
         self.restricted_status = np.zeros(N_tot, dtype=np.uint8)
         self.cfg = nb_cfg
         self.cfg_network = nb_cfg_network
@@ -453,6 +453,8 @@ spec_intervention = {
     'types' : nb.int8[:],
     'clicks_when_restriction_changes' : nb.int32[:],
     'clicks_looking_back' : nb.int64,
+    # Ouputs
+    'stratified_label_map' : DictType(nb.uint16, nb.uint16),
     # Vaccinations
     'vaccinations_per_age_group' : nb.int64[:, :, :],
     'vaccination_schedule' : nb.int32[:, :],
@@ -527,6 +529,7 @@ class Intervention(object) :
         agents_per_incidence_label,
         matrix_label_map,
         N_matrix_labels,
+        stratified_label_map,
         vaccinations_per_age_group,
         vaccination_schedule,
         work_matrix_restrict,
@@ -575,6 +578,8 @@ class Intervention(object) :
         self.work_matrix_restrict            = work_matrix_restrict
         self.other_matrix_restrict           = other_matrix_restrict
 
+        self.stratified_label_map            = stratified_label_map
+
         self.vaccinations_per_age_group      = vaccinations_per_age_group
         self.vaccination_schedule            = vaccination_schedule
 
@@ -612,6 +617,10 @@ class Intervention(object) :
     @property
     def apply_random_testing(self) :
         return 4 in self.cfg.continuous_interventions_to_apply
+
+    @property
+    def apply_testing(self) :
+        return self.apply_symptom_testing or self.apply_random_testing
 
     @property
     def apply_vaccinations(self) :

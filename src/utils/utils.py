@@ -1416,18 +1416,18 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
 
 
 
-def counts_to_df(time, state_counts, stratified_infected, stratified_vaccination, daily_tests, cfg) :  #
+def counts_to_df(time, state_counts, stratified_positive, stratified_vaccination, daily_tests, cfg) :  #
 
     time = np.array(time)
     state_counts = np.array(state_counts)
-    stratified_infected = np.array(stratified_infected)
+    stratified_positive = np.array(stratified_positive)
     stratified_vaccination = np.array(stratified_vaccination)
     daily_tests = np.array(daily_tests).reshape(-1, 1)
 
     N_states      = np.size(state_counts, 1)
-    N_labels      = np.size(stratified_infected, 1)
-    N_variants    = np.size(stratified_infected, 2)
-    N_age_groups  = np.size(stratified_infected, 3)
+    N_labels      = np.size(stratified_positive, 1)
+    N_variants    = np.size(stratified_positive, 2)
+    N_age_groups  = np.size(stratified_positive, 3)
     N_daily_tests = np.size(daily_tests, 1)
 
     header = [
@@ -1452,7 +1452,7 @@ def counts_to_df(time, state_counts, stratified_infected, stratified_vaccination
 
             headers = ['P_l_' + str(l) + '_v_' + str(v) + '_A_' + str(i) for i in range(N_age_groups)]
 
-            df_age_group = pd.DataFrame(stratified_infected[:, l, v, :] * cfg.testing_penetration, columns=headers)
+            df_age_group = pd.DataFrame(stratified_positive[:, l, v, :] * cfg.testing_penetration, columns=headers)
 
             df = pd.concat([df, df_age_group], axis=1)  # .convert_dtypes()
 
@@ -2101,8 +2101,8 @@ def load_params(filename, f) :
 
             restriction_dates = [date for date in params['planned_restriction_dates'][0]]
 
-            dates = [0]
-            for i in range(1, len(restriction_dates)) :
+            dates = []
+            for i in range(0, len(restriction_dates)) :
                 date = restriction_dates[i]
                 dates.append((date - start_date).days)
 
@@ -2110,7 +2110,6 @@ def load_params(filename, f) :
             dates = [(params['planned_restriction_dates'] - start_date).days]
 
         params['planned_restriction_dates'] =  [dates]
-
 
     if 'initial_infection_distribution' in params.keys() and isinstance(params['initial_infection_distribution'], datetime.date) :
         params['initial_infection_distribution'] = params['initial_infection_distribution'].strftime('%Y_%m_%d')

@@ -229,8 +229,6 @@ def initialize_states(
     g,
     intervention,
     state_total_counts,
-    stratified_infection_counts,
-    stratified_label_map,
     agents_in_state,
     subgroup_UK_frac,
     possible_agents,
@@ -301,9 +299,6 @@ def initialize_states(
                         rate = g.rates[agent][ith_contact]
                         g.update_rates(my, +rate, agent)
 
-                # Update the counters
-                stratified_infection_counts[stratified_label_map[my.sogn[agent]]][my.corona_type[agent]][my.age[agent]] += 1
-
             # Make sure agent can not be re-infected
             update_infection_list_for_newly_infected_agent(my, g, agent)
 
@@ -339,7 +334,7 @@ def initialize_states(
 
 
 @njit
-def initialize_testing(my, g, intervention, nts) :
+def initialize_testing(my, g, intervention, nts, stratified_positive) :
 
     start_click = -np.float32(g.N_infectious_states) / (my.cfg.lambda_I * nts)
 
@@ -347,7 +342,7 @@ def initialize_testing(my, g, intervention, nts) :
     for click in range(np.int32(start_click), 0) :
 
         # Implement the consequences of testing
-        testing_intervention(my, g, intervention, np.int32(click*nts), click)
+        testing_intervention(my, g, intervention, np.int32(click*nts), click, stratified_positive)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -467,8 +462,7 @@ def run_simulation(
     g,
     intervention,
     state_total_counts,
-    stratified_infection_counts,
-    stratified_label_map,
+    stratified_positive,
     stratified_vaccination_counts,
     agents_in_state,
     nts,
@@ -480,7 +474,7 @@ def run_simulation(
     # Define outputs
     out_time = List()                            # Sampled times
     out_state_counts = List()                    # Tne counts of the SEIR states
-    out_stratified_infection_counts = List()     # The counts of infected per age group
+    out_stratified_positive = List()             # The counts of positive tests per age group
     out_stratified_vaccination_counts = List()   # The counts of vaccinations per age group
     out_daily_tests = List()                     # The counts of daily tests
     out_my_state = List()
@@ -569,9 +563,6 @@ def run_simulation(
                         rate = g.rates[agent][ith_contact]
                         g.update_rates(my, -rate, agent)
 
-                # Update counters
-                stratified_infection_counts[stratified_label_map[my.sogn[agent]]][my.corona_type[agent]][my.age[agent]] -= 1
-
 
             # Moves TO infectious State from non-infectious
             if state_after == g.N_infectious_states :
@@ -586,9 +577,6 @@ def run_simulation(
 
                         rate = g.rates[agent][ith_contact]
                         g.update_rates(my, +rate, agent)
-
-                # Update the counters
-                stratified_infection_counts[stratified_label_map[my.sogn[agent]]][my.corona_type[agent]][my.age[agent]] += 1
 
 
         #######/ Here we infect new states
@@ -656,8 +644,8 @@ def run_simulation(
         while nts * click  < real_time :
 
             # Apply interventions on clicks
-            if intervention.apply_interventions :
-                testing_intervention(my, g, intervention, day, click)
+            if intervention.apply_testing :
+                testing_intervention(my, g, intervention, day, click, stratified_positive)
 
             # Advance click
             click += 1
@@ -671,7 +659,7 @@ def run_simulation(
 
                     out_time.append(real_time)
                     out_state_counts.append(state_total_counts.copy())
-                    out_stratified_infection_counts.append(stratified_infection_counts.copy())
+                    out_stratified_positive.append(stratified_positive.copy())
                     out_stratified_vaccination_counts.append(stratified_vaccination_counts.copy())
                     out_daily_tests.append(intervention.daily_tests)
                     out_my_state.append(my.state.copy())
@@ -684,11 +672,11 @@ def run_simulation(
                 # Print current progress
                 if verbose :
                     print('--- day : ', day, ' ---')
-                    print('n_infected : ',        np.round(my.cfg.N_init + np.sum(where_infections_happened_counter)))
-                    print('freedom_impact : ',    np.round(intervention.freedom_impact_list[-1], 3))
-                    print('R_true : ',            np.round(intervention.R_true_list[-1],         3))
-                    print('R_true_list_brit : ',  np.round(intervention.R_true_list_brit[-1],    3))
-                    print('Season multiplier : ', np.round(g.seasonality(day),                   2))
+                   # print('n_infected : ',        np.round(my.cfg.N_init + np.sum(where_infections_happened_counter)))
+                   # print('freedom_impact : ',    np.round(intervention.freedom_impact_list[-1], 3))
+                    #print('R_true : ',            np.round(intervention.R_true_list[-1],         3))
+                    #print('R_true_list_brit : ',  np.round(intervention.R_true_list_brit[-1],    3))
+                    #print('Season multiplier : ', np.round(g.seasonality(day),                   2))
 
                 # Advance day
                 day += 1
@@ -696,8 +684,11 @@ def run_simulation(
 
                 # Apply interventions for the new day
                 if intervention.apply_interventions :
+
                     # Reset the test counter
                     intervention.daily_tests = 0
+
+                    stratified_positive = np.zeros_like(stratified_positive)
 
                     # Apply interventions for the new day
                     apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
@@ -711,8 +702,6 @@ def run_simulation(
                         day,
                         agents_in_state,
                         state_total_counts,
-                        stratified_infection_counts,
-                        stratified_label_map,
                         where_infections_happened_counter)
 
 
@@ -746,4 +735,4 @@ def run_simulation(
         print('fraction_failed_vaccinated : ', np.round(np.sum(np.array([1 for vaccination_type in my.vaccination_type if vaccination_type < 0]))  / my.cfg_network.N_tot, 2) )
         print('fraction_not_vaccinated : ',    np.round(np.sum(np.array([1 for vaccination_type in my.vaccination_type if vaccination_type == 0])) / my.cfg_network.N_tot, 2) )
 
-    return out_time, out_state_counts, out_stratified_infection_counts, out_stratified_vaccination_counts, out_daily_tests, out_my_state, intervention
+    return out_time, out_state_counts, out_stratified_positive, out_stratified_vaccination_counts, out_daily_tests, out_my_state, intervention

@@ -1,5 +1,3 @@
-
-from re import T
 import numpy as np
 import pandas as pd
 
@@ -67,7 +65,6 @@ def load_from_file(filename, network_filename, start_date) :
     # Scale the tests
     stratified_positive *= (5_800_000 / cfg.network.N_tot) #* (cfg.lambda_I / 4)
 
-
     # Load the total number of infected and scale
     total_infections = df['I'] * (5_800_000 / cfg.network.N_tot) * (cfg.lambda_I / 4)
 
@@ -95,7 +92,6 @@ def load_from_file(filename, network_filename, start_date) :
 
     # Scale the tests
     N_daily_tests *= (5_800_000 / cfg.network.N_tot)
-
 
     # Convert to observables
     P_total      = np.sum(stratified_positive, axis=(1, 2, 3))
@@ -185,16 +181,24 @@ def load_covid_index() :
 
 def load_b117_fraction() :
 
+    # start_date = '2020-12-28'
     #       uge     53     1     2     3     4     5     6     7     8
-    s = np.array([  80,  154,  284,  470,  518,  662,  922, 1570, 1472])
-    n = np.array([3915, 4154, 4035, 3685, 2659, 2233, 1956, 2388, 1939])
+    #s = np.array([  80,  154,  284,  470,  518,  662,  922, 1570, 1472])
+    #n = np.array([3915, 4154, 4035, 3685, 2659, 2233, 1956, 2388, 1939])
+
+    df = pd.read_csv('Data/wgs_data/2021_05_07.csv', sep=';')
+    pivot = pd.pivot_table(df, columns=['Week'], values=['yes', 'total'], aggfunc='sum')
+    start_date = datetime.datetime.strptime(pivot.columns[0]+'-1', '%Y-W%W-%w')
+    s = pivot.loc['yes'].values
+    n = pivot.loc['total'].values
+
     p = s / n
     p_var = p * (1 - p) / n
 
     fraction = p
-    fraction_sigma = 2 * np.sqrt(p_var)
+    fraction_sigma = 2 * np.sqrt(p_var) * 10
 
-    t = pd.date_range(start='2020-12-28', periods=len(fraction), freq="W-SUN")
+    t = pd.date_range(start=start_date, periods=len(fraction), freq="W-SUN")
 
     return (fraction, fraction_sigma, t)
 

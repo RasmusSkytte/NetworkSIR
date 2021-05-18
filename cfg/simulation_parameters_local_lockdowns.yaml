@@ -1,8 +1,8 @@
 N_tot: 5_800_000
 rho: 0.1
 
-N_init: 17_000
-beta: 0.045
+N_init: 30_000
+beta: 0.285
 
 R_guess: 0.75
 
@@ -12,8 +12,8 @@ beta_UK_multiplier: 1.55
 R_init : 5_800_000 * 0.065
 
 
-lambda_E: 4 / 2.5
-lambda_I: 4 / 4.5 # Higher due to isolation
+lambda_E: 4 / 3.5
+lambda_I: 10 / 10
 
 start_date : 2021-01-01
 end_date :   2021-07-01
@@ -75,7 +75,7 @@ planned_restriction_dates:           [[2021-01-01, 2021-02-08, 2021-03-01, 2021-
 planned_restriction_types:           [[1,          1,          1,          1,          1,          1,          1,          3,          3,          1]]
 
                                  # 'Byen København', 'Københavns omegn', 'Nordsjælland', 'Bornholm', 'Østsjælland', 'Vest- og Sydsjælland', 'Fyn',  'Sydjylland', 'Vestjylland', 'Østjylland', 'Nordjylland'
-matrix_label_multiplier:        [[  1.0,              1.0,                1.0,            1.0,        1.0,           0.9,                    1.0,   1.0,           0.8,           1.0,         1.0]]
+matrix_label_multiplier:        [[  1.0,              1.0,                1.0,            1.0,        1.0,           0.9,                    1.0,   1.0,           0.7,           1.0,         1.0]]
 matrix_label_frac:              [[0.014,            0.014,               0.01,           0.01,       0.01,          0.01,                  0.026, 0.029,         0.029,         0.047,       0.047]]
 
 

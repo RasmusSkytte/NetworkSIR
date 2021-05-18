@@ -171,16 +171,17 @@ class ABM_simulations :
             self.cfgs          = get_cfgs(self.all_folders)
 
 
-        self.d = self._convert_all_files_to_dict(filetype)
+        self.d_filenames = self._convert_all_files_to_dict(path='ABM')
+        self.d_networks  = self._convert_all_files_to_dict(path='network')
 
-    def _convert_all_files_to_dict(self, filetype) :
+    def _convert_all_files_to_dict(self, path='ABM') :
         """
         Dictionary containing all files related to a given hash :
         d[hash] = list of filenames
         """
         d = {}
         for cfg in self.cfgs :
-            d[cfg.hash] = utils.hash_to_filenames(cfg.hash, os.path.join(self.base_dir, 'ABM'), self.filetype)
+            d[cfg.hash] = utils.hash_to_filenames(cfg.hash, base_dir=os.path.join(self.base_dir, path))
         return d
 
     def iter_files(self) :
@@ -200,7 +201,7 @@ class ABM_simulations :
         for cfg in self.cfgs :
             yield cfg
 
-    def cfg_to_filenames(self, cfg) :
+    def cfg_to_filenames(self, cfg, datatype='files') :
 
         cfg = utils.DotDict(cfg)
         cfg_list = utils.query_cfg(cfg)
@@ -213,7 +214,12 @@ class ABM_simulations :
                 cfg_list,
             )
         try :
-            return self.d[cfg_list[0].hash]
+            if datatype == 'files' :
+                return self.d_filenames[cfg_list[0].hash]
+            elif datatype == 'networks' :
+                return self.d_networks[cfg_list[0].hash]
+            else :
+                raise ValueError('Datatype not known')
         except KeyError :
             return None
 

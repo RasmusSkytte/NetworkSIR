@@ -88,6 +88,9 @@ def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=F
                         else :
                             my.vaccination_type[agent] = -(i+1)
 
+                        # Vaccines always reduces transmission risk by half
+                        multiply_outgoing_rates_of_agent(my, g, agent, rate_multiplication=([0.5, 0.5, 0.5]))
+
                         # No longer willing to test
                         my.testing_probability[agent] = 0
 
@@ -219,6 +222,11 @@ def reset_rates_of_connection(my, g, agent, ith_contact, intervention, two_way=T
 
         if my.corona_type[agent] == 1 :
             infection_rate *= my.cfg.beta_UK_multiplier
+
+        # Account for vaccines
+        if my.agent_is_vaccinated(agent) :
+            infection_rate *= 0.5
+
 
         # Account for self-isolation
         if intervention.isolated[agent] or intervention.isolated[contact] :

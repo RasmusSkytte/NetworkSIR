@@ -57,7 +57,7 @@ def plot_simulation_growth_rates(tests_by_variant, t, axes) :
         if np.all(y == 0) :
             continue
 
-        window_size = 7 # days
+        window_size = 14 # days
         t_w = np.arange(window_size)
         R_w = []
 
@@ -67,7 +67,10 @@ def plot_simulation_growth_rates(tests_by_variant, t, axes) :
 
         for j in range(t_max) :
             y_w = y[j:(j+window_size)]
-            res, _ = scipy.optimize.curve_fit(lambda t, a, r: a * np.exp(r * t), t_w, y_w, p0=(np.max(y_w), 0))
+            try :
+                res, _ = scipy.optimize.curve_fit(lambda t, a, r: a * np.exp(r * t), t_w, y_w, p0=(np.mean(y_w), 0), maxfev=5000)
+            except :
+                res = [np.nan, np.nan]
             R_w.append(1 + 4.7 * res[1])
 
         t_w = t[window_size:(window_size+t_max)]

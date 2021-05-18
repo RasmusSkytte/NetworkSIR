@@ -111,9 +111,9 @@ def set_infection_weight(my, agent) :
             agent (int) : ID of agent
     """
     if np.random.rand() < my.cfg.sigma_beta :
-        my.infection_weight[agent] = -np.log(np.random.rand()) * my.cfg.beta
+        my.infection_weight[agent] = -np.log(np.random.rand()) * my.cfg.beta * my.cfg.lambda_I / 4
     else :
-        my.infection_weight[agent] = my.cfg.beta
+        my.infection_weight[agent] = my.cfg.beta * my.cfg.lambda_I / 4
 
 
 @njit

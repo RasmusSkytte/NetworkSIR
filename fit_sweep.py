@@ -8,10 +8,10 @@ from contexttimer import Timer
 
 
 if utils.is_local_computer():
-    f = 0.2
-    n_steps = 1
+    f = 0.05
+    n_steps = 2
     num_cores_max = 3
-    N_runs = 3
+    N_runs = 1
 else :
     f = 0.5
     n_steps = 3
@@ -33,8 +33,10 @@ else :
 params, start_date = utils.load_params('cfg/simulation_parameters_local_lockdowns.yaml', f)
 
 # Sweep around parameter set
-#params['beta']               = noise(params['beta'], 0.005)
-#params['N_init']             = noise(params['N_init'], 500 )
+#params['beta']               = noise(params['beta'], 0.025)
+#params['N_init']             = noise(params['N_init'], 5000 )
+params['lambda_I']           = [0.75, 0.5, 0.25]
+#params['lambda_I']           = noise(params['lambda_I'], 0.1)
 #params['N_init_UK_frac']     = noise(params['N_init_UK_frac'], 1)
 
 
@@ -74,10 +76,10 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
             ll_f = []
             ll_s = []
 
-            for filename in abm_files.cfg_to_filenames(cfg) :
+            for filename, network_filename in zip(abm_files.cfg_to_filenames(cfg), abm_files.cfg_to_filenames(cfg, datatype='networks')) :
 
                 # Load
-                I_tot_scaled, f, _, _, _, _= load_from_file(filename, start_date)
+                I_tot_scaled, f, _, _, _, _, _, _= load_from_file(filename, network_filename, start_date)
 
                 start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
                 end_date   = start_date + datetime.timedelta(days=cfg.day_max)
@@ -132,6 +134,8 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
         N_init         = np.array([cfg.N_init         for cfg in cfgs])
         N_init_UK_frac = np.array([cfg.N_init_UK_frac for cfg in cfgs])
 
+        lambda_I       = np.array([cfg.lambda_I       for cfg in cfgs])
+
         best = lambda arr : np.array([np.mean(lls[arr == v]) for v in np.unique(arr)])
         err  = lambda arr : np.array([np.std( lls[arr == v]) for v in np.unique(arr)])
 
@@ -154,6 +158,6 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
             print(name + '\t' + out_string)
 
         print('--- Maximum likelihood value locations ---')
-        terminal_printer('beta* :      ', betas,          cfg_best.beta                 , lls)
-        terminal_printer('N_init* :    ', N_init,         cfg_best.N_init               , lls)
-        terminal_printer('N_UK_frac* : ', N_init_UK_frac, cfg_best.N_init_UK_frac       , lls)
+        terminal_printer('beta* :      ', betas,          cfg_best.beta,     lls)
+        terminal_printer('N_init* :    ', N_init,         cfg_best.N_init,   lls)
+        terminal_printer('lambda_I* :  ', lambda_I,       cfg_best.lambda_I, lls)

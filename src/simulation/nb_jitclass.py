@@ -40,7 +40,7 @@ spec_cfg = {
     'simulated_tests' : nb.boolean,
     'incidence_labels' : ListType(ListType(nb.types.unicode_type)),
     'incidence_threshold' : ListType(nb.float64[: :1]), # to make the type C instead of A
-    'infection_threshold' : ListType(nb.int64[: :1]), # to make the type C instead of A
+    'infection_threshold' : ListType(nb.int32[: :1]), # to make the type C instead of A
     'percentage_threshold' : ListType(nb.float64[: :1]), # to make the type C instead of A
     'incidence_intervention_effect' : ListType(nb.float64[:, : :1]), # to make the type C instead of A
     'test_reference' : nb.float64,
@@ -115,7 +115,7 @@ class Config(object) :
         self.stratified_labels                  = 'land'
         self.incidence_labels                   = List([List(['land'])])
         self.incidence_threshold                = List([np.array( [2_000.0],        dtype=np.float64)])
-        self.infection_threshold                = List([np.array( [0],              dtype=np.int64)])
+        self.infection_threshold                = List([np.array( [0],              dtype=np.int32)])
         self.percentage_threshold               = List([np.array( [0.0],            dtype=np.float64)])
         self.incidence_intervention_effect      = List([np.array([[1.0, 0.9, 0.9]], dtype=np.float64)])
         self.test_reference                     = 0.017         # 1.7 % percent of the population is tested daily
@@ -279,7 +279,7 @@ class My(object) :
         self.connections = utils.initialize_nested_lists(N_tot, np.uint32)
         self.connection_status = utils.initialize_nested_lists(N_tot, nb.boolean)
         self.connection_type = utils.initialize_nested_lists(N_tot, np.uint8)
-        self.beta_connection_type = np.array([1.5, 1.0, 0.8, 1.0], dtype=np.float32)  # beta multiplier for [House, work, others, events]
+        self.beta_connection_type = np.array([1.0, 0.8, 1.0, 1.0], dtype=np.float32)  # beta multiplier for [House, work, others, events]
         self.connection_weight = np.ones(N_tot, dtype=np.float32)
         self.infection_weight = np.ones(N_tot, dtype=np.float64)
         self.number_of_contacts = np.zeros(N_tot, dtype=nb.uint16)
@@ -319,6 +319,9 @@ class My(object) :
 
     def agent_is_recovered(self, agent) :
         return self.state[agent] == 8
+
+    def agent_is_vaccinated(self, agent) :
+        return self.vaccination_type[agent] != 0
 
     def agent_is_not_vaccinated(self, agent) :
         return self.vaccination_type[agent] == 0
@@ -444,7 +447,7 @@ spec_intervention = {
     'N_incidence_labels' : DictType(nb.types.unicode_type, nb.uint16),
     'incidence_labels' : ListType(nb.types.unicode_type),
     'incidence_threshold' : nb.float64[:],
-    'infection_threshold' : nb.int64[:],
+    'infection_threshold' : nb.int32[:],
     'percentage_threshold' : nb.float64[:],
     'incidence_intervention_effect' : nb.float64[:, :],
     'incidence_label_map' : DictType(nb.types.unicode_type, DictType(nb.uint16, nb.uint16)),

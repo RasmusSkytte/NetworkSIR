@@ -2,7 +2,6 @@ import numpy as np
 from datetime import datetime
 
 import matplotlib.pyplot as plt
-from numpy.core.defchararray import multiply
 
 from tqdm import tqdm
 from pathlib import Path
@@ -13,9 +12,13 @@ from src.utils import file_loaders
 from src.analysis.helpers  import *
 from src.analysis.plotters import *
 
+ref_tests = 160_000
+
+dim = False
+
 # Define the subset to plot on
 subsets = [ {'Intervention_contact_matrices_name' : ['fase3/S2_1', 'fase3/S2_2', 'fase3/S2_3', 'fase3/S2_4', 'fase3/S2_5', 'fase3/S2_6', 'fase3/S2_7', 'fase3/S2_8']} ]
-#subsets = [ {'Intervention_contact_matrices_name' : ['fase3/S2_1', 'fase3/S2_2', 'fase3/S2_3', 'fase3/S2_4', 'fase3/S2_5', 'fase3/S2_6']} ]
+#subsets = [ {'Intervention_contact_matrices_name' : ['fase3/S2_5']} ]
 
 for subset in subsets :
     fig_name = Path('Figures/' + subset['Intervention_contact_matrices_name'][-1].replace('/','_') + '.png')
@@ -69,8 +72,8 @@ for subset in subsets :
     fig6, axes6 = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True, figsize=(12, 12))
 
     print('Plotting the individual ABM simulations. Please wait', flush=True)
-    for (filename, network_filename) in tqdm(
-        zip(abm_files.iter_files(), abm_files.iter_network_files()),
+    for k, (filename, network_filename) in tqdm(
+        enumerate(zip(abm_files.iter_files(), abm_files.iter_network_files())),
         total=len(abm_files.filenames)) :
 
         # Load
@@ -83,18 +86,15 @@ for subset in subsets :
           daily_tests,
           total_infections) = load_from_file(filename, network_filename, start_date)
 
-        # Perform test correction
-        positve_tests *= (daily_tests.T[0] / ref_tests) ** beta
-
         # Plot
-        h  = plot_simulation_cases_and_variant_fraction(positve_tests, f, total_infections, daily_tests, t_day, t_week, axes1)
-        #h2 = plot_simulation_growth_rates(positive_by_variant, t_day, axes2)
+        h  = plot_simulation_cases_and_variant_fraction(positve_tests, f, total_infections, daily_tests, t_day, t_week, axes1, color=plt.cm.tab10(k))
+        h2 = plot_simulation_growth_rates(positive_by_variant, t_day, axes2)
         h3 = plot_simulation_category(positive_per_age_group, t_day, axes3)
         h4 = plot_simulation_category(positive_by_region, t_day, axes4)
         h5 = plot_simulation_category(vaccinations_by_age_group, t_day, axes5)
         h6 = plot_simulation_category(daily_tests, t_day, [axes6])
 
-        #h.extend(h2)
+        h.extend(h2)
         h.extend(h3)
         h.extend(h4)
         h.extend(h5)
@@ -108,36 +108,38 @@ for subset in subsets :
         plot_handles.append(h)
         lls.append(ll)
 
-    lls = np.array(lls)
-    lls[np.isneginf(lls)] = np.nan
 
-    # Filter out 'bad' runs
-    ulls = lls[~np.isnan(lls)] # Only non-nans
-    ulls = np.unique(ulls)     # Only unique values
-    ulls = sorted(ulls)[-N:]   # Keep N best
-    lls = lls.tolist()
+    if dim :
+        lls = np.array(lls)
+        lls[np.isneginf(lls)] = np.nan
+
+        # Filter out 'bad' runs
+        ulls = lls[~np.isnan(lls)] # Only non-nans
+        ulls = np.unique(ulls)     # Only unique values
+        ulls = sorted(ulls)[-N:]   # Keep N best
+        lls = lls.tolist()
 
 
-    if len(ulls) > 1 :
+        if len(ulls) > 1 :
 
-        for i in reversed(range(len(lls))) :
-            if lls[i] in ulls :
-                ulls.remove(lls[i])
-            else :
-                for handle in plot_handles[i] :
-                    handle.remove()
-                plot_handles.pop(i)
-                lls.pop(i)
+            for i in reversed(range(len(lls))) :
+                if lls[i] in ulls :
+                    ulls.remove(lls[i])
+                else :
+                    for handle in plot_handles[i] :
+                        handle.remove()
+                    plot_handles.pop(i)
+                    lls.pop(i)
 
-        lls_best = np.array(lls)
-        # Rescale lls for plotting
-        lls_best -= np.min(lls_best)
-        lls_best /= np.max(lls_best)
+            lls_best = np.array(lls)
+            # Rescale lls for plotting
+            lls_best -= np.min(lls_best)
+            lls_best /= np.max(lls_best)
 
-        # Color according to lls
-        for ll, handles in zip(lls_best, plot_handles) :
-            for line in handles :
-                line.set_alpha(0.05 + 0.95*ll)
+            # Color according to lls
+            for ll, handles in zip(lls_best, plot_handles) :
+                for line in handles :
+                    line.set_alpha(0.05 + 0.95*ll)
 
 
 
@@ -182,7 +184,7 @@ for subset in subsets :
     ylims = [ax.get_ylim() for ax in axes1]
 
     # Get the transition dates
-    restiction_days = planned_restriction_dates[1::2]
+    restiction_days = planned_restriction_dates
 
     for day in restiction_days :
         restiction_date = start_date + datetime.timedelta(days=day)

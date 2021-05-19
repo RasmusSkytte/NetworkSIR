@@ -71,7 +71,6 @@ spec_cfg = {
     'planned_restriction_dates' : nb.uint16[:],
     'planned_restriction_types' : nb.uint8[:],
     'continuous_interventions_to_apply' : nb.int8[:],
-    'daily_tests' : nb.uint16,
     'test_delay_in_clicks' : nb.int64[:],
     'results_delay_in_clicks' : nb.int64[:],
     'chance_of_finding_infected' : nb.float64[:],
@@ -433,7 +432,7 @@ spec_intervention = {
     'R_true_list' : ListType(nb.float64),
     'R_true_list_brit' : ListType(nb.float64),
     # Testing
-    'daily_tests' : nb.int32,
+    'daily_tests' : nb.int32[:],
     'day_found_infected' : nb.int32[:],
     'reason_for_test' : nb.int8[:],
     'result_of_test' : nb.int8[:],
@@ -550,7 +549,7 @@ class Intervention(object) :
         self.R_true_list_brit                = List([0.0])
 
 
-        self.daily_tests                     = 0
+        self.daily_tests                     = np.zeros(1, dtype=np.int32)
         self.day_found_infected              = np.full(self.cfg_network.N_tot, fill_value=-10_000, dtype=np.int32)
         self.reason_for_test                 = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)
         self.result_of_test                  = np.full(self.cfg_network.N_tot, fill_value=-1, dtype=np.int8)

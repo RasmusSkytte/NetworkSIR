@@ -550,7 +550,7 @@ def run_simulation(
 
             # Allow for symptom testing
             if intervention.apply_interventions and intervention.apply_symptom_testing and day >= 0 :
-                apply_symptom_testing(my, intervention, agent, my.state[agent], click)
+                apply_symptom_testing(my, intervention, agent, my.state[agent])
 
             # If this moves to Recovered state
             if state_after == g.N_states - 1 :

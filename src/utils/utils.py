@@ -1212,8 +1212,6 @@ def scale_population_parameters(cfg) :
     cfg_scaled.R_init = int(cfg.R_init * f)
     cfg_scaled.N_init = int(cfg.N_init * f)
 
-    cfg_scaled.daily_tests = int(cfg.daily_tests * f)
-
     if len(cfg.infection_threshold) > 0 :
         for j, interventions in enumerate(cfg.infection_threshold) :
             for k, thresholds in enumerate(interventions) :

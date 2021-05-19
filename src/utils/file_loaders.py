@@ -438,6 +438,24 @@ def load_seasonal_model(scenario=None, offset = 0) :
     # Scale to starting value
     return model / model[0]
 
+def load_daily_tests(length, offset) :
+
+    # Get the newest SSI data filename
+    date = newest_SSI_filename()
+
+    # Download the data
+    _, df, _, _ = get_SSI_data(date, return_data=True)
+
+    # Tests 
+    start_date = datetime.datetime(2020, 12, 28)
+
+    df = df.loc[pd.to_datetime(df.index) >= start_date + datetime.timedelta(days=offset)]
+    df = df.iloc[:-2]
+    print(df.sum(axis=1))
+    x = x
+    # Scale to starting value
+    return model / model[0]
+
 
 def load_contact_matrix_set(matrix_path) :
 

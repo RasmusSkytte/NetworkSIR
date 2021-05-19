@@ -22,7 +22,7 @@ end_date :   2021-07-01
 stratified_labels: landsdel  # Output granularity
 
 
-chance_of_finding_infected: [[0.35, 0.55, 0.45, 0.35]]
+chance_of_finding_infected: [[1.5, 2.5, 2.0, 1.5]]
 testing_penetration: [[0.40,  0.45,  0.55,  0.55,  0.60,  0.65,  0.70,  0.75]]
 
 

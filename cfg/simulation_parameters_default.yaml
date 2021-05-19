@@ -72,9 +72,6 @@ continuous_interventions_to_apply: [1, 2, 3, 4, 5]
   # 4: Random Testing
   # 5: vaccinations
 
-
-daily_tests: 170_000 # Daily tests for the full population
-
 test_delay_in_clicks: [0, 0, 20] #clicks until test. [symptoms, random_test, tracing]
 results_delay_in_clicks: [5, 10, 5] #clicks from test until results. [symptoms, random_test, tracing]
 intervention_removal_delay_in_clicks: 70

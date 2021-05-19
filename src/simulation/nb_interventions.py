@@ -769,36 +769,22 @@ def check_test_results(my, g, intervention, agent, day, click, stratified_positi
 
 
 @njit
-def apply_symptom_testing(my, intervention, agent, state, click) :
+def apply_symptom_testing(my, intervention, agent, state) :
 
     # Infectious agents may test due to symptopns
     if my.agent_is_infectious(agent) :
 
-        # Only thest with probabaility
-        if np.random.rand() < intervention.cfg.chance_of_finding_infected[state - 4] * my.testing_probability[agent] :   # TODO: Fjern hardcoded 4
-
-            # Testing in n_clicks for symptom checking
-            intervention.clicks_when_tested[agent] = click + intervention.cfg.test_delay_in_clicks[0]
-            intervention.result_of_test[agent]     = 1
-
-            # Set the reason for testing to symptoms (0)
-            intervention.reason_for_test[agent] = 0
-
-            # Isolate while waiting
-            intervention.clicks_when_isolated[agent] = click
-
-            # No longer willing to test
-            my.testing_probability[agent] = 0.0
+         my.testing_probability[agent] *= intervention.cfg.chance_of_finding_infected[state - 4]
 
 
 @njit
-def apply_random_testing(my, intervention, click) :
+def apply_random_testing(my, intervention, day, click) :
 
     # choose N_daily_test people at random to test
     agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
 
     # Choose the agents
-    random_agents_to_be_tested = nb_random_choice(agents, my.testing_probability, size=my.cfg.daily_tests, replace=True)    # Replace = True makes it faster and the probability of choosing people twice should be low enough
+    random_agents_to_be_tested = nb_random_choice(agents, my.testing_probability, size=my.cfg.daily_tests[day], replace=True)    # Replace = True makes it faster and the probability of choosing people twice should be low enough
 
     # Book test
     intervention.clicks_when_tested[random_agents_to_be_tested] = click + intervention.cfg.test_delay_in_clicks[1]
@@ -942,7 +928,7 @@ def apply_daily_interventions(my, g, intervention, day, click, stratified_vaccin
         apply_interventions_on_label(my, g, intervention, day, click, verbose)
 
     if intervention.apply_random_testing :
-        apply_random_testing(my, intervention, click)
+        apply_random_testing(my, intervention, day, click)
 
     if intervention.apply_vaccinations :
         vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose = verbose)

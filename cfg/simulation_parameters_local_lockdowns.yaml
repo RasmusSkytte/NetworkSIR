@@ -1,19 +1,19 @@
 N_tot: 5_800_000
 rho: 0.1
 
-N_init: 20_000
-beta: 0.35
+N_init: 25_000
+beta: 0.2
 
 R_guess: 0.75
 
-N_init_UK_frac: 1.0
+N_init_UK_frac: 2.0
 beta_UK_multiplier: 1.55
 
 R_init : 5_800_000 * 0.065
 
 
 lambda_E: 4 / 3.5
-lambda_I: 7 / 10
+lambda_I: 7.5 / 10
 
 start_date : 2021-01-01
 end_date :   2021-07-01
@@ -23,7 +23,7 @@ stratified_labels: landsdel  # Output granularity
 
 continuous_interventions_to_apply: [[1, 2, 3, 4, 5]]     # No tracing
 
-chance_of_finding_infected: [[0.50, 0.90, 0.70, 0.50]]
+chance_of_finding_infected: [[0.125, 0.225, 0.175, 0.125]]
 testing_penetration: [[0.40,  0.45,  0.55,  0.55,  0.60,  0.65,  0.70,  0.75]]
 tracing_rates: [[1.0, 0.5, 0.3]] # [family, job, other]
 

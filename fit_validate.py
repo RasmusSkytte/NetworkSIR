@@ -136,7 +136,7 @@ for subset in subsets :
             lls_best /= np.max(lls_best)
 
             # Color according to lls
-            for k, ll, handles in enumerate(zip(lls_best, plot_handles)) :
+            for k, (ll, handles) in enumerate(zip(lls_best, plot_handles)) :
                 for line in handles :
                     line.set_alpha(0.05 + 0.95*ll)
                     line.set_color(plt.cm.tab10(k))

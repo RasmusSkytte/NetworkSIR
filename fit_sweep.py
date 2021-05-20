@@ -13,8 +13,8 @@ if utils.is_local_computer():
     num_cores_max = 1
     N_runs = 1
 else :
-    f = 0.05
-    n_steps = 3
+    f = 0.1
+    n_steps = 2
     num_cores_max = 30
     N_runs = 1
 
@@ -33,10 +33,10 @@ else :
 params, start_date = utils.load_params('cfg/simulation_parameters_local_lockdowns.yaml', f)
 
 # Sweep around parameter set
-params['beta']               = noise(params['beta'], 0.025)
-params['N_init']             = noise(params['N_init'], 5000 )
-#params['lambda_I']           =
+params['beta']               = noise(params['beta'], 0.05)
+params['N_init']             = noise(params['N_init'], 10000 )
 params['lambda_I']           = noise(params['lambda_I'], 0.1)
+#params['beta_UK_multiplier'] = noise(params['beta_UK_multiplier'], 0.05)
 #params['N_init_UK_frac']     = noise(params['N_init_UK_frac'], 1)
 
 
@@ -161,3 +161,5 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
         terminal_printer('beta* :      ', betas,          cfg_best.beta,     lls)
         terminal_printer('N_init* :    ', N_init,         cfg_best.N_init,   lls)
         terminal_printer('lambda_I* :  ', lambda_I,       cfg_best.lambda_I, lls)
+        terminal_printer('rel_beta* :  ', rel_betas,      cfg_best.beta_UK_multiplier, lls)
+

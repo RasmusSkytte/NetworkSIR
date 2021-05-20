@@ -92,7 +92,7 @@ def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=F
                         multiply_outgoing_rates_of_agent(my, g, agent, rate_multiplication=([0.5, 0.5, 0.5]))
 
                         # No longer willing to test
-                        my.testing_probability[agent] = 0
+                        my.testing_probability[agent] = 0.0
 
                         # Update counter
                         stratified_vaccination_counts[my.age[agent]] += 1

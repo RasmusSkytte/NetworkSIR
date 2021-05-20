@@ -9,6 +9,7 @@ ageCasesFolder: Data/age_cases
 municipalityCasesFolder: Data/municipality_cases
 municipalityTestsFolder: Data/municipality_tests
 municipalitySummeryFolder: Data/municipality_summery
+antigenTestsFolder : Data/antigen_tests
 contactMatrixFolder: Data/contact_matrices
 seasonalFolder: Data/seasonal_effects
 

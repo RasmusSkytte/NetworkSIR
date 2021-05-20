@@ -99,8 +99,9 @@ for subset in subsets :
         plot_handles.append(h)
 
         if dim :
-            # Evaluate
-            ll =  compute_loglikelihood((positve_tests, t_day), (logK,         logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(daily_tests[:len(logK)].flatten()))
+            # Evaluate loglikelihood
+            I = min(len(logK), len(daily_tests))
+            ll =  compute_loglikelihood((positve_tests[:I], t_day[:I]), (logK[:I],         logK_sigma[:I], t_index[:I]), transformation_function = lambda x : np.log(x) - beta * np.log(daily_tests[:I].flatten()))
             ll += compute_loglikelihood((f, t_week),          (fraction, fraction_sigma, t_fraction))
 
             # Store the plot handles and loglikelihoods

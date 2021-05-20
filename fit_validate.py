@@ -12,7 +12,7 @@ from src.utils import file_loaders
 from src.analysis.helpers  import *
 from src.analysis.plotters import *
 
-dim = False
+dim = True
 
 # Define the subset to plot on
 subsets = [ {'Intervention_contact_matrices_name' : ['fase3/S2_1', 'fase3/S2_2', 'fase3/S2_3', 'fase3/S2_4', 'fase3/S2_5', 'fase3/S2_6', 'fase3/S2_7', 'fase3/S2_8']} ]

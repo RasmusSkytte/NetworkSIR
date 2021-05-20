@@ -721,9 +721,6 @@ def check_test_results(my, g, intervention, agent, day, click, stratified_positi
         # Go into self-isolation
         intervention.clicks_when_isolated[agent] = click
 
-        # No longer willing to test
-        my.testing_probability[agent] = 0.0
-
         # Count the tests
         intervention.positive_test_counter[intervention.reason_for_test[agent]] += 1
 
@@ -769,7 +766,6 @@ def check_test_results(my, g, intervention, agent, day, click, stratified_positi
             my.testing_probability[agent] = 2 * my.testing_probability[agent]
 
         intervention.isolated[agent] = False
-        intervention.clicks_when_isolated[agent] = np.nan
         reset_rates_of_agent(my, g, agent, intervention)
 
 
@@ -938,7 +934,7 @@ def testing_intervention(my, g, intervention, day, click, stratified_positive) :
             check_test_results(my, g, intervention, agent, day, click, stratified_positive)
 
         # check for isolation
-        if intervention.clicks_when_isolated[agent] == click and intervention.apply_isolation :
+        if intervention.apply_isolation and intervention.clicks_when_isolated[agent] == click and not intervention.isolated[agent] :
             intervention.isolated[agent] = True
             multiply_rates_of_agent(my, g, agent, rate_multiplication = intervention.cfg.isolation_rate_multiplier)
 

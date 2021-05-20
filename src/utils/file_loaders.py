@@ -444,16 +444,28 @@ def load_daily_tests(cfg) :
     date = newest_SSI_filename()
 
     # Download the data
-    _, T, _, _ = get_SSI_data(date, return_data=True)
+    _, T_pcr, _, _, T_ag = get_SSI_data(date, return_data=True)
+    T_ag = T_ag['Tested']   # datafrane to series
+
+    # Aggregate PCR tests at the national level
+    T_pcr = T_pcr.sum(axis=1)
+
+    # Combine PCR and antigen_tests
+    intersection = T_pcr.index.intersection(T_ag.index)
+    T = T_pcr.iloc[np.isin(T_pcr.index, intersection)] + 0.5 * T_ag.iloc[np.isin(T_ag.index, intersection)]
 
     # Tests
     start_date = datetime.datetime(2020, 12, 28)
+    end_date   = datetime.datetime.strptime(date, '%Y_%m_%d') - datetime.timedelta(days=2)
 
     # Extract the range corresponding to simulation
     T = T.loc[pd.to_datetime(T.index) >= start_date + datetime.timedelta(days=cfg.start_date_offset)]
-    T = T.iloc[:-2]
-    T = T.sum(axis=1).values  # aggregate at the national level
+    T = T.loc[pd.to_datetime(T.index) <= end_date]
 
+    # Convert to numpy
+    T = T.values
+
+    # Add projection
     if cfg.day_max > len(T) :
 
         # Determine the current test behaviour
@@ -608,6 +620,11 @@ def load_age_data(zfile) :
     return df[:-1]
 
 
+def load_antigen_test_data(zfile) :
+    D = pd.read_csv(zfile.open('Test_pos_over_time_antigen.csv'), usecols=['Date', 'Tested'], dtype={'Tested' : 'str'}, sep=';', index_col=0)[:-2]
+    return D['Tested'].str.replace('.','', regex=False).astype(int)
+
+
 def newest_SSI_filename() :
 
     date = datetime.datetime.now()
@@ -653,7 +670,9 @@ def download_SSI_data(date=None,
                       download_municipality_summery=True,
                       path_municipality_summery=None,
                       download_age=True,
-                      path_age=None) :
+                      path_age=None,
+                      download_antigen_tests=True,
+                      path_antigen_tests=None) :
     # Parse date
     date = datetime.datetime.strptime(date, '%Y_%m_%d')
 
@@ -699,6 +718,11 @@ def download_SSI_data(date=None,
             df = load_age_data(zfile)
             save_dataframe(df, path_age, filename)
 
+        if download_antigen_tests :
+            if date > datetime.datetime(2021, 3, 30) : # Only added after this date
+                df = load_antigen_test_data(zfile)
+                save_dataframe(df, path_antigen_tests, filename)
+
 
 def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False) :
 
@@ -711,36 +735,49 @@ def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False)
     f_municipality_cases   = os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'],   filename)
     f_municipality_summery = os.path.join(load_yaml('cfg/files.yaml')['municipalitySummeryFolder'], filename)
     f_age                  = os.path.join(load_yaml('cfg/files.yaml')['ageCasesFolder'],            filename)
+    f_antigen_tests        = os.path.join(load_yaml('cfg/files.yaml')['antigenTestsFolder'],        filename)
 
     download_municipality_tests   = SSI_data_missing(f_municipality_tests)
     download_municipality_cases   = SSI_data_missing(f_municipality_cases)
     download_municipality_summery = SSI_data_missing(f_municipality_summery)
     download_age                  = SSI_data_missing(f_age)
 
+    if datetime.datetime.strptime(date, '%Y_%m_%d') > datetime.datetime(2021, 3, 30) :   # Only added after this date
+        download_antigen_tests    = SSI_data_missing(f_antigen_tests)
+    else :
+        download_antigen_tests    = False
+    
 
-    if download_municipality_tests or download_municipality_cases or download_municipality_summery or download_age :
+    if download_municipality_tests or download_municipality_cases or download_municipality_summery or download_age or download_antigen_tests :
 
         if verbose:
             print("Downloading new data")
 
         download_SSI_data(date=date,
-                          download_municipality_tests=download_municipality_tests,
-                          path_municipality_tests=os.path.dirname(f_municipality_tests),
-                          download_municipality_cases=download_municipality_cases,
-                          path_municipality_cases=os.path.dirname(f_municipality_cases),
-                          download_municipality_summery=download_municipality_summery,
-                          path_municipality_summery=os.path.dirname(f_municipality_summery),
-                          download_age=download_age,
-                          path_age=os.path.dirname(f_age))
+                          download_municipality_tests   = download_municipality_tests,
+                          path_municipality_tests       = os.path.dirname(f_municipality_tests),
+                          download_municipality_cases   = download_municipality_cases,
+                          path_municipality_cases       = os.path.dirname(f_municipality_cases),
+                          download_municipality_summery = download_municipality_summery,
+                          path_municipality_summery     = os.path.dirname(f_municipality_summery),
+                          download_age                  = download_age,
+                          path_age                      = os.path.dirname(f_age),
+                          download_antigen_tests        = download_antigen_tests,
+                          path_antigen_tests            = os.path.dirname(f_antigen_tests))
 
     if return_data :
         # Load the dataframes
-        df_municipality_tests   = pd.read_csv(f_municipality_tests,   index_col=0)
-        df_municipality_cases   = pd.read_csv(f_municipality_cases,   index_col=0)
-        df_municipality_summery = pd.read_csv(f_municipality_summery, index_col=0)
-        df_age                  = pd.read_csv(f_age,                  index_col=0)
-
-        return df_municipality_cases, df_municipality_tests, df_municipality_summery, df_age
+        df_municipality_tests   = pd.read_csv(f_municipality_tests,   index_col = 0)
+        df_municipality_cases   = pd.read_csv(f_municipality_cases,   index_col = 0)
+        df_municipality_summery = pd.read_csv(f_municipality_summery, index_col = 0)
+        df_age                  = pd.read_csv(f_age,                  index_col = 0)
+        
+        if datetime.datetime.strptime(date, '%Y_%m_%d') > datetime.datetime(2021, 3, 30) :   # Only added after this date
+            df_antigen_tests    = pd.read_csv(f_antigen_tests,        index_col = 0)
+        else :
+            df_antigen_tests = -1
+        
+        return df_municipality_cases, df_municipality_tests, df_municipality_summery, df_age, df_antigen_tests
 
     if return_name :
         return date
@@ -763,8 +800,8 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
         date_delayed = datetime.datetime.strptime(date_current, '%Y_%m_%d') - datetime.timedelta(days=7)
         date_delayed = date_delayed.strftime('%Y_%m_%d')
 
-        _, _, _, df_current = get_SSI_data(date=date_current, return_data=True)
-        _, _, _, df_delayed = get_SSI_data(date=date_delayed, return_data=True)
+        _, _, _, df_current, _ = get_SSI_data(date=date_current, return_data=True)
+        _, _, _, df_delayed, _ = get_SSI_data(date=date_delayed, return_data=True)
 
         age_distribution_current_raw = df_current.to_numpy().flatten()
         age_distribution_delayed_raw = df_delayed.to_numpy().flatten()
@@ -791,7 +828,7 @@ def load_label_data(initial_distribution_file, label_map, test_reference = 0.017
     N_labels = len(label_map.unique())
 
     if initial_distribution_file.lower() == 'newest' :
-        df_cases, df_tests, df_summery, _ = get_SSI_data(date='newest', return_data=True)
+        df_cases, df_tests, df_summery, _, _ = get_SSI_data(date='newest', return_data=True)
     else :
         df_cases   = pd.read_csv(os.path.join(load_yaml('cfg/files.yaml')['municipalityCasesFolder'],   initial_distribution_file + '.csv'), index_col=0)
         df_tests   = pd.read_csv(os.path.join(load_yaml('cfg/files.yaml')['municipalityTestsFolder'],   initial_distribution_file + '.csv'), index_col=0)

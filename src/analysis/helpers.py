@@ -203,7 +203,7 @@ def load_b117_fraction() :
     return (fraction, fraction_sigma, t)
 
 
-def load_infected_per_category(beta, category='AgeGr') :
+def load_infected_per_category(beta, category='AgeGr', test_adjust=True) :
 
     raw_data = pd.read_csv(file_loaders.load_yaml("cfg/files.yaml")["RegionData"], sep="\t")
 
@@ -215,6 +215,8 @@ def load_infected_per_category(beta, category='AgeGr') :
 
     data = pd.pivot_table(raw_data, values=['pos'], index=['PrDate'], columns=[category],  aggfunc=np.sum)
     positive_per_category = data.to_numpy().astype(float)
-    positive_per_category *= (tests_per_category_adjusted / tests_per_category) ** beta
+
+    if test_adjust :
+        positive_per_category *= (tests_per_category_adjusted / tests_per_category) ** beta
 
     return pd.to_datetime(data.index), positive_per_category

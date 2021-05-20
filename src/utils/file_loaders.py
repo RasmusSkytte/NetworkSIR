@@ -438,23 +438,40 @@ def load_seasonal_model(scenario=None, offset = 0) :
     # Scale to starting value
     return model / model[0]
 
-def load_daily_tests(length, offset) :
+def load_daily_tests(cfg) :
 
     # Get the newest SSI data filename
     date = newest_SSI_filename()
 
     # Download the data
-    _, df, _, _ = get_SSI_data(date, return_data=True)
+    _, T, _, _ = get_SSI_data(date, return_data=True)
 
-    # Tests 
+    # Tests
     start_date = datetime.datetime(2020, 12, 28)
 
-    df = df.loc[pd.to_datetime(df.index) >= start_date + datetime.timedelta(days=offset)]
-    df = df.iloc[:-2]
-    print(df.sum(axis=1))
-    x = x
-    # Scale to starting value
-    return model / model[0]
+    # Extract the range corresponding to simulation
+    T = T.loc[pd.to_datetime(T.index) >= start_date + datetime.timedelta(days=cfg.start_date_offset)]
+    T = T.iloc[:-2]
+    T = T.sum(axis=1).values  # aggregate at the national level
+
+    if cfg.day_max > len(T) :
+
+        # Determine the current test behaviour
+        weeks_looking_back = 4
+        T_week_template = np.round(np.mean(np.reshape(T[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
+
+        # Project current test behavior forward.
+        n_repeats = int(np.ceil((cfg.day_max + 1 - len(T)) / 7))
+
+        T_projected = np.tile(T_week_template, n_repeats)
+
+        # Combine
+        T = np.concatenate((T, T_projected))
+
+    # Scale to the tests
+    T = T[:(cfg.day_max+1)] * cfg.network.N_tot / 5_800_000
+
+    return np.round(T).astype(int)
 
 
 def load_contact_matrix_set(matrix_path) :

@@ -743,9 +743,14 @@ def check_test_results(my, g, intervention, agent, day, click, stratified_positi
                 # Not all will be traced
                 if np.random.rand() < intervention.cfg.tracing_rates[my.connection_type[agent][ith_contact]] * my.testing_probability[contact] :
 
+                    test_click = click + my.cfg.tracing_delay + intervention.cfg.test_delay_in_clicks[2]
+                    test_day   = int(click / 10) # TODO: remove hardcode
+
                     # Book new test
                     intervention.reason_for_test[contact] = 2
-                    intervention.clicks_when_tested[contact] = click + my.cfg.tracing_delay + intervention.cfg.test_delay_in_clicks[2]
+
+                    intervention.clicks_when_tested[contact] = test_click
+                    intervention.random_tests[test_day] -= 1
 
                     # Isolate while waiting
                     intervention.clicks_when_isolated[contact] = click + my.cfg.tracing_delay
@@ -769,13 +774,31 @@ def check_test_results(my, g, intervention, agent, day, click, stratified_positi
 
 
 @njit
-def apply_symptom_testing(my, intervention, agent, state) :
+def apply_symptom_testing(my, intervention, agent, state, click) :
 
     # Infectious agents may test due to symptopns
     if my.agent_is_infectious(agent) :
 
-         my.testing_probability[agent] *= intervention.cfg.chance_of_finding_infected[state - 4]
+        # Only thest with probabaility
+        if np.random.rand() < intervention.cfg.chance_of_finding_infected[state - 4] * my.testing_probability[agent] :   # TODO: Fjern hardcoded 4
 
+            test_click = click + intervention.cfg.test_delay_in_clicks[0]
+            test_day   = int(click / 10) # TODO: remove hardcode
+
+
+            # Testing in n_clicks for symptom checking
+            intervention.clicks_when_tested[agent] = test_click
+            intervention.result_of_test[agent]     = 1
+            intervention.random_tests[test_day] -= 1
+
+            # Set the reason for testing to symptoms (0)
+            intervention.reason_for_test[agent] = 0
+
+            # Isolate while waiting
+            intervention.clicks_when_isolated[agent] = click
+
+            # No longer willing to test
+            my.testing_probability[agent] = 0.0
 
 @njit
 def apply_random_testing(my, intervention, day, click) :
@@ -784,7 +807,7 @@ def apply_random_testing(my, intervention, day, click) :
     agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
 
     # Choose the agents
-    random_agents_to_be_tested = nb_random_choice(agents, my.testing_probability, size=my.cfg.daily_tests[day], replace=True)    # Replace = True makes it faster and the probability of choosing people twice should be low enough
+    random_agents_to_be_tested = nb_random_choice(agents, my.testing_probability, size=intervention.random_tests[day], replace=True)    # Replace = True makes it faster and the probability of choosing people twice should be low enough
 
     # Book test
     intervention.clicks_when_tested[random_agents_to_be_tested] = click + intervention.cfg.test_delay_in_clicks[1]
@@ -908,7 +931,6 @@ def testing_intervention(my, g, intervention, day, click, stratified_positive) :
 
         # testing everybody who should be tested
         if intervention.clicks_when_tested[agent] == click:
-            intervention.daily_tests += 1
             test_agent(my, g, intervention, agent, click)
 
         # check for test results

@@ -396,7 +396,7 @@ def do_bug_check(
     s,
     x) :
 
-    if day > my.cfg.day_max :
+    if day >= my.cfg.day_max :
         if verbose :
             print("--- day exceeded day_max ---")
         continue_run = False
@@ -550,7 +550,7 @@ def run_simulation(
 
             # Allow for symptom testing
             if intervention.apply_interventions and intervention.apply_symptom_testing and day >= 0 :
-                apply_symptom_testing(my, intervention, agent, my.state[agent])
+                apply_symptom_testing(my, intervention, agent, my.state[agent], click)
 
             # If this moves to Recovered state
             if state_after == g.N_states - 1 :
@@ -661,7 +661,7 @@ def run_simulation(
                     out_state_counts.append(state_total_counts.copy())
                     out_stratified_positive.append(stratified_positive.copy())
                     out_stratified_vaccination_counts.append(stratified_vaccination_counts.copy())
-                    out_daily_tests.append(intervention.daily_tests)
+                    out_daily_tests.append(intervention.daily_tests[day])
                     out_my_state.append(my.state.copy())
 
                     intervention.R_true_list.append(calculate_R_True(my, g, day))
@@ -678,31 +678,31 @@ def run_simulation(
                     #print('R_true_list_brit : ',  np.round(intervention.R_true_list_brit[-1],    3))
                     #print('Season multiplier : ', np.round(g.seasonality(day),                   2))
 
+
                 # Advance day
-                day += 1
-                daily_counter = 0
+                if day < my.cfg.day_max :
 
-                # Apply interventions for the new day
-                if intervention.apply_interventions :
-
-                    # Reset the test counter
-                    intervention.daily_tests = 0
-
-                    stratified_positive = np.zeros_like(stratified_positive)
+                    day += 1
+                    daily_counter = 0
 
                     # Apply interventions for the new day
-                    apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
+                    if intervention.apply_interventions :
 
-                # Apply events for the new day
-                if my.cfg.N_events > 0 :
-                    add_daily_events(
-                        my,
-                        g,
-                        intervention,
-                        day,
-                        agents_in_state,
-                        state_total_counts,
-                        where_infections_happened_counter)
+                        stratified_positive = np.zeros_like(stratified_positive)
+
+                        # Apply interventions for the new day
+                        apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
+
+                    # Apply events for the new day
+                    if my.cfg.N_events > 0 :
+                        add_daily_events(
+                            my,
+                            g,
+                            intervention,
+                            day,
+                            agents_in_state,
+                            state_total_counts,
+                            where_infections_happened_counter)
 
 
 

@@ -8,9 +8,9 @@ from contexttimer import Timer
 
 
 if utils.is_local_computer():
-    f = 0.05
+    f = 0.1
     n_steps = 2
-    num_cores_max = 1
+    num_cores_max = 2
     N_runs = 1
 else :
     f = 0.5
@@ -35,7 +35,7 @@ params, start_date = utils.load_params('cfg/simulation_parameters_local_lockdown
 # Sweep around parameter set
 #params['beta']               = noise(params['beta'], 0.025)
 #params['N_init']             = noise(params['N_init'], 5000 )
-params['lambda_I']           = [0.75, 0.5, 0.25]
+#params['lambda_I']           =
 #params['lambda_I']           = noise(params['lambda_I'], 0.1)
 #params['N_init_UK_frac']     = noise(params['N_init_UK_frac'], 1)
 

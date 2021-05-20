@@ -5,6 +5,8 @@ import datetime
 
 import h5py
 
+import warnings
+
 import matplotlib        as mpl
 import matplotlib.pyplot as plt
 import matplotlib.dates  as mdates
@@ -68,7 +70,9 @@ def plot_simulation_growth_rates(tests_by_variant, t, axes) :
         for j in range(t_max) :
             y_w = y[j:(j+window_size)]
             try :
-                res, _ = scipy.optimize.curve_fit(lambda t, a, r: a * np.exp(r * t), t_w, y_w, p0=(np.mean(y_w), 0), maxfev=5000)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    res, _ = scipy.optimize.curve_fit(lambda t, a, r: a * np.exp(r * t), t_w, y_w, p0=(np.mean(y_w), 0), maxfev=5000)
             except :
                 res = [np.nan, np.nan]
             R_w.append(1 + 4.7 * res[1])

@@ -22,7 +22,7 @@ for subset in subsets :
     fig_name = Path('Figures/' + subset['Intervention_contact_matrices_name'][-1].replace('/','_') + '.png')
 
     # Number of plots to keep
-    N = 25
+    N = 15
 
     # Load the ABM simulations
     abm_files = file_loaders.ABM_simulations(subset=subset, verbose=True)
@@ -136,9 +136,10 @@ for subset in subsets :
             lls_best /= np.max(lls_best)
 
             # Color according to lls
-            for ll, handles in zip(lls_best, plot_handles) :
+            for k, ll, handles in enumerate(zip(lls_best, plot_handles)) :
                 for line in handles :
                     line.set_alpha(0.05 + 0.95*ll)
+                    line.set_color(plt.cm.tab10(k))
 
 
 

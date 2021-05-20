@@ -735,4 +735,7 @@ def run_simulation(
         print('fraction_failed_vaccinated : ', np.round(np.sum(np.array([1 for vaccination_type in my.vaccination_type if vaccination_type < 0]))  / my.cfg_network.N_tot, 2) )
         print('fraction_not_vaccinated : ',    np.round(np.sum(np.array([1 for vaccination_type in my.vaccination_type if vaccination_type == 0])) / my.cfg_network.N_tot, 2) )
 
+    f = 5_800_000 / my.cfg_network.N_tot
+    print('positive_test_counter : ', [int(f * P / day) for P in intervention.positive_test_counter])
+
     return out_time, out_state_counts, out_stratified_positive, out_stratified_vaccination_counts, out_daily_tests, out_my_state, intervention

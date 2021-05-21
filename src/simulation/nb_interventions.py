@@ -360,6 +360,12 @@ def check_status_for_intervention_on_labels(my, g, intervention, day, click) :
 @njit
 def check_incidence_against_tresholds(my, intervention, day, click) :
 
+    # Incidence is computed on pcr tests
+    pcr_to_total_tests_ratio = intervention.daily_pcr_tests[day] / (intervention.daily_pcr_tests[day] + 0.5 * intervention.daily_antigen_tests[day])
+
+    # Store the incidence at kommune level
+    incidence_per_kommume = np.zeros(my.N_kommuner, dtype=np.float32)
+
     # Loop over all interventions and check if condition applies
 
     # Arrays to encode information about which sogne is above the on and off tresholds
@@ -381,7 +387,27 @@ def check_incidence_against_tresholds(my, intervention, day, click) :
 
         # Loop over labels
         for ith_label, (N_tests, N_infected, N_inhabitants) in enumerate(zip(tests_per_label, infected_per_label, intervention.agents_per_incidence_label[incidence_label])) :
+            
+            # Discount AG tests
+            N_tests *= pcr_to_total_tests_ratio
 
+            if N_tests < 1.0 :
+                continue
+
+            # Compute the incidence on the label
+            incidence = N_infected / (N_inhabitants / intervention.cfg.incidence_reference)
+
+            # Adjust for the number of tests
+            if not incidence_label.lower() == 'sogn' :
+                incidence *= (intervention.cfg.test_reference * N_inhabitants / N_tests) ** intervention.cfg.testing_exponent
+
+            # Store the incidence
+            if incidence_label.lower() == 'kommune' :
+                incidence_per_kommume[ith_label] = incidence
+
+            # Check incidence against incidence treshold
+            # If conditions are met
+            
             # Check against infection treshold
             if N_infected <= intervention.infection_threshold[ith_intervention] :
                 continue
@@ -390,14 +416,6 @@ def check_incidence_against_tresholds(my, intervention, day, click) :
             if N_infected / N_tests <= intervention.percentage_threshold[ith_intervention] :
                 continue
 
-            # Compute the incidence on the label
-            incidence = N_infected / (N_inhabitants / intervention.cfg.incidence_reference)
-
-            if not incidence_label.lower() == 'sogn' :
-                incidence *= (intervention.cfg.test_reference * N_inhabitants / N_tests) ** intervention.cfg.testing_exponent
-
-            # Check incidence against incidence treshold
-            # If conditions are met
             if incidence > intervention.incidence_threshold[ith_intervention] :
 
                 # Loop over parishes on label
@@ -411,6 +429,10 @@ def check_incidence_against_tresholds(my, intervention, day, click) :
     # Interventions are set to inactive unless they are already active and (&) incidence is above the off treshold
     intervention_at_sogn = np.bitwise_and(intervention_at_sogn, sogne_above_treshold)
 
+
+    print('incidence per kommune')
+    print(np.mean(incidence_per_kommume))
+    print(np.max(incidence_per_kommume))
 
     return intervention_at_sogn
 

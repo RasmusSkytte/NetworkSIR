@@ -661,7 +661,7 @@ def run_simulation(
                     out_state_counts.append(state_total_counts.copy())
                     out_stratified_positive.append(stratified_positive.copy())
                     out_stratified_vaccination_counts.append(stratified_vaccination_counts.copy())
-                    out_daily_tests.append(intervention.daily_tests[day])
+                    out_daily_tests.append(intervention.daily_pcr_tests[day] + 0.5 * intervention.daily_antigen_tests[day])
                     out_my_state.append(my.state.copy())
 
                     intervention.R_true_list.append(calculate_R_True(my, g, day))

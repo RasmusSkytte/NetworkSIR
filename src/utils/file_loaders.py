@@ -452,38 +452,47 @@ def load_daily_tests(cfg) :
 
     # Combine PCR and antigen_tests
     intersection = T_pcr.index.intersection(T_ag.index)
-    T = T_pcr.iloc[np.isin(T_pcr.index, intersection)] + 0.5 * T_ag.iloc[np.isin(T_ag.index, intersection)]
+    T_pcr = T_pcr.iloc[np.isin(T_pcr.index, intersection)]
+    T_ag  = T_ag.iloc[np.isin(T_ag.index, intersection)]
 
     # Tests
     start_date = datetime.datetime(2020, 12, 28)
     end_date   = datetime.datetime.strptime(date, '%Y_%m_%d') - datetime.timedelta(days=2)
 
     # Extract the range corresponding to simulation
-    T = T.loc[pd.to_datetime(T.index) >= start_date + datetime.timedelta(days=cfg.start_date_offset)]
-    T = T.loc[pd.to_datetime(T.index) <= end_date]
+    T_pcr = T_pcr.loc[pd.to_datetime(T_pcr.index) >= start_date + datetime.timedelta(days=cfg.start_date_offset)]
+    T_ag  = T_ag.loc[ pd.to_datetime(T_ag.index)  >= start_date + datetime.timedelta(days=cfg.start_date_offset)]
+
+    T_pcr = T_pcr.loc[pd.to_datetime(T_pcr.index) <= end_date]
+    T_ag  = T_ag.loc[ pd.to_datetime(T_ag.index)  <= end_date]
 
     # Convert to numpy
-    T = T.values
+    T_pcr = T_pcr.values
+    T_ag  = T_ag.values
 
     # Add projection
-    if cfg.day_max > len(T) :
+    if cfg.day_max > len(T_pcr) :
 
         # Determine the current test behaviour
         weeks_looking_back = 4
-        T_week_template = np.round(np.mean(np.reshape(T[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
+        T_pcr_week_template = np.round(np.mean(np.reshape(T_pcr[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
+        T_ag_week_template  = np.round(np.mean(np.reshape( T_ag[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))        
 
         # Project current test behavior forward.
-        n_repeats = int(np.ceil((cfg.day_max + 1 - len(T)) / 7))
+        n_repeats = int(np.ceil((cfg.day_max + 1 - len(T_pcr_week_template)) / 7))
 
-        T_projected = np.tile(T_week_template, n_repeats)
+        T_pcr_projected = np.tile(T_pcr_week_template, n_repeats)
+        T_ag_projected  = np.tile(T_ag_week_template,  n_repeats)
 
         # Combine
-        T = np.concatenate((T, T_projected))
+        T_pcr = np.concatenate((T_pcr, T_pcr_projected))
+        T_ag  = np.concatenate((T_ag,  T_ag_projected))
 
     # Scale to the tests
-    T = T[:(cfg.day_max+1)] * cfg.network.N_tot / 5_800_000
+    T_pcr = T_pcr[:(cfg.day_max+1)] * cfg.network.N_tot / 5_800_000
+    T_ag  = T_ag[:(cfg.day_max+1)]  * cfg.network.N_tot / 5_800_000
 
-    return np.round(T).astype(int)
+    return np.round(T_pcr).astype(int), np.round(T_ag).astype(int)
 
 
 def load_contact_matrix_set(matrix_path) :

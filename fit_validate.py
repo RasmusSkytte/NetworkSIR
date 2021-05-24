@@ -72,7 +72,7 @@ for subset in subsets :
 
     fig7, axes7 = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True, figsize=(12, 12))
 
-    fig8, axes8 = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True, figsize=(12, 12))
+    fig8, axes8 = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(12, 4))
 
     print('Plotting the individual ABM simulations. Please wait', flush=True)
     for k, (filename, network_filename) in tqdm(
@@ -98,7 +98,7 @@ for subset in subsets :
         h.extend( plot_simulation_category(positive_by_region, t_day, axes5) )
         h.extend( plot_simulation_category(vaccinations_by_age_group, t_day, axes6) )
         h.extend( plot_simulation_category(daily_tests, t_day, [axes7]) )
-        h.extend( plot_simulation_category(incidences, t_day, [axes8]) )
+        h.extend( plot_simulation_category(incidences, t_day, axes8, color=plt.cm.tab10(k) ))
 
         plot_handles.append(h)
 
@@ -443,8 +443,10 @@ for subset in subsets :
     N_stratifications = len(label_map['stratification_idx_to_stratification'])
     t, _, _, _, incidence_adjusted_per_kommune = file_loaders.load_label_data('newest', label_map['kommune_to_stratification_idx'], test_reference = cfg.test_reference, beta = cfg.testing_exponent)
 
-    axes8.scatter(t, np.median(incidence_adjusted_per_kommune, axis=1), color='k', s=10, zorder=100)
+    axes8[0].scatter(t, np.median(incidence_adjusted_per_kommune, axis=1), color='k', s=10, zorder=100)
 
-    set_date_xaxis(axes8, start_date, end_date)
+    axes8[1].scatter(t, np.quantile(incidence_adjusted_per_kommune, 0.9, axis=1), color='k', s=10, zorder=100)
+
+    set_date_xaxis(axes8[0], start_date, end_date)
 
     fig8.savefig(os.path.splitext(fig_name)[0] + '_incidence.png')

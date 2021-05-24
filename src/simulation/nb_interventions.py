@@ -89,7 +89,7 @@ def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=F
                             my.vaccination_type[agent] = -(i+1)
 
                         # Vaccines always reduces transmission risk by half
-                        multiply_outgoing_rates_of_agent(my, g, agent, rate_multiplication=([0.5, 0.5, 0.5]))
+                        multiply_outgoing_rates_of_agent(my, g, agent, rate_multiplication=([0.5, 0.5, 0.5, 0.5]))
 
                         # No longer willing to test
                         my.testing_probability[agent] = 0.0
@@ -261,7 +261,7 @@ def reset_rates_of_agent(my, g, agent, intervention) :
 
 
 @njit
-def multiply_incoming_rates_of_agent(my, g, agent, rate_multiplication = np.array([0.0, 0.0, 0.0])) :
+def multiply_incoming_rates_of_agent(my, g, agent, rate_multiplication = np.array([0.0, 0.0, 0.0, 0.0])) :
 
     # loop over all of an agents contact
     for ith_contact in range(my.number_of_contacts[agent]) :
@@ -279,7 +279,7 @@ def multiply_incoming_rates_of_agent(my, g, agent, rate_multiplication = np.arra
             g.update_rates(my, rate, contact)
 
 @njit
-def multiply_outgoing_rates_of_agent(my, g, agent, rate_multiplication = np.array([0.0, 0.0, 0.0])) :
+def multiply_outgoing_rates_of_agent(my, g, agent, rate_multiplication = np.array([0.0, 0.0, 0.0, 0.0])) :
 
     # loop over all of an agents contact
     for ith_contact, contact in enumerate(my.connections[agent]) :
@@ -338,7 +338,7 @@ def check_status_for_incidence_interventions(my, g, intervention, day, click) :
     # Loop over all interventions and check if condition still applies
     # if yes, write to all sogn within label of intervention
 
-    required_interventions_at_sogn, median_incidence = check_incidence_against_tresholds(my, intervention, day, click)
+    required_interventions_at_sogn, incidence_metrics = check_incidence_against_tresholds(my, intervention, day, click)
 
     # Loop over sogne to remove restricitons
     for sogn, required_interventions in enumerate(required_interventions_at_sogn) :
@@ -356,9 +356,9 @@ def check_status_for_incidence_interventions(my, g, intervention, day, click) :
 
             intervention.clicks_when_restriction_changes[sogn] = click + delay
 
-    return median_incidence
+    return incidence_metrics
 
-#@njit
+@njit
 def check_incidence_against_tresholds(my, intervention, day, click) :
 
     # Incidence is computed on pcr tests
@@ -429,9 +429,9 @@ def check_incidence_against_tresholds(my, intervention, day, click) :
     # Interventions are set to inactive unless they are already active and (&) incidence is above the off treshold
     intervention_at_sogn = np.bitwise_and(intervention_at_sogn, sogne_above_treshold)
 
-    median_incidence = np.median(incidence_per_kommume)
+    incidence_metrics = [np.median(incidence_per_kommume), np.quantile(incidence_per_kommume, 0.9), np.sum(intervention_at_sogn > 1)]
 
-    return intervention_at_sogn, median_incidence
+    return intervention_at_sogn, incidence_metrics
 
 @njit
 def loop_update_rates_of_contacts(

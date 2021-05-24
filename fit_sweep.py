@@ -10,7 +10,7 @@ from contexttimer import Timer
 if utils.is_local_computer():
     f = 0.1
     n_steps = 2
-    num_cores_max = 2
+    num_cores_max = 3
     N_runs = 1
 else :
     f = 0.1
@@ -34,7 +34,7 @@ params, start_date = utils.load_params('cfg/simulation_parameters_local_lockdown
 
 # Sweep around parameter set
 #params['beta']               = noise(params['beta'], 0.0125)
-#params['N_init']             = noise(params['N_init'], 5_000 )
+params['N_init']             = noise(params['N_init'], 5_000 )
 #params['lambda_I']           = noise(params['lambda_I'], 0.1)
 #params['beta_UK_multiplier'] = noise(params['beta_UK_multiplier'], 0.05)
 #params['N_init_UK_frac']     = noise(params['N_init_UK_frac'], 1)

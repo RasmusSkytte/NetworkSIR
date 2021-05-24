@@ -424,7 +424,7 @@ def load_contact_matrices(scenario = 'reference', N_labels = 1) :
         matrix_weights.append(tmp_matrix_weights)
         age_groups_work.append(tmp_age_groups_work)
 
-    return matrix_work, matrix_other, matrix_weights, age_groups_work
+    return matrix_work, matrix_school, matrix_other, matrix_weights, age_groups_work
 
 def load_seasonal_model(scenario=None, offset = 0) :
 
@@ -476,7 +476,7 @@ def load_daily_tests(cfg) :
     if cfg.day_max > len(T_pcr) :
 
         # Determine the current test behaviour
-        weeks_looking_back = 4
+        weeks_looking_back = 2
         T_pcr_week_template = np.round(np.mean(np.reshape(T_pcr[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
         T_ag_week_template  = np.round(np.mean(np.reshape( T_ag[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
 
@@ -902,7 +902,7 @@ def load_kommune_infection_distribution(initial_distribution_file, label_map, te
     else :
 
         # Load the incidence per kommune
-        _, _, _, cases_adjusted_per_kommune = load_label_data(initial_distribution_file, label_map['kommune_to_kommune_idx'], test_reference = test_reference, beta = beta)
+        _, _, _, cases_adjusted_per_kommune, _ = load_label_data(initial_distribution_file, label_map['kommune_to_kommune_idx'], test_reference = test_reference, beta = beta)
 
         # Swap arrays for the last 7 days
         I = cases_adjusted_per_kommune.shape[0] - 7

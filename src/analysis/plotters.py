@@ -34,12 +34,16 @@ def plot_simulation_cases_and_variant_fraction(total_tests, f, total_infections,
 
     return [handle_0, handle_1, handle_2]
 
-def plot_simulation_category(tests_by_category, t, axes, linestyle = '-') :
+def plot_simulation_category(tests_by_category, t, axes, linestyle = '-', color=None) :
 
     tmp_handles = []
     # Create the plots
     for i in range(np.size(tests_by_category, 1)) :
-        tmp_handle = axes[i].plot(t[:np.size(tests_by_category, 0)], tests_by_category[:, i], lw=4, linestyle=linestyle, c=plt.cm.tab10(i % 10))[0]
+        if color is None :
+            c = plt.cm.tab10(i % 10)
+        else :
+            c = color
+        tmp_handle = axes[i].plot(t[:np.size(tests_by_category, 0)], tests_by_category[:, i], lw=4, linestyle=linestyle, c=c)[0]
         tmp_handles.append(tmp_handle)
 
     return tmp_handles

@@ -208,6 +208,7 @@ spec_network = {
     'sigma_mu' : nb.float32,
     'contact_matrices_name' : nb.types.unicode_type,
     'work_matrix' : nb.float64[:, :],
+    'school_matrix' : nb.float64[:, :],
     'other_matrix' : nb.float64[:, :],
     'matrix_weights' : nb.float64[:],
     'N_contacts_max' : nb.uint16,
@@ -225,8 +226,9 @@ class Network(object) :
         self.epsilon_rho = 0.04
         self.mu = 40.0
         self.sigma_mu = 0.0
-        self.work_matrix  = np.ones((8, 8), dtype=np.float64)
-        self.other_matrix = np.ones((8, 8), dtype=np.float64)
+        self.work_matrix   = np.ones((8, 8), dtype=np.float64)
+        self.school_matrix = np.ones((8, 8), dtype=np.float64)
+        self.other_matrix  = np.ones((8, 8), dtype=np.float64)
         self.matrix_weights = np.array([0.33, 0.33], dtype=np.float64)
         self.N_contacts_max = 0
         self.ID = 0

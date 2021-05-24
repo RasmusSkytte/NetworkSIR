@@ -1421,7 +1421,7 @@ def counts_to_df(time, state_counts, stratified_positive, stratified_vaccination
     stratified_positive = np.array(stratified_positive)
     stratified_vaccination = np.array(stratified_vaccination)
     daily_tests = np.array(daily_tests).reshape(-1, 1)
-    median_incidence = np.array(median_incidence).reshape(-1, 1)
+    median_incidence = np.array(median_incidence)
 
     N_states      = np.size(state_counts, 1)
     N_labels      = np.size(stratified_positive, 1)
@@ -1938,7 +1938,7 @@ def add_cfg_to_hdf5_file_recursively(f, cfg, path = 'cfg') :
                 val = nested_list_to_rectangular_numpy_array(val, pad_value=-1)
 
             if key == 'incidence_intervention_effect' :
-                val = nested_list_to_rectangular_numpy_array(val, pad_value=[-1, -1, -1])
+                val = nested_list_to_rectangular_numpy_array(val, pad_value=[-1, -1, -1, -1])
 
             d.attrs[key] = val
 

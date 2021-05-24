@@ -10,7 +10,7 @@ from contexttimer import Timer
 if utils.is_local_computer():
     f = 0.1
     n_steps = 2
-    num_cores_max = 1
+    num_cores_max = 2
     N_runs = 1
 else :
     f = 0.1
@@ -33,8 +33,8 @@ else :
 params, start_date = utils.load_params('cfg/simulation_parameters_local_lockdowns.yaml', f)
 
 # Sweep around parameter set
-params['beta']               = noise(params['beta'], 0.05)
-#params['N_init']             = noise(params['N_init'], 10000 )
+#params['beta']               = noise(params['beta'], 0.0125)
+#params['N_init']             = noise(params['N_init'], 5_000 )
 #params['lambda_I']           = noise(params['lambda_I'], 0.1)
 #params['beta_UK_multiplier'] = noise(params['beta_UK_multiplier'], 0.05)
 #params['N_init_UK_frac']     = noise(params['N_init_UK_frac'], 1)
@@ -79,7 +79,7 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
             for filename, network_filename in zip(abm_files.cfg_to_filenames(cfg), abm_files.cfg_to_filenames(cfg, datatype='networks')) :
 
                 # Load
-                I_tot_scaled, f, _, _, _, _, _, _= load_from_file(filename, network_filename, start_date)
+                I_tot_scaled, f, _, _, _, _, _, _, _= load_from_file(filename, network_filename, start_date)
 
                 start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
                 end_date   = start_date + datetime.timedelta(days=cfg.day_max)

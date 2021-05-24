@@ -81,7 +81,7 @@ def load_from_file(filename, network_filename, start_date) :
         stratified_vaccinations[:, a] = df[col]
 
 
-     # Find all columns with "T_"
+    # Find all columns with "T_"
     test_cols = [col for col in df.columns if 'T_' in col]
     N_test_types = len(test_cols)
 
@@ -90,6 +90,17 @@ def load_from_file(filename, network_filename, start_date) :
 
     for i, col in enumerate(test_cols) :
         N_daily_tests[:, i] = df[col]
+
+
+    # Find all columns with "INCI_"
+    incidence_cols = [col for col in df.columns if 'INCI_' in col]
+    N_incidence_types = len(incidence_cols)
+
+    # Load into a multidimensional array
+    incidences = np.zeros((len(df), N_incidence_types))
+
+    for i, col in enumerate(incidence_cols) :
+       incidences[:, i] = df[col]
 
     # Scale the tests
     N_daily_tests *= (5_800_000 / cfg.network.N_tot)
@@ -130,7 +141,7 @@ def load_from_file(filename, network_filename, start_date) :
         f = P_uk_week / P_total_week
         f[np.isnan(f)] = -1
 
-    return P_total, f, P_age_groups, P_variants, P_labels, V_age_groups, N_daily_tests, total_infections
+    return P_total, f, P_age_groups, P_variants, P_labels, V_age_groups, N_daily_tests, total_infections, incidences
 
 
 def parse_time_ranges(start_date, end_date) :

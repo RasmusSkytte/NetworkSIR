@@ -476,7 +476,7 @@ def load_daily_tests(cfg) :
         # Determine the current test behaviour
         weeks_looking_back = 4
         T_pcr_week_template = np.round(np.mean(np.reshape(T_pcr[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
-        T_ag_week_template  = np.round(np.mean(np.reshape( T_ag[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))        
+        T_ag_week_template  = np.round(np.mean(np.reshape( T_ag[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
 
         # Project current test behavior forward.
         n_repeats = int(np.ceil((cfg.day_max + 1 - len(T_pcr_week_template)) / 7))
@@ -755,7 +755,7 @@ def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False)
         download_antigen_tests    = SSI_data_missing(f_antigen_tests)
     else :
         download_antigen_tests    = False
-    
+
 
     if download_municipality_tests or download_municipality_cases or download_municipality_summery or download_age or download_antigen_tests :
 
@@ -780,12 +780,12 @@ def get_SSI_data(date=None, return_data=False, return_name=False, verbose=False)
         df_municipality_cases   = pd.read_csv(f_municipality_cases,   index_col = 0)
         df_municipality_summery = pd.read_csv(f_municipality_summery, index_col = 0)
         df_age                  = pd.read_csv(f_age,                  index_col = 0)
-        
+
         if datetime.datetime.strptime(date, '%Y_%m_%d') > datetime.datetime(2021, 3, 30) :   # Only added after this date
             df_antigen_tests    = pd.read_csv(f_antigen_tests,        index_col = 0)
         else :
             df_antigen_tests = -1
-        
+
         return df_municipality_cases, df_municipality_tests, df_municipality_summery, df_age, df_antigen_tests
 
     if return_name :
@@ -882,7 +882,9 @@ def load_label_data(initial_distribution_file, label_map, test_reference = 0.017
         cases_adjusted_per_label = cases_per_label * label_adjustment_factor
         cases_adjusted_per_label[tests_per_label == 0] = 0
 
-    return t, tests_per_label, cases_per_label, cases_adjusted_per_label
+    incidence_adjusted_per_label = 7 * cases_adjusted_per_label / (population_per_label / 100_000)
+
+    return t, tests_per_label, cases_per_label, cases_adjusted_per_label, incidence_adjusted_per_label
 
 
 def load_kommune_infection_distribution(initial_distribution_file, label_map, test_reference = 0.017, beta = 0.55) :

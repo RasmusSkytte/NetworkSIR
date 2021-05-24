@@ -7,7 +7,7 @@ from numba.typed import List
 from src.utils import utils
 
 from src.simulation.nb_interventions   import testing_intervention, vaccinate, apply_daily_interventions
-from src.simulation.nb_interventions   import apply_symptom_testing
+from src.simulation.nb_interventions   import apply_symptom_testing, check_status_for_incidence_interventions
 from src.simulation.nb_interventions   import calculate_R_True, calculate_R_True_brit, calculate_population_freedom_impact
 from src.simulation.nb_events          import add_daily_events
 from src.simulation.nb_helpers         import nb_random_choice, single_random_choice
@@ -477,6 +477,7 @@ def run_simulation(
     out_stratified_positive = List()             # The counts of positive tests per age group
     out_stratified_vaccination_counts = List()   # The counts of vaccinations per age group
     out_daily_tests = List()                     # The counts of daily tests
+    out_median_incidence = List()                # The median muncipality incidence
     out_my_state = List()
 
     daily_counter = 0
@@ -489,6 +490,9 @@ def run_simulation(
 
     s_counter = np.zeros(4)
     where_infections_happened_counter = np.zeros(4)
+
+    # Compute incidence
+    median_incidence = check_status_for_incidence_interventions(my, g, intervention, day, click)
 
     # Check for day 0 interventions
     if intervention.apply_interventions :
@@ -662,6 +666,7 @@ def run_simulation(
                     out_stratified_positive.append(stratified_positive.copy())
                     out_stratified_vaccination_counts.append(stratified_vaccination_counts.copy())
                     out_daily_tests.append(intervention.daily_pcr_tests[day] + 0.5 * intervention.daily_antigen_tests[day])
+                    out_median_incidence.append(median_incidence)
                     out_my_state.append(my.state.copy())
 
                     intervention.R_true_list.append(calculate_R_True(my, g, day))
@@ -689,6 +694,9 @@ def run_simulation(
                     if intervention.apply_interventions :
 
                         stratified_positive = np.zeros_like(stratified_positive)
+
+                        # Update incidence NPIs
+                        median_incidence = check_status_for_incidence_interventions(my, g, intervention, day, click)
 
                         # Apply interventions for the new day
                         apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
@@ -738,4 +746,4 @@ def run_simulation(
     f = 5_800_000 / my.cfg_network.N_tot
     print('positive_test_counter : ', [int(f * P / day) for P in intervention.positive_test_counter])
 
-    return out_time, out_state_counts, out_stratified_positive, out_stratified_vaccination_counts, out_daily_tests, out_my_state, intervention
+    return out_time, out_state_counts, out_stratified_positive, out_stratified_vaccination_counts, out_daily_tests, out_median_incidence, out_my_state, intervention

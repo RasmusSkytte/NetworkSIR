@@ -333,12 +333,12 @@ def add_intervention_at_sogn(my, g, intervention, sogn, rate_multiplier) :
 
 
 @njit
-def check_status_for_intervention_on_labels(my, g, intervention, day, click) :
+def check_status_for_incidence_interventions(my, g, intervention, day, click) :
 
     # Loop over all interventions and check if condition still applies
     # if yes, write to all sogn within label of intervention
 
-    required_interventions_at_sogn = check_incidence_against_tresholds(my, intervention, day, click)
+    required_interventions_at_sogn, median_incidence = check_incidence_against_tresholds(my, intervention, day, click)
 
     # Loop over sogne to remove restricitons
     for sogn, required_interventions in enumerate(required_interventions_at_sogn) :
@@ -356,8 +356,9 @@ def check_status_for_intervention_on_labels(my, g, intervention, day, click) :
 
             intervention.clicks_when_restriction_changes[sogn] = click + delay
 
+    return median_incidence
 
-@njit
+#@njit
 def check_incidence_against_tresholds(my, intervention, day, click) :
 
     # Incidence is computed on pcr tests
@@ -365,7 +366,6 @@ def check_incidence_against_tresholds(my, intervention, day, click) :
 
     # Store the incidence at kommune level
     incidence_per_kommume = np.zeros(my.N_kommuner, dtype=np.float32)
-
     # Loop over all interventions and check if condition applies
 
     # Arrays to encode information about which sogne is above the on and off tresholds
@@ -387,7 +387,7 @@ def check_incidence_against_tresholds(my, intervention, day, click) :
 
         # Loop over labels
         for ith_label, (N_tests, N_infected, N_inhabitants) in enumerate(zip(tests_per_label, infected_per_label, intervention.agents_per_incidence_label[incidence_label])) :
-            
+
             # Discount AG tests
             N_tests *= pcr_to_total_tests_ratio
 
@@ -407,7 +407,7 @@ def check_incidence_against_tresholds(my, intervention, day, click) :
 
             # Check incidence against incidence treshold
             # If conditions are met
-            
+
             # Check against infection treshold
             if N_infected <= intervention.infection_threshold[ith_intervention] :
                 continue
@@ -429,12 +429,9 @@ def check_incidence_against_tresholds(my, intervention, day, click) :
     # Interventions are set to inactive unless they are already active and (&) incidence is above the off treshold
     intervention_at_sogn = np.bitwise_and(intervention_at_sogn, sogne_above_treshold)
 
+    median_incidence = np.median(incidence_per_kommume)
 
-    print('incidence per kommune')
-    print(np.mean(incidence_per_kommume))
-    print(np.max(incidence_per_kommume))
-
-    return intervention_at_sogn
+    return intervention_at_sogn, median_incidence
 
 @njit
 def loop_update_rates_of_contacts(
@@ -843,8 +840,6 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose = Fals
 
     if intervention.start_interventions_by_incidence :
 
-        check_status_for_intervention_on_labels(my, g, intervention, day, click)
-
         # Loop over sogne to update restrictions
         for ith_sogn, clicks_when_restriction_changes in enumerate(intervention.clicks_when_restriction_changes) :
 
@@ -910,7 +905,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose = Fals
 
 
                         # if event restrictions
-                        elif intervention.cfg.planned_restriction_types[k] == 2 :
+                        elif intervention.cfg.planned_restriction_types[i] == 2 :
 
                             if ith_label >= 1 :
                                 break
@@ -924,7 +919,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose = Fals
 
 
                         # if incidence restrictions
-                        elif intervention.cfg.planned_restriction_types[k] == 3 :
+                        elif intervention.cfg.planned_restriction_types[i] == 3 :
 
                             if ith_label >= 1 :
                                 break

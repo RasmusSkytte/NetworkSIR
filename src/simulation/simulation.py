@@ -428,45 +428,45 @@ class Simulation :
 
 
     def initialize_states(self) :
-        
+
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
-        
+
         if self.verbose :
             print('\nINITIAL INFECTIONS')
 
         np.random.seed(utils.hash_to_seed(self.hash))
-        
+
         self.N_states = 9  # number of states
         self.N_infectious_states = 4  # This means the 5'th state
 
         self.initial_ages_exposed = np.arange(self.N_ages)  # means that all ages are exposed
-        
+
         self.state_total_counts            = np.zeros(self.N_states, dtype=np.uint32)
         self.stratified_positive           = np.zeros((len(set(self.stratified_label_map.values())), 2, self.N_ages), dtype=np.uint32)
         self.stratified_vaccination_counts = np.zeros(self.N_ages, dtype=np.uint32)
 
         self.agents_in_state = utils.initialize_nested_lists(self.N_states, dtype=np.uint32)
-        
+
         # Load the seasonal data
         seasonal_model = file_loaders.load_seasonal_model(scenario=self.cfg.seasonal_list_name, offset=self.cfg.start_date_offset)
 
         self.g = nb_jitclass.Gillespie(self.my, self.N_states, self.N_infectious_states, seasonal_model, self.cfg.seasonal_strength)
-        
+
         # Find the possible agents
         possible_agents = nb_simulation.find_possible_agents(self.my, self.initial_ages_exposed, self.agents_in_age_group)
 
         # Load the age distribution for infected
         age_distribution_infected, age_distribution_immunized = file_loaders.load_infection_age_distributions(self.cfg.initial_infection_distribution, self.N_ages)
-        
+
         # Adjust for the untested fraction
         age_distribution_infected  /= self.cfg.testing_penetration
         age_distribution_immunized /= self.cfg.testing_penetration
-        
+
         # Convert to probability
         age_distribution_infected  /= age_distribution_infected.sum()
         age_distribution_immunized /= age_distribution_immunized.sum()
 
-        
+
         # Set the probability to choose agents
         if self.cfg.initialize_at_kommune_level :
 
@@ -476,14 +476,14 @@ class Simulation :
             w_kommune = np.ones(n_kommuner)
             for i in range(n_kommuner) :
                 w_kommune[i] = self.cfg.initial_infected_label_weight[self.label_map['kommune_idx_to_landsdel_idx'][i]]
-            
+
             w_kommune /= w_kommune.sum()
             infected_per_kommune *= w_kommune
 
 
             infected_per_kommune  /= infected_per_kommune.sum()
             immunized_per_kommune /= immunized_per_kommune.sum()
-            
+
             # Choose the a number of initially infected and immunized per kommune
             kommune_ids = np.arange(len(infected_per_kommune))
             N_kommune   = np.zeros(np.shape(kommune_ids), dtype=int)
@@ -491,22 +491,22 @@ class Simulation :
 
             N_inds, N_counts = np.unique(np.random.choice(kommune_ids, size=self.my.cfg.N_init, p=infected_per_kommune),  return_counts=True)
             R_inds, R_counts = np.unique(np.random.choice(kommune_ids, size=self.my.cfg.R_init, p=immunized_per_kommune), return_counts=True)
-            
+
             N_kommune[N_inds] += N_counts
             R_kommune[R_inds] += R_counts
 
             initialization_subgroups = []
-            
+
             # Compute the relative risk for each kommune (based on infection history)
             risk_per_kommune = immunized_per_kommune / np.mean(immunized_per_kommune)
-            
+
             contacts_per_kommune = np.zeros(n_kommuner)
             for agent in possible_agents :
                 contacts_per_kommune[self.my.kommune[agent]] += self.my.number_of_contacts[agent]
-        
+
             relative_risk_per_kommune = risk_per_kommune / contacts_per_kommune
             relative_risk_per_kommune /= np.mean(relative_risk_per_kommune)
-            
+
             # Adjust the infection_weight based on the relative risk
             for agent in possible_agents :
                 self.my.infection_weight[agent] *= relative_risk_per_kommune[self.my.kommune[agent]]
@@ -518,36 +518,36 @@ class Simulation :
 
             # Loop over kommuner
             for kommune_id, N, R, agents_in_kommune in zip(kommune_ids, N_kommune, R_kommune, agents_in_kommuner) :
-                
+
                 # Check if any are to be infectd
                 if N == 0 and R == 0 :
                     continue
-                
+
                 # Check if kommune is valid
                 if len(agents_in_kommune) == 0:
                     warnings.warn(f"Agents selected for initialization in a kommune {kommune_id} : {self.label_map['kommune_idx_to_kommune'][kommune_id]} but no agents exists")
                     continue
-                
+
                 # Check if too many have been selected
                 if len(agents_in_kommune) < (N + R) :
                     warnings.warn(f"{N+R} agents selected for initialization in a kommune {kommune_id} : {self.label_map['kommune_idx_to_kommune'][kommune_id]} but only {len(agents_in_kommune)} agents exists")
                     N = int(len(agents_in_kommune) * N / (N + R))
                     R = int(len(agents_in_kommune) * R / (N + R))
-                
+
                 # Determine the age distribution in the simulation
                 ages_in_kommune = self.my.age[agents_in_kommune]
                 agent_age_distribution = np.zeros(self.N_ages)
                 age_inds, age_counts = np.unique(ages_in_kommune, return_counts=True)
                 agent_age_distribution[age_inds] += age_counts
-                
+
                 # Adjust for age distribution of the populaiton
                 prior_infected  = age_distribution_infected[ages_in_kommune]  / agent_age_distribution[ages_in_kommune]
                 prior_immunized = age_distribution_immunized[ages_in_kommune] / agent_age_distribution[ages_in_kommune]
-                
+
                 # Convert to probability
                 prior_infected  /= prior_infected.sum()
                 prior_immunized /= prior_immunized.sum()
-                
+
                 kommune_UK_frac = self.my.cfg.matrix_label_frac[self.label_map['sogn_idx_to_landsdel_idx'][self.my.sogn[agents_in_kommune[0]]]]
 
                 initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized, kommune_UK_frac))
@@ -658,11 +658,11 @@ class Simulation :
             self.nts,
             self.verbose)
 
-        out_time, out_state_counts, out_stratified_positive, out_stratified_vaccination_counts, out_daily_tests, out_my_state, intervention = res
+        out_time, out_state_counts, out_stratified_positive, out_stratified_vaccination_counts, out_daily_tests, out_median_incidence, out_my_state, intervention = res
 
         self.out_time = out_time
         self.my_state = np.array(out_my_state)
-        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_positive, out_stratified_vaccination_counts, out_daily_tests, self.cfg)
+        self.df = utils.counts_to_df(out_time, out_state_counts, out_stratified_positive, out_stratified_vaccination_counts, out_daily_tests, out_median_incidence, self.cfg)
         self.intervention = intervention
 
         return self.df

@@ -1178,8 +1178,8 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
                     if key == 'contact_matrices_name' :
                         # TODO : fix the DotDict indexing
-                        work_matix, other_matrix, work_other_ratio, _ = file_loaders.load_contact_matrices(scenario = d[key])
-                        cfg['network'].update({'work_matrix' : work_matix[0], 'other_matrix' : other_matrix[0], 'work_other_ratio' : work_other_ratio[0]})
+                        work_matix, school_matrix, other_matrix, work_other_ratio, _ = file_loaders.load_contact_matrices(scenario = d[key])
+                        cfg['network'].update({'work_matrix' : work_matix[0], 'school_matrix' : school_matrix[0], 'other_matrix' : other_matrix[0], 'work_other_ratio' : work_other_ratio[0]})
 
                 #elif key in spec_intervention.keys() :
                 #    cfg['intervention'].update(d)
@@ -1414,19 +1414,21 @@ def get_hospitalization_variables(N_tot, N_ages=1) :
 
 
 
-def counts_to_df(time, state_counts, stratified_positive, stratified_vaccination, daily_tests, cfg) :  #
+def counts_to_df(time, state_counts, stratified_positive, stratified_vaccination, daily_tests, median_incidence, cfg) :  #
 
     time = np.array(time)
     state_counts = np.array(state_counts)
     stratified_positive = np.array(stratified_positive)
     stratified_vaccination = np.array(stratified_vaccination)
     daily_tests = np.array(daily_tests).reshape(-1, 1)
+    median_incidence = np.array(median_incidence).reshape(-1, 1)
 
     N_states      = np.size(state_counts, 1)
     N_labels      = np.size(stratified_positive, 1)
     N_variants    = np.size(stratified_positive, 2)
     N_age_groups  = np.size(stratified_positive, 3)
     N_daily_tests = np.size(daily_tests, 1)
+    N_incidences  = np.size(median_incidence, 1)
 
     header = [
         'Time',
@@ -1463,6 +1465,11 @@ def counts_to_df(time, state_counts, stratified_positive, stratified_vaccination
     headers = ['T_' + str(i) for i in range(N_daily_tests)]
     df_tests = pd.DataFrame(daily_tests, columns=headers)
     df = pd.concat([df, df_tests], axis=1)  # .convert_dtypes()
+
+    # Add the incidence counters
+    headers = ['INCI_' + str(i) for i in range(N_incidences)]
+    df_incidence = pd.DataFrame(median_incidence, columns=headers)
+    df = pd.concat([df, df_incidence], axis=1)  # .convert_dtypes()
 
     return df
 

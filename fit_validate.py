@@ -72,6 +72,8 @@ for subset in subsets :
 
     fig7, axes7 = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True, figsize=(12, 12))
 
+    fig8, axes8 = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True, figsize=(12, 12))
+
     print('Plotting the individual ABM simulations. Please wait', flush=True)
     for k, (filename, network_filename) in tqdm(
         enumerate(zip(abm_files.iter_files(), abm_files.iter_network_files())),
@@ -85,7 +87,8 @@ for subset in subsets :
           positive_by_region,
           vaccinations_by_age_group,
           daily_tests,
-          total_infections) = load_from_file(filename, network_filename, start_date)
+          total_infections,
+          incidences) = load_from_file(filename, network_filename, start_date)
 
         # Plot
         h  =      plot_simulation_cases_and_variant_fraction(positve_tests, f, total_infections, daily_tests, t_day, t_week, axes1, color=plt.cm.tab10(k) )
@@ -95,6 +98,7 @@ for subset in subsets :
         h.extend( plot_simulation_category(positive_by_region, t_day, axes5) )
         h.extend( plot_simulation_category(vaccinations_by_age_group, t_day, axes6) )
         h.extend( plot_simulation_category(daily_tests, t_day, [axes7]) )
+        h.extend( plot_simulation_category(incidences, t_day, [axes8]) )
 
         plot_handles.append(h)
 
@@ -161,11 +165,11 @@ for subset in subsets :
 
 
     N_stratifications = len(label_map['stratification_idx_to_stratification'])
-    t, _, cases, _ = file_loaders.load_label_data('newest', label_map['kommune_to_stratification_idx'], test_reference = cfg.test_reference, beta = cfg.testing_exponent)
+    t, _, cases_nationally, _, _ = file_loaders.load_label_data('newest', label_map['kommune_to_stratification_idx'], test_reference = cfg.test_reference, beta = cfg.testing_exponent)
 
 
     # Plot the covid index on axes 2
-    axes1[0].scatter(t, cases.flatten(), color='k', s=10, zorder=100)
+    axes1[0].scatter(t, cases_nationally.flatten(), color='k', s=10, zorder=100)
 
     # Plot the WGS B.1.1.7 fraction
     axes1[1].errorbar(t_fraction, fraction, yerr=fraction_sigma, fmt='s', lw=2)
@@ -184,7 +188,8 @@ for subset in subsets :
 
 
     # Plot the covid index on axes 2
-    ref_tests = file_loaders.load_daily_tests(utils.DotDict({'day_max' : len(logK)-1, 'start_date_offset' : cfg.start_date_offset, 'network':utils.DotDict({'N_tot' : 5_800_000})}))
+    pcr_tests, ag_tests = file_loaders.load_daily_tests(utils.DotDict({'day_max' : len(logK)-1, 'start_date_offset' : cfg.start_date_offset, 'network':utils.DotDict({'N_tot' : 5_800_000})}))
+    ref_tests = pcr_tests# + 0.5 * ag_tests
     m  = np.exp(logK) * (ref_tests ** beta)
     ub = np.exp(logK + logK_sigma) * (ref_tests ** beta) - m
     lb = m - np.exp(logK - logK_sigma) * (ref_tests ** beta)
@@ -341,7 +346,7 @@ for subset in subsets :
 
 
     N_stratifications = len(label_map['stratification_idx_to_stratification'])
-    t, _, cases_per_label, _ = file_loaders.load_label_data('newest', label_map['kommune_to_stratification_idx'], test_reference = cfg.test_reference, beta = cfg.testing_exponent)
+    t, _, cases_per_label, _, _ = file_loaders.load_label_data('newest', label_map['kommune_to_stratification_idx'], test_reference = cfg.test_reference, beta = cfg.testing_exponent)
 
 
     for i in range(len(axes5)) :
@@ -405,14 +410,41 @@ for subset in subsets :
 
 
 
+
+
+
     ######## ########  ######  ######## #### ##    ##  ######
        ##    ##       ##    ##    ##     ##  ###   ## ##    ##
        ##    ##       ##          ##     ##  ####  ## ##
        ##    ######    ######     ##     ##  ## ## ## ##   ####
        ##    ##             ##    ##     ##  ##  #### ##    ##
        ##    ##       ##    ##    ##     ##  ##   ### ##    ##
-       ##    ########  ######     ##    #### ##    ##  ######¨
-
-    t, tests_per_label, _, _ = file_loaders.load_label_data('newest', label_map['kommune_to_stratification_idx'], test_reference = cfg.test_reference, beta = cfg.testing_exponent)
+       ##    ########  ######     ##    #### ##    ##  ######
 
     fig7.savefig(os.path.splitext(fig_name)[0] + '_testing.png')
+
+
+
+
+
+
+    #### ##    ##  ######  #### ########  ######## ##    ##  ######  ########
+     ##  ###   ## ##    ##  ##  ##     ## ##       ###   ## ##    ## ##
+     ##  ####  ## ##        ##  ##     ## ##       ####  ## ##       ##
+     ##  ## ## ## ##        ##  ##     ## ######   ## ## ## ##       ######
+     ##  ##  #### ##        ##  ##     ## ##       ##  #### ##       ##
+     ##  ##   ### ##    ##  ##  ##     ## ##       ##   ### ##    ## ##
+    #### ##    ##  ######  #### ########  ######## ##    ##  ######  ########
+
+    stratification = 'kommune'
+    label_map = {'stratification_idx_to_stratification' : raw_label_map[[stratification + '_idx',  stratification ]].drop_duplicates().set_index(stratification + '_idx')[stratification],
+                 'kommune_to_stratification_idx' : raw_label_map[[stratification + '_idx',  'kommune' ]].drop_duplicates().set_index('kommune')[stratification + '_idx']}
+
+    N_stratifications = len(label_map['stratification_idx_to_stratification'])
+    t, _, _, _, incidence_adjusted_per_kommune = file_loaders.load_label_data('newest', label_map['kommune_to_stratification_idx'], test_reference = cfg.test_reference, beta = cfg.testing_exponent)
+
+    axes8.scatter(t, np.median(incidence_adjusted_per_kommune, axis=1), color='k', s=10, zorder=100)
+
+    set_date_xaxis(axes8, start_date, end_date)
+
+    fig8.savefig(os.path.splitext(fig_name)[0] + '_incidence.png')

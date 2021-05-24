@@ -40,7 +40,7 @@ spec_cfg = {
     'simulated_tests' : nb.boolean,
     'incidence_labels' : ListType(ListType(nb.types.unicode_type)),
     'incidence_threshold' : ListType(nb.float64[: :1]), # to make the type C instead of A
-    'infection_threshold' : ListType(nb.int32[: :1]), # to make the type C instead of A
+    'infection_threshold' : ListType(nb.int64[: :1]), # to make the type C instead of A
     'percentage_threshold' : ListType(nb.float64[: :1]), # to make the type C instead of A
     'incidence_intervention_effect' : ListType(nb.float64[:, : :1]), # to make the type C instead of A
     'test_reference' : nb.float64,
@@ -114,7 +114,7 @@ class Config(object) :
         self.stratified_labels                  = 'land'
         self.incidence_labels                   = List([List(['land'])])
         self.incidence_threshold                = List([np.array( [2_000.0],        dtype=np.float64)])
-        self.infection_threshold                = List([np.array( [0],              dtype=np.int32)])
+        self.infection_threshold                = List([np.array( [0],              dtype=np.int64)])
         self.percentage_threshold               = List([np.array( [0.0],            dtype=np.float64)])
         self.incidence_intervention_effect      = List([np.array([[1.0, 0.9, 0.9]], dtype=np.float64)])
         self.test_reference                     = 0.017         # 1.7 % percent of the population is tested daily
@@ -436,9 +436,9 @@ spec_intervention = {
     'R_true_list' : ListType(nb.float64),
     'R_true_list_brit' : ListType(nb.float64),
     # Testing
-    'daily_pcr_tests' : nb.int32[:],
-    'daily_antigen_tests' : nb.int32[:],
-    'random_tests' : nb.int32[:],
+    'daily_pcr_tests' : nb.int64[:],
+    'daily_antigen_tests' : nb.int64[:],
+    'random_tests' : nb.int64[:],
     'day_found_infected' : nb.int32[:],
     'reason_for_test' : nb.int8[:],
     'result_of_test' : nb.int8[:],
@@ -452,7 +452,7 @@ spec_intervention = {
     'N_incidence_labels' : DictType(nb.types.unicode_type, nb.uint16),
     'incidence_labels' : ListType(nb.types.unicode_type),
     'incidence_threshold' : nb.float64[:],
-    'infection_threshold' : nb.int32[:],
+    'infection_threshold' : nb.int64[:],
     'percentage_threshold' : nb.float64[:],
     'incidence_intervention_effect' : nb.float64[:, :],
     'incidence_label_map' : DictType(nb.types.unicode_type, DictType(nb.uint16, nb.uint16)),

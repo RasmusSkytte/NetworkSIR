@@ -403,7 +403,7 @@ def place_and_connect_families_kommune_specific(
 
 
 @njit
-def run_algo_work(my, agents_in_age_group, age1, age2, rho_tmp) :
+def run_algo_work(my, agents_in_age_group, age1, age2, rho_tmp, connection_type=1) :
     """ Make connection of work type. Algo locks choice of agent1, and then tries different agent2's until one is accepted.
         This algorithm gives an equal number of connections independent of local population density.
         The sssumption here is that the size of peoples workplaces is independent on where they live.
@@ -426,7 +426,7 @@ def run_algo_work(my, agents_in_age_group, age1, age2, rho_tmp) :
             rho_tmp,
             agent1,
             agent2,
-            connection_type=1,
+            connection_type=connection_type,
             code_version=2,
         )
 
@@ -456,7 +456,7 @@ def run_algo_other(my, agents_in_age_group, age1, age2, rho_tmp) :
             rho_tmp,
             agent1,
             agent2,
-            connection_type=2,
+            connection_type=3,
             code_version=2,
         )
         if do_stop :
@@ -483,11 +483,12 @@ def find_two_age_groups(N_ages, matrix) :
 
 
 @njit
-def connect_work_and_others(
+def connect_work_school_and_others(
     my,
     N_ages,
     mu_counter,
     matrix_work,
+    matrix_school,
     matrix_other,
     agents_in_age_group,
     verbose=True) :
@@ -505,8 +506,9 @@ def connect_work_and_others(
     progress_counter = 1
 
 
-    matrix_work  = matrix_work  / np.sum(matrix_work)
-    matrix_other = matrix_other / np.sum(matrix_other)
+    matrix_work   = matrix_work   / np.sum(matrix_work)
+    matrix_school = matrix_school / np.sum(matrix_school)
+    matrix_other  = matrix_other  / np.sum(matrix_other)
 
     mu_tot = my.cfg_network.mu / 2 * my.cfg_network.N_tot # total number of connections in the network, when done
     while mu_counter < mu_tot : # continue until all connections are made
@@ -520,9 +522,13 @@ def connect_work_and_others(
         # determining if next connections is work or other.
         # 1) draw ages from connectivity matrix
         # 2) make connection
-        if np.random.rand() < my.cfg_network.work_other_ratio :
+        ra = np.random.rand()
+        if ra < my.cfg_network.matrix_weights[0] :
             age1, age2 = find_two_age_groups(N_ages, matrix_work)
             run_algo_work(my, agents_in_age_group, age1, age2, rho_tmp)
+        elif ra < my.cfg_network.matrix_weights[1] :
+            age1, age2 = find_two_age_groups(N_ages, matrix_school)
+            run_algo_work(my, agents_in_age_group, age1, age2, rho_tmp, connection_type=2)
         else :
             age1, age2 = find_two_age_groups(N_ages, matrix_other)
             run_algo_other(my, agents_in_age_group, age1, age2, rho_tmp)
@@ -533,7 +539,7 @@ def connect_work_and_others(
             progress = mu_counter / mu_tot
             if progress > progress_counter * progress_delta_print :
                 progress_counter += 1
-                print("Connected ", round(progress * 100), r"% of work and others")
+                print('Connected ', round(progress * 100), r"% of work, school and others")
 
 
 @njit

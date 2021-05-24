@@ -1178,8 +1178,8 @@ def generate_cfgs(d_simulation_parameters, N_runs=1, N_tot_max=False, verbose=Fa
 
                     if key == 'contact_matrices_name' :
                         # TODO : fix the DotDict indexing
-                        work_matix, school_matrix, other_matrix, work_other_ratio, _ = file_loaders.load_contact_matrices(scenario = d[key])
-                        cfg['network'].update({'work_matrix' : work_matix[0], 'school_matrix' : school_matrix[0], 'other_matrix' : other_matrix[0], 'work_other_ratio' : work_other_ratio[0]})
+                        work_matix, school_matrix, other_matrix, matrix_weights, _ = file_loaders.load_contact_matrices(scenario = d[key])
+                        cfg['network'].update({'work_matrix' : work_matix[0], 'school_matrix' : school_matrix[0], 'other_matrix' : other_matrix[0], 'matrix_weights' : matrix_weights[0]})
 
                 #elif key in spec_intervention.keys() :
                 #    cfg['intervention'].update(d)

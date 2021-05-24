@@ -193,11 +193,12 @@ class Simulation :
         if self.verbose :
             print("Connecting work and others, currently slow, please wait")
 
-        nb_network.connect_work_and_others(
+        nb_network.connect_work_school_and_others(
             self.my,
             self.N_ages,
             mu_counter,
             np.array(self.cfg.network.work_matrix),
+            np.array(self.cfg.network.school_matrix),
             np.array(self.cfg.network.other_matrix),
             agents_in_age_group,
             verbose=self.verbose)
@@ -352,31 +353,36 @@ class Simulation :
         # TODO: This should properably be done at cfg generation for consistent hashes
         if 'Intervention_contact_matrices_name' in self.cfg.keys() :    # If restriction matrices are set, load the here
 
-            work_matrix_restrict  = []
-            other_matrix_restrict = []
+            work_matrix_restrict   = []
+            school_matrix_restrict = []
+            other_matrix_restrict  = []
 
             for scenario in self.cfg.Intervention_contact_matrices_name :
-                tmp_work_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=self.N_matrix_labels)
+                tmp_work_matrix_restrict, tmp_school_matrix_restrict, tmp_other_matrix_restrict, _, _ = file_loaders.load_contact_matrices(scenario=scenario, N_labels=self.N_matrix_labels)
 
                 # Check the loaded contact matrices have the right size
                 if not len(tmp_other_matrix_restrict) == self.N_matrix_labels :
                     raise ValueError(f'Number of labels ({self.N_matrix_labels}) does not match the number of contact matrices ({len(tmp_other_matrix_restrict)}) for scenario: {scenario} and label: {self.cfg.labels}')
 
                 work_matrix_restrict.append(tmp_work_matrix_restrict)
+                school_matrix_restrict.append(tmp_school_matrix_restrict)
                 other_matrix_restrict.append(tmp_other_matrix_restrict)
 
             # Rescale the restriction matrices
             wm = np.array(work_matrix_restrict)
+            sm = np.array(school_matrix_restrict)
             om = np.array(other_matrix_restrict)
 
             for s in range(len(self.cfg.Intervention_contact_matrices_name)) :
                 for l in range(len(np.unique(self.N_matrix_labels))) :
                     wm[s, l, :, :] *= self.cfg.matrix_label_multiplier[l]
+                    sm[s, l, :, :] *= self.cfg.matrix_label_multiplier[l]
                     om[s, l, :, :] *= self.cfg.matrix_label_multiplier[l]
 
         else : # Set the default values
-            wm = np.zeros((1, self.N_matrix_labels, self.my.cfg_network.work_matrix.shape[0], self.my.cfg_network.work_matrix.shape[1]))
-            om = np.zeros((1, self.N_matrix_labels, self.my.cfg_network.other_matrix.shape[0], self.my.cfg_network.other_matrix.shape[1]))
+            wm = np.zeros((1, self.N_matrix_labels, self.my.cfg_network.work_matrix.shape[0],   self.my.cfg_network.work_matrix.shape[1]))
+            sm = np.zeros((1, self.N_matrix_labels, self.my.cfg_network.school_matrix.shape[0], self.my.cfg_network.school_matrix.shape[1]))
+            om = np.zeros((1, self.N_matrix_labels, self.my.cfg_network.other_matrix.shape[0],  self.my.cfg_network.other_matrix.shape[1]))
 
         # Convert maps to numba dicts
         matrix_label_map = Dict.empty(key_type=nb.uint16, value_type=nb.uint16)
@@ -420,6 +426,7 @@ class Simulation :
             vaccinations_per_age_group  = vaccinations_per_age_group,
             vaccination_schedule        = vaccination_schedule,
             work_matrix_restrict        = wm,
+            school_matrix_restrict      = sm,
             other_matrix_restrict       = om,
             daily_pcr_tests             = daily_pcr_tests,
             daily_antigen_tests         = daily_antigen_tests,

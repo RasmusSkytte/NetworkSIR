@@ -209,7 +209,7 @@ spec_network = {
     'contact_matrices_name' : nb.types.unicode_type,
     'work_matrix' : nb.float64[:, :],
     'other_matrix' : nb.float64[:, :],
-    'work_other_ratio' : nb.float64,  # 0.2 = 20% work, 80% other
+    'matrix_weights' : nb.float64[:],
     'N_contacts_max' : nb.uint16,
     # ID
     'ID' : nb.uint16,
@@ -227,7 +227,7 @@ class Network(object) :
         self.sigma_mu = 0.0
         self.work_matrix  = np.ones((8, 8), dtype=np.float64)
         self.other_matrix = np.ones((8, 8), dtype=np.float64)
-        self.work_other_ratio = 0.5
+        self.matrix_weights = np.array([0.33, 0.33], dtype=np.float64)
         self.N_contacts_max = 0
         self.ID = 0
 
@@ -280,7 +280,7 @@ class My(object) :
         self.connections = utils.initialize_nested_lists(N_tot, np.uint32)
         self.connection_status = utils.initialize_nested_lists(N_tot, nb.boolean)
         self.connection_type = utils.initialize_nested_lists(N_tot, np.uint8)
-        self.beta_connection_type = np.array([1.0, 0.8, 1.0, 1.0], dtype=np.float32)  # beta multiplier for [House, work, others, events]
+        self.beta_connection_type = np.array([1.0, 0.8, 1.0, 1.0, 1.0], dtype=np.float32)  # beta multiplier for [House, work, school, others, events]
         self.connection_weight = np.ones(N_tot, dtype=np.float32)
         self.infection_weight = np.ones(N_tot, dtype=np.float64)
         self.number_of_contacts = np.zeros(N_tot, dtype=nb.uint16)
@@ -470,6 +470,7 @@ spec_intervention = {
     'N_matrix_labels' : nb.uint16,
     'matrix_label_map' : DictType(nb.uint16, nb.uint16),
     'work_matrix_restrict' : nb.float64[:, :, :, :],
+    'school_matrix_restrict' : nb.float64[:, :, :, :],
     'other_matrix_restrict' : nb.float64[:, :, :, :],
     # Events
     'event_size_max' : nb.uint32[:],
@@ -541,6 +542,7 @@ class Intervention(object) :
         vaccinations_per_age_group,
         vaccination_schedule,
         work_matrix_restrict,
+        school_matrix_restrict,
         other_matrix_restrict,
         daily_pcr_tests,
         daily_antigen_tests,
@@ -585,6 +587,7 @@ class Intervention(object) :
         self.N_matrix_labels                 = N_matrix_labels
         self.matrix_label_map                = matrix_label_map
         self.work_matrix_restrict            = work_matrix_restrict
+        self.school_matrix_restrict          = school_matrix_restrict
         self.other_matrix_restrict           = other_matrix_restrict
 
         self.daily_pcr_tests                 = daily_pcr_tests

@@ -577,17 +577,21 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label
 
     # Extract the contact matrices
     if n == 0 :
-        work_matrix_previous  = my.cfg_network.work_matrix
-        other_matrix_previous = my.cfg_network.other_matrix
+        work_matrix_previous   = my.cfg_network.work_matrix
+        school_matrix_previous = my.cfg_network.school_matrix
+        other_matrix_previous  = my.cfg_network.other_matrix
     else :
-        work_matrix_previous  = intervention.work_matrix_restrict[n-1][label]
-        other_matrix_previous = intervention.other_matrix_restrict[n-1][label]
+        work_matrix_previous   = intervention.work_matrix_restrict[n-1][label]
+        school_matrix_previous = intervention.school_matrix_restrict[n-1][label]
+        other_matrix_previous  = intervention.other_matrix_restrict[n-1][label]
 
-    work_matrix_max  = my.cfg_network.work_matrix
-    other_matrix_max = my.cfg_network.other_matrix
+    work_matrix_max   = my.cfg_network.work_matrix
+    school_matrix_max = my.cfg_network.school_matrix
+    other_matrix_max  = my.cfg_network.other_matrix
 
-    work_matrix_current  = intervention.work_matrix_restrict[n][label]
-    other_matrix_current = intervention.other_matrix_restrict[n][label]
+    work_matrix_current   = intervention.work_matrix_restrict[n][label]
+    school_matrix_current = intervention.school_matrix_restrict[n][label]
+    other_matrix_current  = intervention.other_matrix_restrict[n][label]
 
     # Step 1, determine the contacts and their connection probability
     # Get the list of restrictable contacts and the list of restricted contacts
@@ -613,6 +617,11 @@ def remove_and_reduce_rates_of_agent_matrix(my, g, intervention, agent, n, label
                 sm = work_matrix_max[my.age[agent], my.age[contact]]
 
             elif my.connection_type[agent][ith_contact] == 2 :
+                sc = school_matrix_current[my.age[agent], my.age[contact]]
+                sp = school_matrix_previous[my.age[agent], my.age[contact]]
+                sm = school_matrix_max[my.age[agent], my.age[contact]]
+
+            elif my.connection_type[agent][ith_contact] == 3 :
                 sc = other_matrix_current[my.age[agent], my.age[contact]]
                 sp = other_matrix_previous[my.age[agent], my.age[contact]]
                 sm = other_matrix_max[my.age[agent], my.age[contact]]

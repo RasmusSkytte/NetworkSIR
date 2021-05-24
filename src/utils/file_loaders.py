@@ -392,16 +392,17 @@ def load_age_stratified_file(file) :
 def load_contact_matrices(scenario = 'reference', N_labels = 1) :
     """ Loads and parses the contact matrices corresponding to the chosen scenario.
         The function first determines what the relationship between work activites and other activites are
-        After the work_other_ratio has been calculated, the function returns the normalized contact matrices
+        After the matrix_weights has been calculated, the function returns the normalized contact matrices
         Parameters :
             scenario (string) : Name for the scenario to load
             N_labels (int) : The number of labels in the simulation. I.e the number of contact matrices to output
     """
 
 
-    matrix_work  = []
-    matrix_other = []
-    work_other_ratio = []
+    matrix_work     = []
+    matrix_school   = []
+    matrix_other    = []
+    matrix_weights  = []
     age_groups_work = []
 
     base_path = load_yaml('cfg/files.yaml')['contactMatrixFolder']
@@ -415,14 +416,15 @@ def load_contact_matrices(scenario = 'reference', N_labels = 1) :
             filenames.append(os.path.join(base_path, scenario))
 
     for filename_set in filenames:
-        tmp_matrix_work, tmp_matrix_other, tmp_work_other_ratio, tmp_age_groups_work = load_contact_matrix_set(filename_set)
+        tmp_matrix_work, tmp_matrix_school, tmp_matrix_other, tmp_matrix_weights, tmp_age_groups_work = load_contact_matrix_set(filename_set)
 
         matrix_work.append(tmp_matrix_work)
+        matrix_school.append(tmp_matrix_school)
         matrix_other.append(tmp_matrix_other)
-        work_other_ratio.append(tmp_work_other_ratio)
+        matrix_weights.append(tmp_matrix_weights)
         age_groups_work.append(tmp_age_groups_work)
 
-    return matrix_work, matrix_other, work_other_ratio, age_groups_work
+    return matrix_work, matrix_other, matrix_weights, age_groups_work
 
 def load_seasonal_model(scenario=None, offset = 0) :
 
@@ -503,16 +505,18 @@ def load_contact_matrix_set(matrix_path) :
     matrix_other,  _, age_groups_other  = load_age_stratified_file(matrix_path + '_other.csv')
 
     # Assert the age_groups are the same
+    if not age_groups_work == age_groups_school :
+        raise ValueError('Age groups for work contact matrix and school contact matrix not equal')
+
     if not age_groups_work == age_groups_other :
         raise ValueError('Age groups for work contact matrix and other contact matrix not equal')
-    matrix_work = matrix_work + matrix_school
 
     # Determine the work-to-other ratio
-    work_other_ratio = matrix_work.sum() / (matrix_other.sum() + matrix_work.sum())
+    matrix_weights = np.array([matrix_work.sum(), matrix_work.sum() + matrix_school.sum()]) / (matrix_work.sum() + matrix_school.sum() + matrix_other.sum())
 
     # Normalize the contact matrices after this ratio has been determined
     # TODO : Find out if lists or numpy arrays are better --- I am leaning towards using only numpy arrays
-    return matrix_work.tolist(), matrix_other.tolist(), work_other_ratio, age_groups_work
+    return matrix_work.tolist(), matrix_school.tolist(), matrix_other.tolist(), matrix_weights, age_groups_work
 
 
 

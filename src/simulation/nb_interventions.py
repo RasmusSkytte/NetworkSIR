@@ -304,18 +304,18 @@ def multiply_rates_of_agent(my, g, agent, rate_multiplication) :
 @njit
 def remove_intervention_at_sogn(my, g, intervention, ith_sogn) :
     for agent in range(my.cfg_network.N_tot) :
-        if my.sogn[agent] == ith_sogn and my.restricted_status[agent] == 1 :
+        if my.sogn[agent] == ith_sogn and my.restricted_status[agent] > 0 :
+
+            if intervention.apply_increased_testing :
+                my.testing_probability[agent] = my.testing_probability[agent] / (my.restricted_status[agent] + 1)
 
             if intervention.apply_lockdowns :
                 reset_rates_of_agent(my, g, agent, intervention)
                 my.restricted_status[agent] = 0
 
-            if intervention.apply_increased_testing :
-                my.testing_probability[agent] = my.testing_probability[agent] / 2
-
 
 @njit
-def add_intervention_at_sogn(my, g, intervention, sogn, rate_multiplier) :
+def add_intervention_at_sogn(my, g, intervention, sogn, ith_intervention) :
     # lockdown on all agent with a certain sogn
     # Rate reduction is a vectors of length 3.
     # The fraction of reduction of the remaining [home, job, others] rates.
@@ -325,11 +325,11 @@ def add_intervention_at_sogn(my, g, intervention, sogn, rate_multiplier) :
         if my.sogn[agent] == sogn :
 
             if intervention.apply_lockdowns :
-                my.restricted_status[agent] = 1
-                multiply_rates_of_agent(my, g, agent, rate_multiplier)
+                my.restricted_status[agent] = ith_intervention
+                multiply_rates_of_agent(my, g, agent, intervention.incidence_intervention_effect[ith_intervention])
 
             if intervention.apply_increased_testing :
-                my.testing_probability[agent] = 2 * my.testing_probability[agent]
+                my.testing_probability[agent] = (ith_intervention + 1) * my.testing_probability[agent]
 
 
 @njit
@@ -790,8 +790,9 @@ def check_test_results(my, g, intervention, agent, day, click, stratified_positi
         my.testing_probability[agent] = my.cfg.testing_penetration[my.age[agent]]
 
         # Check for lockdown
-        if intervention.apply_increased_testing and my.restricted_status[agent] == 1 :
-            my.testing_probability[agent] = 2 * my.testing_probability[agent]
+        if intervention.apply_increased_testing and my.restricted_status[agent] > 0 :
+
+            my.testing_probability[agent] = (my.restricted_status[agent] + 1) * my.testing_probability[agent]
 
         intervention.isolated[agent] = False
         reset_rates_of_agent(my, g, agent, intervention)
@@ -863,7 +864,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose = Fals
                     for ith_intervention in utils.decode_binary_flags(intervention.types[ith_sogn]) : # Using only the last entry in iterator
                         pass
 
-                    add_intervention_at_sogn(my, g, intervention, ith_sogn, intervention.incidence_intervention_effect[ith_intervention])
+                    add_intervention_at_sogn(my, g, intervention, ith_sogn, ith_intervention)
 
 
 

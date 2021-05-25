@@ -584,7 +584,7 @@ class Intervention(object) :
         self.agents_per_incidence_label      = agents_per_incidence_label
         self.types                           = np.zeros(my.N_sogne, dtype=np.int8)
         self.clicks_when_restriction_changes = np.full(my.N_sogne,  fill_value=-1, dtype=np.int32)
-        self.clicks_looking_back             = int(self.cfg.days_looking_back / nts)
+        self.clicks_looking_back             = int(np.round(self.cfg.days_looking_back / nts))
 
         self.N_matrix_labels                 = N_matrix_labels
         self.matrix_label_map                = matrix_label_map

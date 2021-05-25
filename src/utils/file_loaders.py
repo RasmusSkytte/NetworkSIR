@@ -880,6 +880,10 @@ def load_label_data(initial_distribution_file, label_map, test_reference = 0.017
         cases_per_label[:, label_map[name_c]]   += values_c[:, i]
         population_per_label[label_map[name_s]] += values_s[i]
 
+    # P = I * T**beta
+    # P_a = I * (N * f)**beta
+    # P_a = P * (N * f / T)**beta
+
     # Divide and correct for nans
     with np.errstate(divide='ignore', invalid='ignore') :
         label_adjustment_factor  = (test_reference * population_per_label / tests_per_label) ** beta

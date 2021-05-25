@@ -16,7 +16,7 @@ if utils.is_local_computer():
     N_runs = 1
 else :
     f = 0.1
-    n_steps = 2
+    n_steps = 7
     num_cores_max = 30
     N_runs = 1
 
@@ -34,11 +34,11 @@ else :
 
 params, start_date = utils.load_params('cfg/simulation_parameters_local_lockdowns.yaml', f)
 
-params['day_max'] = 25
+params['day_max'] = 50
 
 # Sweep around parameter set
-params['N_init']  = np.round(np.linspace(0, 3, n_steps)[1:] * params['N_init'], 5)
-params['beta']    = np.round(np.linspace(0, 3, n_steps)[1:] * params['beta'], 5)
+params['N_init']  = np.round(np.linspace(0.8, 1.2, n_steps)[1:] * params['N_init'], 5)
+params['beta']    = np.round(np.linspace(0.8, 1.2, n_steps)[1:] * params['beta'], 5)
 
 N_files_total = 0
 if __name__ == '__main__':
@@ -79,7 +79,7 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
             for filename, network_filename in zip(abm_files.cfg_to_filenames(cfg), abm_files.cfg_to_filenames(cfg, datatype='networks')) :
 
                 # Load
-                I_tot_scaled, f, _, _, _, _, _, _= load_from_file(filename, network_filename, start_date)
+                I_tot_scaled, f, _, _, _, _, _, _, _= load_from_file(filename, network_filename, start_date)
 
                 start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
                 end_date   = start_date + datetime.timedelta(days=cfg.day_max)
@@ -87,7 +87,7 @@ for subset in [{'Intervention_contact_matrices_name' : params['Intervention_cont
                 t_tests, t_f = parse_time_ranges(start_date, end_date)
 
                 # Evaluate
-                tmp_ll_s = compute_loglikelihood((I_tot_scaled, t_tests), (logK, logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
+                tmp_ll_s = compute_loglikelihood((I_tot_scaled[5:], t_tests[5:]), (logK, logK_sigma, t_index), transformation_function = lambda x : np.log(x) - beta * np.log(ref_tests))
                 tmp_ll_f = compute_loglikelihood((f, t_f), (fraction, fraction_sigma, t_fraction))
 
                 ll_s.append(tmp_ll_s)

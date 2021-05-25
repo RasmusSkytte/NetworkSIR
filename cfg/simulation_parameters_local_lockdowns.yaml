@@ -7,7 +7,7 @@ beta: 0.2        # 0.2125
 R_guess: 0.75
 
 N_init_UK_frac: 2.0
-beta_UK_multiplier: 1.66      # 1.58
+beta_UK_multiplier: 1.69      # 1.58
 
 R_init : 5_800_000 * 0.065
 

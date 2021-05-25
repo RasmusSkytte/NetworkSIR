@@ -12,7 +12,7 @@ from src.utils import file_loaders
 from src.analysis.helpers  import *
 from src.analysis.plotters import *
 
-dim = False
+dim = True
 
 # Define the subset to plot on
 subsets = [ {'Intervention_contact_matrices_name' : ['fase3/S2_1', 'fase3/S2_2', 'fase3/S2_3', 'fase3/S2_4', 'fase3/S2_5', 'fase3/S2_6', 'fase3/S2_7', 'fase3/S2_8']} ]
@@ -105,7 +105,7 @@ for subset in subsets :
         if dim :
             # Evaluate loglikelihood
             I = min(len(logK), len(daily_tests))
-            ll =  compute_loglikelihood((positve_tests[:I], t_day[:I]), (logK[:I],         logK_sigma[:I], t_index[:I]), transformation_function = lambda x : np.log(x) - beta * np.log(daily_tests[:I].flatten()))
+            ll =  compute_loglikelihood((positve_tests[5:I], t_day[5:I]), (logK[5:I],         logK_sigma[5:I], t_index[5:I]), transformation_function = lambda x : np.log(x) - beta * np.log(daily_tests[5:I].flatten()))
             ll += compute_loglikelihood((f, t_week),          (fraction, fraction_sigma, t_fraction))
 
             # Store the plot handles and loglikelihoods

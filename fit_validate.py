@@ -294,7 +294,7 @@ for subset in subsets :
     ##     ##  ######   ########     ######   ##     ##  #######   #######  ##         ######
 
     # Load tests per age group
-    t, positive_per_age_group = load_infected_per_category(beta, category='AgeGr', test_adjust=False)
+    t, positive_per_age_group = load_infected_per_category(cfg.testing_exponent, category='AgeGr', test_adjust=False)
 
     for i in range(len(axes4)) :
 

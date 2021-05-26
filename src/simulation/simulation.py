@@ -776,28 +776,33 @@ def run_single_simulation(
             simulation.initialize_network(
                 force_rerun=force_rerun, save_initial_network=save_initial_network, only_initialize_network=only_initialize_network
             )
-            print(f'Run time (initialize_network): {t.elapsed:.1f}')
+            if verbose :
+                print(f'Run time (initialize_network): {t.elapsed:.1f}')
 
         if only_initialize_network :
             return None
 
         with Timer() as t:
             simulation.initialize_maps()
-            print(f'Run time (initialize_maps): {t.elapsed:.1f}')
+            if verbose :
+                print(f'Run time (initialize_maps): {t.elapsed:.1f}')
 
         with Timer() as t:
             simulation.initialize_interventions()
-            print(f'Run time (initialize_interventions): {t.elapsed:.1f}')
+            if verbose :
+                print(f'Run time (initialize_interventions): {t.elapsed:.1f}')
 
         with Timer() as t:
             simulation.initialize_states()
-            print(f'Run time (initialize_states): {t.elapsed:.1f}')
+            if verbose :
+                print(f'Run time (initialize_states): {t.elapsed:.1f}')
 
         simulation.run_simulation()
 
         with Timer() as t:
             simulation.save(time_elapsed=t.elapsed, save_hdf5=True, save_csv=save_csv)
-            print(f'Run time (save): {t.elapsed:.1f}')
+            if verbose :
+                print(f'Run time (save): {t.elapsed:.1f}')
 
     return cfg
 
@@ -856,15 +861,19 @@ def run_simulations(
         s_simulation_parameters = str(simulation_parameters)
 
     elif isinstance(simulation_parameters, list) :
-        s_simulation_parameters = f"{len(simulation_parameters)} runs"
+        s_simulation_parameters = f'{len(simulation_parameters)} runs'
 
     else :
-        raise AssertionError("simulation_parameters neither list nor dict")
+        raise AssertionError('simulation_parameters neither list nor dict')
 
-    print( f"\n\n" f"Generating {N_files :3d} network-based simulations",
-           f"with {num_cores} cores",
-           f"based on {s_simulation_parameters}.",
-           "Please wait. \n",
+    if verbose :
+        extra_print = f'based on {s_simulation_parameters}. Please wait. \n'
+    else :
+        extra_print = ''
+
+    print( f'\n\n' f'Generating {N_files :3d} network-based simulations',
+           f'with {num_cores} cores',
+           extra_print,
            flush=True)
 
     if dry_run or N_files == 0 :

@@ -406,7 +406,7 @@ def place_and_connect_families_kommune_specific(
 def run_algo_work(my, agents_in_age_group, age1, age2, rho_tmp, connection_type=1) :
     """ Make connection of work type. Algo locks choice of agent1, and then tries different agent2's until one is accepted.
         This algorithm gives an equal number of connections independent of local population density.
-        The sssumption here is that the size of peoples workplaces is independent on where they live.
+        The assumption here is that the size of peoples workplaces is independent on where they live.
         Parameters :
             my (class) : Class of parameters describing the system
             agents_in_age_group (nested list) : list of which agents are in which age groups.
@@ -526,9 +526,11 @@ def connect_work_school_and_others(
         if ra < my.cfg_network.matrix_weights[0] :
             age1, age2 = find_two_age_groups(N_ages, matrix_work)
             run_algo_work(my, agents_in_age_group, age1, age2, rho_tmp)
+
         elif ra < my.cfg_network.matrix_weights[1] :
             age1, age2 = find_two_age_groups(N_ages, matrix_school)
             run_algo_work(my, agents_in_age_group, age1, age2, rho_tmp, connection_type=2)
+
         else :
             age1, age2 = find_two_age_groups(N_ages, matrix_other)
             run_algo_other(my, agents_in_age_group, age1, age2, rho_tmp)

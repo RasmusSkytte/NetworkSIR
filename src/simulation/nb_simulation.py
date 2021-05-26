@@ -396,12 +396,7 @@ def do_bug_check(
     s,
     x) :
 
-    if day > my.cfg.day_max :
-        if verbose :
-            print("--- day exceeded day_max ---")
-        continue_run = False
-
-    elif day > 10_000 :
+    if day > 10_000 :
         if verbose :
             print("--- day exceeded 10_000 ---")
         continue_run = False
@@ -456,7 +451,7 @@ def do_bug_check(
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-@njit
+#@njit
 def run_simulation(
     my,
     g,
@@ -684,33 +679,39 @@ def run_simulation(
                     #print('Season multiplier : ', np.round(g.seasonality(day),                   2))
 
 
-                # Advance day
-                if day <= my.cfg.day_max :
 
-                    day += 1
-                    daily_counter = 0
+                # Check for simulation completion
+                if day == my.cfg.day_max :
+                    if verbose :
+                        print("--- day reached day_max ---")
+                    continue_run = False
+                    break
+
+                # Advance day
+                day += 1
+                daily_counter = 0
+
+                # Apply interventions for the new day
+                if intervention.apply_interventions :
+
+                    stratified_positive = np.zeros_like(stratified_positive)
+
+                    # Update incidence NPIs
+                    median_incidence = check_status_for_incidence_interventions(my, g, intervention, day, click)
 
                     # Apply interventions for the new day
-                    if intervention.apply_interventions :
+                    apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
 
-                        stratified_positive = np.zeros_like(stratified_positive)
-
-                        # Update incidence NPIs
-                        median_incidence = check_status_for_incidence_interventions(my, g, intervention, day, click)
-
-                        # Apply interventions for the new day
-                        apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
-
-                    # Apply events for the new day
-                    if my.cfg.N_events > 0 :
-                        add_daily_events(
-                            my,
-                            g,
-                            intervention,
-                            day,
-                            agents_in_state,
-                            state_total_counts,
-                            where_infections_happened_counter)
+                # Apply events for the new day
+                if my.cfg.N_events > 0 :
+                    add_daily_events(
+                        my,
+                        g,
+                        intervention,
+                        day,
+                        agents_in_state,
+                        state_total_counts,
+                        where_infections_happened_counter)
 
 
 
@@ -744,6 +745,8 @@ def run_simulation(
         print('fraction_not_vaccinated : ',    np.round(np.sum(np.array([1 for vaccination_type in my.vaccination_type if vaccination_type == 0])) / my.cfg_network.N_tot, 2) )
 
     f = 5_800_000 / my.cfg_network.N_tot
-    print('positive_test_counter : ', [int(f * P / day) for P in intervention.positive_test_counter])
+    print('Where : ', where_infections_happened_counter)
+    if day > 0 :
+        print('positive_test_counter : ', [int(f * P / day) for P in intervention.positive_test_counter])
 
     return out_time, out_state_counts, out_stratified_positive, out_stratified_vaccination_counts, out_daily_tests, out_median_incidence, out_my_state, intervention

@@ -13,13 +13,13 @@ from contexttimer import Timer
 if utils.is_local_computer():
     f = 0.1
     n_steps = 10
-    num_cores_max = 1
-    N_runs = 1
+    num_cores_max = 3
+    N_runs = num_cores_max
 else :
     f = 0.1
     n_steps = 10
-    num_cores_max = 3
-    N_runs = 3
+    num_cores_max = 10
+    N_runs = num_cores_max
 
 
 verbose = False
@@ -29,7 +29,7 @@ increment = 0.05
 
 # load starting parameters
 params, start_date = utils.load_params('cfg/simulation_parameters_local_lockdowns.yaml', f)
-params['day_max'] = 60
+params['day_max'] = 40
 
 
 # Run iterative algorithm
@@ -77,8 +77,14 @@ for n in range(n_steps) :
 
 
     # Dermine which age group needs adjustment
-    I = np.argmax(delta)
     print(delta)
+    print(delta.mean())
+    print(delta.std())
+    delta[np.array(params['testing_penetration'][0]) + 1.1*increment > 1.0] = 0  # Increment must not bring above 1
+    delta[np.array(params['testing_penetration'][0]) - 1.1*increment < 0.0] = 0  # Increment must not bring below 0
+    I = np.argmax(np.abs(delta))
     print(I)
-    params['testing_penetration'][0][I] -= np.sign(delta[I]) * increment
+    params['testing_penetration'][0][I] += np.sign(delta[I]) * increment
+    params['testing_penetration'][0] = [np.round(s, 2) for s in params['testing_penetration'][0]]
+    print(params['testing_penetration'][0])
 

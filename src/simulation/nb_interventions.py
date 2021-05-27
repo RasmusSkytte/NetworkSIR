@@ -317,8 +317,8 @@ def remove_intervention_at_sogn(my, g, intervention, ith_sogn) :
 @njit
 def add_intervention_at_sogn(my, g, intervention, sogn, ith_intervention) :
     # lockdown on all agent with a certain sogn
-    # Rate reduction is a vectors of length 3.
-    # The fraction of reduction of the remaining [home, job, others] rates.
+    # Rate reduction is a vectors of length 4.
+    # The fraction of reduction of the remaining [home, job, school, others] rates.
 
     # loop over all agents
     for agent in range(my.cfg_network.N_tot) :

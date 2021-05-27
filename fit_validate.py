@@ -109,7 +109,7 @@ for subset in subsets :
         h.extend( plot_simulation_category(positive_by_region, t_day, axes5) )
         h.extend( plot_simulation_category(vaccinations_by_age_group, t_day, axes6) )
         h.extend( plot_simulation_category(daily_tests, t_day, [axes7]) )
-        h.extend( plot_simulation_category(1.5*incidences, t_day, axes8, color=color ))
+        h.extend( plot_simulation_category(incidences, t_day, axes8, color=color ))
 
         plot_handles.append(h)
 

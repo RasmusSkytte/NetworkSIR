@@ -50,13 +50,15 @@ def contact_counter(connection_type, connection_status, types=[0, 1, 2]) :
 
     return contact_counts
 
+
+
 # Prepare figure
 plotters.set_rc_params()
 fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 8))
 axes = axes.flatten()
 
-filters = [[0,1,2], [0], [1], [2]]
-titles  = ['All', 'Home', 'Work', 'Other']
+filters = [[0,1,2,3], [1], [2], [3]]
+titles  = ['All', 'Work', 'School', 'Other']
 
 # Prepare summery output
 N_contacts = np.zeros((len(Intervention_contact_matrices_name)+1, len(filters)), dtype=int)
@@ -127,7 +129,7 @@ with h5py.File(initial_network_filename, 'r') as f :
 names = Intervention_contact_matrices_name + [cfg.network.contact_matrices_name]
 axes[1].legend(names, fontsize = 18)
 
-for i in [0, 2, 3] :
+for i in [1, 2, 3] :
     axes[i].legend([f'N : {n:,}'.replace(',','.') for n in N_contacts[:, i]], fontsize = 18)
 
 
@@ -141,3 +143,100 @@ for ax in axes :
     ax.set_ylim(0, .1 * (np.floor(ylim[1]/.1) + 1))
 
 fig.savefig('Figures/contact_distribution_' + '_'.join(Intervention_contact_matrices_name).replace('/','_') + '.png')
+
+
+
+
+
+
+
+
+
+# Prepare figure
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 8))
+axes = axes.flatten()
+
+filters = [[0, 1],  [2, 3],  [4, 5], [6, 7]]
+titles  = ['0-19', '20-39', '40-59', '60+']
+
+# Prepare summery output
+N_contacts = np.zeros((len(Intervention_contact_matrices_name)+1, len(filters)), dtype=int)
+
+
+for k, (network_filename, cfg) in enumerate(tqdm(
+    zip(data.iter_network_files(), data.iter_cfgs()),
+    desc='Analyzing number of contacts',
+    total=len(data))) :
+
+    # Get the distribution in the restricted network
+    age, connection_type, connection_status = plotters._load_data_from_network_file(network_filename, ['my_age', 'my_connection_type', 'my_connection_status'], cfg=cfg)
+
+    for i, (types, title) in enumerate(zip(filters, titles)) :
+
+        I = np.isin(age, types)
+
+        number_of_contacts = contact_counter(connection_type[I], connection_status[I], types=[0, 1, 2, 3])
+
+        N_contacts[k, i] = np.sum(number_of_contacts)
+
+        x_min = -0.5
+        x_max = 10 * (np.floor(np.max(number_of_contacts) / 10) + 1) + 0.5
+
+        x_range = (x_min, x_max)
+        N_bins = int(x_max - x_min)
+
+        kwargs = {"bins": N_bins, "range": x_range, "histtype": "step"}
+
+        # Plot the distribution of contacts
+        axes[i].hist(number_of_contacts, weights=np.ones_like(number_of_contacts) / cfg.network.N_tot, color=plt.cm.tab10(k), **kwargs)
+
+
+# Add the reference
+with h5py.File(initial_network_filename, 'r') as f :
+    my_hdf5ready = file_loaders.load_jitclass_to_dict(f['my'])
+    my = file_loaders.load_My_from_dict(my_hdf5ready, cfg.deepcopy())
+
+    for i, (types, title) in enumerate(zip(filters, titles)) :
+
+        I = np.isin(my.age, types)
+
+        number_of_contacts = contact_counter(connection_type[I], connection_status[I], types=[0, 1, 2, 3])
+
+        N_contacts[-1, i] = np.sum(number_of_contacts)
+
+        x_min = -0.5
+        x_max = 10 * (np.floor(np.max(number_of_contacts) / 10) + 1) + 0.5
+
+        x_range = (x_min, x_max)
+        N_bins = int(x_max - x_min)
+
+        kwargs = {"bins": N_bins, "range": x_range, "histtype": "step"}
+
+        axes[i].hist(number_of_contacts,  weights=np.ones_like(number_of_contacts)  / cfg.network.N_tot, color='k', **kwargs)
+
+        # Adjust axes
+        axes[i].yaxis.set_major_formatter(PercentFormatter(xmax=1))
+        axes[i].set(xlim=x_range)
+        axes[i].set_title(title)
+
+        if i % 2 == 0 :
+            axes[i].set_ylabel('Counts')
+
+
+names = Intervention_contact_matrices_name + [cfg.network.contact_matrices_name]
+axes[1].legend(names, fontsize = 18)
+
+for i in [1, 2, 3] :
+    axes[i].legend([f'N : {n:,}'.replace(',','.') for n in N_contacts[:, i]], fontsize = 18)
+
+
+plt.tight_layout()
+
+fig.canvas.draw()
+
+# Adjust the y axes
+for ax in axes :
+    ylim = ax.get_ylim()
+    ax.set_ylim(0, .1 * (np.floor(ylim[1]/.1) + 1))
+
+fig.savefig('Figures/contact_distribution_' + '_'.join(Intervention_contact_matrices_name).replace('/','_') + '_age.png')

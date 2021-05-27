@@ -429,7 +429,7 @@ def check_incidence_against_tresholds(my, intervention, day, click) :
     # Interventions are set to inactive unless they are already active and (&) incidence is above the off treshold
     intervention_at_sogn = np.bitwise_and(intervention_at_sogn, sogne_above_treshold)
 
-    incidence_metrics = [np.median(incidence_per_kommume), np.quantile(incidence_per_kommume, 0.9), np.sum(intervention_at_sogn > 1)]
+    incidence_metrics = np.array([np.median(incidence_per_kommume), np.quantile(incidence_per_kommume, 0.9), np.sum(intervention_at_sogn > 1)])
 
     return intervention_at_sogn, incidence_metrics
 
@@ -766,7 +766,7 @@ def check_test_results(my, g, intervention, agent, day, click, stratified_positi
                     continue
 
                 # Not all will be traced
-                if np.random.rand() < intervention.cfg.tracing_rates[my.connection_type[agent][ith_contact]] * my.testing_probability[contact] :
+                if np.random.rand() < intervention.cfg.tracing_rates[my.connection_type[agent][ith_contact]] : # * my.testing_probability[contact] :
 
                     test_click = click + my.cfg.tracing_delay + intervention.cfg.test_delay_in_clicks[2]
                     test_day   = int(click / 10) # TODO: remove hardcode
@@ -825,7 +825,7 @@ def apply_symptom_testing(my, intervention, agent, state, click) :
             # No longer willing to test
             my.testing_probability[agent] = 0.0
 
-@njit
+#@njit
 def apply_random_testing(my, intervention, day, click) :
 
     # choose N_daily_test people at random to test
@@ -966,7 +966,7 @@ def testing_intervention(my, g, intervention, day, click, stratified_positive) :
             multiply_rates_of_agent(my, g, agent, rate_multiplication = intervention.cfg.isolation_rate_multiplier)
 
 
-@njit
+#@njit
 def apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose) :
 
     if intervention.apply_interventions_on_label and day >= 0 :

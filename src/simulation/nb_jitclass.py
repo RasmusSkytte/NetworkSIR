@@ -282,7 +282,7 @@ class My(object) :
         self.connections = utils.initialize_nested_lists(N_tot, np.uint32)
         self.connection_status = utils.initialize_nested_lists(N_tot, nb.boolean)
         self.connection_type = utils.initialize_nested_lists(N_tot, np.uint8)
-        self.beta_connection_type = np.array([1.0, 0.8, 1.0, 1.0, 1.0], dtype=np.float32)  # beta multiplier for [House, work, school, others, events]
+        self.beta_connection_type = np.array([0.7, 1.0, 1.4, 1.4, 1.0], dtype=np.float32)  # beta multiplier for [House, work, school, others, events]
         self.connection_weight = np.ones(N_tot, dtype=np.float32)
         self.infection_weight = np.ones(N_tot, dtype=np.float64)
         self.number_of_contacts = np.zeros(N_tot, dtype=nb.uint16)

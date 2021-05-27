@@ -33,6 +33,7 @@ for subset in subsets :
 
     # Get a cfg out
     cfg = abm_files.cfgs[0]
+
     start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
     end_date   = start_date + datetime.timedelta(days=cfg.day_max)
 
@@ -90,15 +91,25 @@ for subset in subsets :
           total_infections,
           incidences) = load_from_file(filename, network_filename, start_date)
 
+        # Get the corresponding cfg file
+        cfg = file_loaders.filename_to_cfg(filename)
+
+        # Color by run
+        #color = plt.cm.tab10(k)
+
+        # Color by beta
+        color = plt.cm.tab10(np.argmax(cfg.beta == np.unique([cfg.beta for cfg in abm_files.cfgs])))
+        print(color)
+
         # Plot
-        h  =      plot_simulation_cases_and_variant_fraction(positve_tests, f, total_infections, daily_tests, t_day, t_week, axes1, color=plt.cm.tab10(k) )
-        h.extend( plot_simulation_cases_and_variant_fraction(positve_tests, f, total_infections, daily_tests, t_day, t_week, axes2, color=plt.cm.tab10(k)) )
+        h  =      plot_simulation_cases_and_variant_fraction(positve_tests, f, total_infections, daily_tests, t_day, t_week, axes1, color=color )
+        h.extend( plot_simulation_cases_and_variant_fraction(positve_tests, f, total_infections, daily_tests, t_day, t_week, axes2, color=color) )
         h.extend( plot_simulation_growth_rates(positive_by_variant, t_day, axes3) )
         h.extend( plot_simulation_category(positive_per_age_group, t_day, axes4) )
         h.extend( plot_simulation_category(positive_by_region, t_day, axes5) )
         h.extend( plot_simulation_category(vaccinations_by_age_group, t_day, axes6) )
         h.extend( plot_simulation_category(daily_tests, t_day, [axes7]) )
-        h.extend( plot_simulation_category(incidences, t_day, axes8, color=plt.cm.tab10(k) ))
+        h.extend( plot_simulation_category(incidences, t_day, axes8, color=color ))
 
         plot_handles.append(h)
 
@@ -143,7 +154,6 @@ for subset in subsets :
             for k, (ll, handles) in enumerate(zip(lls_best, plot_handles)) :
                 for line in handles :
                     line.set_alpha(0.05 + 0.95*ll)
-                    line.set_color(plt.cm.tab10(k))
 
 
 

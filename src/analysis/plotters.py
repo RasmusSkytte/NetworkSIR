@@ -43,7 +43,7 @@ def plot_simulation_category(tests_by_category, t, axes, linestyle = '-', color=
             c = plt.cm.tab10(i % 10)
         else :
             c = color
-        tmp_handle = axes[i].plot(t[:np.size(tests_by_category, 0)], tests_by_category[:, i], lw=4, linestyle=linestyle, c=c)[0]
+        tmp_handle = axes[i].plot(t[:np.size(tests_by_category, 0)], tests_by_category[:, i], lw=4, linestyle=linestyle, color=c)[0]
         tmp_handles.append(tmp_handle)
 
     return tmp_handles

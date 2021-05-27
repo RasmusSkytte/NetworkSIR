@@ -4,9 +4,6 @@ from src.utils import utils
 from src.simulation import simulation
 from src.analysis.helpers import *
 
-import os
-
-from tqdm import tqdm
 from contexttimer import Timer
 
 
@@ -80,5 +77,5 @@ for n in range(n_steps) :
     I = np.argmax(delta)
     print(delta)
     print(I)
-    params['testing_penetration'][0][I] -= np.sign(delta[I]) * increment
+    params['testing_penetration'][0][I] += np.sign(delta[I]) * increment
 

@@ -451,7 +451,7 @@ def do_bug_check(
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-#@njit
+@njit
 def run_simulation(
     my,
     g,
@@ -687,6 +687,9 @@ def run_simulation(
                     continue_run = False
                     break
 
+                # Update incidence NPIs
+                median_incidence = check_status_for_incidence_interventions(my, g, intervention, day, click)
+
                 # Advance day
                 day += 1
                 daily_counter = 0
@@ -695,9 +698,6 @@ def run_simulation(
                 if intervention.apply_interventions :
 
                     stratified_positive = np.zeros_like(stratified_positive)
-
-                    # Update incidence NPIs
-                    median_incidence = check_status_for_incidence_interventions(my, g, intervention, day, click)
 
                     # Apply interventions for the new day
                     apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)

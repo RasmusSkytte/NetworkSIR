@@ -32,14 +32,14 @@ else :
 
 params, start_date = utils.load_params('cfg/simulation_parameters_local_lockdowns.yaml', f)
 
-p = [[np.round(0.35/0.55 * p, 2) for p in params['chance_of_finding_infected'][0]],
-     [np.round(0.25/0.55 * p, 2) for p in params['chance_of_finding_infected'][0]],
-     [np.round(0.15/0.55 * p, 2) for p in params['chance_of_finding_infected'][0]]]
-params['chance_of_finding_infected'] = p
+#p = [[np.round(0.35/0.55 * p, 2) for p in params['chance_of_finding_infected'][0]],
+     #[np.round(0.25/0.55 * p, 2) for p in params['chance_of_finding_infected'][0]],
+     #[np.round(0.15/0.55 * p, 2) for p in params['chance_of_finding_infected'][0]]]
+#params['chance_of_finding_infected'] = p
 
 
 # Sweep around parameter set
-#params['beta']               = noise(params['beta'], 0.02)
+params['beta']               = noise(params['beta'], 0.01)
 #params['N_init']             = noise(params['N_init'], 10_000 )
 #params['lambda_I']           = noise(params['lambda_I'], 0.1)
 #params['beta_UK_multiplier'] = noise(params['beta_UK_multiplier'], 0.05)

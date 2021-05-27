@@ -31,8 +31,9 @@ def plot_simulation_cases_and_variant_fraction(total_tests, f, total_infections,
     handle_0 = plot_simulation_cases(total_tests, t_day, axes[0], color=color)
     handle_1 = plot_simulation_cases(total_infections, t_day, axes[0], linestyle=':', color=color)
     handle_2 = plot_variant_fraction(f, t_week, axes[1], color=color)
+    handle_3 = plot_simulation_cases(total_tests/total_infections, t_day, axes[1], linestyle=':', color=color)
 
-    return [handle_0, handle_1, handle_2]
+    return [handle_0, handle_1, handle_2, handle_3]
 
 def plot_simulation_category(tests_by_category, t, axes, linestyle = '-', color=None) :
 

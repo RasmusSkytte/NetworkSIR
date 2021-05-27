@@ -73,7 +73,8 @@ for subset in subsets :
 
     fig7, axes7 = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True, figsize=(12, 12))
 
-    fig8, axes8 = plt.subplots(nrows=1, ncols=3, sharex=True, sharey=True, figsize=(12, 4))
+    fig8, axes8 = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True, figsize=(12, 12))
+    axes8 = axes8.flatten()
 
     print('Plotting the individual ABM simulations. Please wait', flush=True)
     for k, (filename, network_filename) in tqdm(
@@ -99,7 +100,6 @@ for subset in subsets :
 
         # Color by beta
         color = plt.cm.tab10(np.argmax(cfg.beta == np.unique([cfg.beta for cfg in abm_files.cfgs])))
-        print(color)
 
         # Plot
         h  =      plot_simulation_cases_and_variant_fraction(positve_tests, f, total_infections, daily_tests, t_day, t_week, axes1, color=color )
@@ -109,7 +109,7 @@ for subset in subsets :
         h.extend( plot_simulation_category(positive_by_region, t_day, axes5) )
         h.extend( plot_simulation_category(vaccinations_by_age_group, t_day, axes6) )
         h.extend( plot_simulation_category(daily_tests, t_day, [axes7]) )
-        h.extend( plot_simulation_category(incidences, t_day, axes8, color=color ))
+        h.extend( plot_simulation_category(1.5*incidences, t_day, axes8, color=color ))
 
         plot_handles.append(h)
 
@@ -453,9 +453,11 @@ for subset in subsets :
     N_stratifications = len(label_map['stratification_idx_to_stratification'])
     t, _, _, _, incidence_adjusted_per_kommune = file_loaders.load_label_data('newest', label_map['kommune_to_stratification_idx'], test_reference = cfg.test_reference, beta = cfg.testing_exponent)
 
-    axes8[0].scatter(t, np.median(incidence_adjusted_per_kommune, axis=1), color='k', s=10, zorder=100)
-
-    axes8[1].scatter(t, np.quantile(incidence_adjusted_per_kommune, 0.9, axis=1), color='k', s=10, zorder=100)
+    axes8[0].scatter(t, np.quantile(incidence_adjusted_per_kommune, 0.10, axis=1), color='k', s=10, zorder=100)
+    axes8[1].scatter(t, np.quantile(incidence_adjusted_per_kommune, 0.25, axis=1), color='k', s=10, zorder=100)
+    axes8[2].scatter(t,   np.median(incidence_adjusted_per_kommune,       axis=1), color='k', s=10, zorder=100)
+    axes8[3].scatter(t, np.quantile(incidence_adjusted_per_kommune, 0.75, axis=1), color='k', s=10, zorder=100)
+    axes8[4].scatter(t, np.quantile(incidence_adjusted_per_kommune, 0.90, axis=1), color='k', s=10, zorder=100)
 
     set_date_xaxis(axes8[0], start_date, end_date)
 

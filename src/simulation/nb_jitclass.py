@@ -477,6 +477,7 @@ spec_intervention = {
     # Events
     'event_size_max' : nb.uint32[:],
     # Options
+    'nts' : nb.float32,
     'verbose' : nb.boolean,
 }
 
@@ -602,6 +603,8 @@ class Intervention(object) :
         self.vaccination_schedule            = vaccination_schedule
 
         self.event_size_max                  = self.cfg.event_size_max[0]
+
+        self.nts                             = nts
 
         self.verbose = verbose
 

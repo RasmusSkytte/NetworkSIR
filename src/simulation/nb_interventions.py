@@ -342,6 +342,7 @@ def check_status_for_incidence_interventions(my, g, intervention, day, click) :
 
     # Loop over sogne to remove restricitons
     for sogn, required_interventions in enumerate(required_interventions_at_sogn) :
+
         # If required intervntions do not match the current interventions, tag sogn for updates
         if not required_interventions == intervention.types[sogn] :
 
@@ -361,75 +362,103 @@ def check_status_for_incidence_interventions(my, g, intervention, day, click) :
 @njit
 def check_incidence_against_tresholds(my, intervention, day, click) :
 
+    days_looking_back = intervention.cfg.days_looking_back
+
     # Incidence is computed on pcr tests
-    pcr_to_total_tests_ratio = intervention.daily_pcr_tests[day] / (intervention.daily_pcr_tests[day] + 0.5 * intervention.daily_antigen_tests[day])
+    pcr_tests       = np.zeros(days_looking_back, dtype=np.float32)
+    effective_tests = np.zeros(days_looking_back, dtype=np.float32)
+
+    for d in range(days_looking_back) :
+        if day-d >= 0 :
+            pcr_tests[d]       = intervention.daily_pcr_tests[day-d]
+            effective_tests[d] = pcr_tests[d] + 0.5 * intervention.daily_antigen_tests[day-d]
+        else :
+            pcr_tests[d]       = pcr_tests[d-1]
+            effective_tests[d] = effective_tests[d-1]
+
+    pcr_to_total_tests_ratio = pcr_tests / effective_tests
 
     # Store the incidence at kommune level
     incidence_per_kommume = np.zeros(my.N_kommuner, dtype=np.float32)
     # Loop over all interventions and check if condition applies
 
     # Arrays to encode information about which sogne is above the on and off tresholds
-    sogne_above_treshold  = np.zeros_like(intervention.types, dtype=np.int8)
+    intervention_at_sogn  = np.zeros_like(intervention.types, dtype=np.int8)
 
     # Loop over possible interventions
     for ith_intervention, incidence_label in enumerate(intervention.incidence_labels) :
 
         # Determine the number of (found) infected per label
-        infected_per_label = np.zeros(intervention.N_incidence_labels[incidence_label], dtype=np.float32)
-        tests_per_label    = np.zeros(intervention.N_incidence_labels[incidence_label], dtype=np.float32)
+        infected_per_label = np.zeros((intervention.N_incidence_labels[incidence_label], intervention.cfg.days_looking_back), dtype=np.float32)
+        tests_per_label    = np.zeros((intervention.N_incidence_labels[incidence_label], intervention.cfg.days_looking_back), dtype=np.float32)
 
         for agent, (day_found, click_tested) in enumerate(zip(intervention.day_found_infected, intervention.clicks_when_tested_result)) :
-            if day_found > day - intervention.cfg.days_looking_back :
-                infected_per_label[intervention.incidence_label_map[incidence_label][my.sogn[agent]]] += 1.0
+            if day_found > day - days_looking_back :
+
+                if incidence_label.lower() == 'sogn' :
+                    infected_per_label[my.sogn[agent]][day-day_found] += 1.0
+                elif incidence_label.lower() == 'kommune' :
+                    infected_per_label[my.kommune[agent]][day-day_found] += 1.0
+                else :
+                    infected_per_label[intervention.incidence_label_map[incidence_label][my.sogn[agent]]][day-day_found]  += 1.0
 
             if click_tested > click - intervention.clicks_looking_back :
-                tests_per_label[intervention.incidence_label_map[incidence_label][my.sogn[agent]]] += 1.0
+                I = int((click - click_tested) * intervention.nts)   # Convert click to day
+
+                if incidence_label.lower() == 'sogn' :
+                    tests_per_label[my.sogn[agent]][I]  += 1.0
+                elif incidence_label.lower() == 'kommune' :
+                    tests_per_label[my.kommune[agent]][I] += 1.0
+                else :
+                    tests_per_label[intervention.incidence_label_map[incidence_label][my.sogn[agent]]][I] += 1.0
+
 
         # Loop over labels
         for ith_label, (N_tests, N_infected, N_inhabitants) in enumerate(zip(tests_per_label, infected_per_label, intervention.agents_per_incidence_label[incidence_label])) :
 
+            if np.sum(N_tests) == 0 :
+                continue
+
             # Discount AG tests
             N_tests *= pcr_to_total_tests_ratio
 
-            if N_tests < 1.0 :
-                continue
-
-            # Compute the incidence on the label
-            incidence = N_infected / (N_inhabitants / intervention.cfg.incidence_reference)
-
             # Adjust for the number of tests
-            if not incidence_label.lower() == 'sogn' :
-                incidence *= (intervention.cfg.test_reference * N_inhabitants / N_tests) ** intervention.cfg.testing_exponent
+            if incidence_label.lower() == 'sogn' :
+
+                # Compute the incidence on the label
+                incidence = np.sum(N_infected) / (N_inhabitants / intervention.cfg.incidence_reference)
+
+            else :
+
+                # Scaled positives
+                infected_per_label_adjusted = N_infected * (intervention.cfg.test_reference * N_inhabitants / N_tests) ** intervention.cfg.testing_exponent
+
+                # Add the scaled positives for the week
+                incidence = np.nansum(infected_per_label_adjusted) / (N_inhabitants / intervention.cfg.incidence_reference)
+
+
 
             # Store the incidence
             if incidence_label.lower() == 'kommune' :
                 incidence_per_kommume[ith_label] = incidence
 
-            # Check incidence against incidence treshold
-            # If conditions are met
 
             # Check against infection treshold
-            if N_infected <= intervention.infection_threshold[ith_intervention] :
+            if np.sum(N_infected) <= intervention.infection_threshold[ith_intervention] :
                 continue
 
             # Check against percentage tresholds
-            if N_infected / N_tests <= intervention.percentage_threshold[ith_intervention] :
+            if np.sum(N_infected) / np.sum(N_tests) <= intervention.percentage_threshold[ith_intervention] :
                 continue
 
+            # Check incidence against incidence treshold
             if incidence > intervention.incidence_threshold[ith_intervention] :
 
                 # Loop over parishes on label
                 for sogn in intervention.inverse_incidence_label_map[incidence_label][np.uint16(ith_label)] :
-                    sogne_above_treshold[sogn] += 2**ith_intervention    # Encode as binary flags
+                    intervention_at_sogn[sogn] += 2**ith_intervention    # Encode as binary flags
 
-
-    # Interventions are set to active if either they are active or (|) when incidence is above the on treshold
-    intervention_at_sogn = np.bitwise_or(intervention.types,    sogne_above_treshold)
-
-    # Interventions are set to inactive unless they are already active and (&) incidence is above the off treshold
-    intervention_at_sogn = np.bitwise_and(intervention_at_sogn, sogne_above_treshold)
-
-    incidence_metrics = np.array([np.median(incidence_per_kommume), np.quantile(incidence_per_kommume, 0.9), np.sum(intervention_at_sogn > 1)])
+    incidence_metrics = np.array([np.quantile(incidence_per_kommume, 0.1), np.quantile(incidence_per_kommume, 0.25), np.median(incidence_per_kommume), np.quantile(incidence_per_kommume, 0.75), np.quantile(incidence_per_kommume, 0.9), np.sum(intervention_at_sogn > 1)])
 
     return intervention_at_sogn, incidence_metrics
 
@@ -825,7 +854,7 @@ def apply_symptom_testing(my, intervention, agent, state, click) :
             # No longer willing to test
             my.testing_probability[agent] = 0.0
 
-#@njit
+@njit
 def apply_random_testing(my, intervention, day, click) :
 
     # choose N_daily_test people at random to test
@@ -966,7 +995,7 @@ def testing_intervention(my, g, intervention, day, click, stratified_positive) :
             multiply_rates_of_agent(my, g, agent, rate_multiplication = intervention.cfg.isolation_rate_multiplier)
 
 
-#@njit
+@njit
 def apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose) :
 
     if intervention.apply_interventions_on_label and day >= 0 :

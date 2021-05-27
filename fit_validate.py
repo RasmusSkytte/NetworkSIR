@@ -12,7 +12,7 @@ from src.utils import file_loaders
 from src.analysis.helpers  import *
 from src.analysis.plotters import *
 
-dim = True
+dim = False
 
 # Define the subset to plot on
 subsets = [ {'Intervention_contact_matrices_name' : ['fase3/S2_1', 'fase3/S2_2', 'fase3/S2_3', 'fase3/S2_4', 'fase3/S2_5', 'fase3/S2_6', 'fase3/S2_7', 'fase3/S2_8']} ]
@@ -98,8 +98,9 @@ for subset in subsets :
         # Color by run
         #color = plt.cm.tab10(k)
 
-        # Color by beta
-        color = plt.cm.tab10(np.argmax(cfg.beta == np.unique([cfg.beta for cfg in abm_files.cfgs])))
+        # Color by variable
+        variable = 'lambda_E'
+        color = plt.cm.tab10(np.argmax(cfg[variable] == np.unique([cfg[variable] for cfg in abm_files.cfgs])))
 
         # Plot
         h  =      plot_simulation_cases_and_variant_fraction(positve_tests, f, total_infections, daily_tests, t_day, t_week, axes1, color=color )

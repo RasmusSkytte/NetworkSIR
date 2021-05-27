@@ -11,7 +11,7 @@ if utils.is_local_computer():
     f = 0.05
     n_steps = 2
     num_cores_max = 3
-    N_runs = 1
+    N_runs = 3
 else :
     f = 0.1
     n_steps = 3
@@ -39,9 +39,10 @@ params, start_date = utils.load_params('cfg/simulation_parameters_local_lockdown
 
 
 # Sweep around parameter set
-params['beta']               = noise(params['beta'], 0.01)
+#params['beta']               = noise(params['beta'], 0.01)
 #params['N_init']             = noise(params['N_init'], 10_000 )
-#params['lambda_I']           = noise(params['lambda_I'], 0.1)
+#params['lambda_I']           = noise(params['lambda_I'], 0.2)
+#params['lambda_E']           = noise(params['lambda_E'], 0.2)
 #params['beta_UK_multiplier'] = noise(params['beta_UK_multiplier'], 0.05)
 #params['N_init_UK_frac']     = noise(params['N_init_UK_frac'], 1)
 

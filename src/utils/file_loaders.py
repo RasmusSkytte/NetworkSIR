@@ -476,7 +476,7 @@ def load_daily_tests(cfg) :
     if cfg.day_max > len(T_pcr) :
 
         # Determine the current test behaviour
-        weeks_looking_back = 2
+        weeks_looking_back = 1
         T_pcr_week_template = np.round(np.mean(np.reshape(T_pcr[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
         T_ag_week_template  = np.round(np.mean(np.reshape( T_ag[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
 

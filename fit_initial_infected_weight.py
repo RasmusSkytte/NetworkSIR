@@ -1,0 +1,98 @@
+import numpy as np
+
+from src.utils import utils
+from src.simulation import simulation
+from src.analysis.helpers import *
+
+from contexttimer import Timer
+
+
+if utils.is_local_computer():
+    f = 0.1
+    n_steps = 10
+    num_cores_max = 3
+    N_runs = num_cores_max
+else :
+    f = 0.1
+    n_steps = 10
+    num_cores_max = 10
+    N_runs = num_cores_max
+
+
+verbose = False
+
+increment = 0.05
+
+
+# load starting parameters
+params, start_date = utils.load_params('cfg/simulation_parameters_local_lockdowns.yaml', f)
+params['day_max'] = 40
+
+
+# Run iterative algorithm
+for n in range(n_steps) :
+
+    # Run simulation with the next parameter set
+    if __name__ == '__main__':
+        with Timer() as t:
+            simulation.run_simulations(params, N_runs=N_runs, num_cores_max=num_cores_max, verbose=verbose)
+
+
+    # Load the latest simulation data
+    subset = {'Intervention_contact_matrices_name' : params['Intervention_contact_matrices_name'][0], 'testing_penetration' : params['testing_penetration'][0]}
+
+    if __name__ == '__main__':
+        # Load the ABM simulations
+        abm_files = file_loaders.ABM_simulations(subset=subset, verbose=True)
+
+        if len(abm_files.cfgs) == 0 :
+            raise ValueError('No files found')
+
+        # Define delta
+        delta = np.zeros_like(params['testing_penetration'][0])
+
+        for cfg in abm_files.iter_cfgs() :
+
+            for filename, network_filename in zip(abm_files.cfg_to_filenames(cfg), abm_files.cfg_to_filenames(cfg, datatype='networks')) :
+
+                # Load
+                _, _, _, _, P_landsdel, _, _, _, _= load_from_file(filename, network_filename, start_date)
+
+                start_date = datetime.datetime(2020, 12, 28) + datetime.timedelta(days=cfg.start_date_offset)
+                end_date   = start_date + datetime.timedelta(days=cfg.day_max)
+
+                t_tests, _ = parse_time_ranges(start_date, end_date)
+
+
+                raw_label_map = pd.read_csv('Data/label_map.csv')
+
+                stratification = cfg.stratified_labels
+                label_map = {'stratification_idx_to_stratification' : raw_label_map[[stratification + '_idx',  stratification ]].drop_duplicates().set_index(stratification + '_idx')[stratification],
+                            'kommune_to_stratification_idx' : raw_label_map[[stratification + '_idx',  'kommune' ]].drop_duplicates().set_index('kommune')[stratification + '_idx']}
+
+
+                N_stratifications = len(label_map['stratification_idx_to_stratification'])
+                t, _, positive_per_landsdel, _, _ = file_loaders.load_label_data('newest', label_map['kommune_to_stratification_idx'], test_reference = cfg.test_reference, beta = cfg.testing_exponent)
+
+
+                t, positive_per_landsdel = load_infected_per_category(cfg.testing_exponent, category='AgeGr', test_adjust=False)
+
+                positive_per_landsdel = positive_per_landsdel[t >= start_date, :]
+                positive_per_landsdel = positive_per_landsdel[:cfg['day_max']+1, :]
+
+                # Compute the difference between simulations and data
+                delta += np.sum(positive_per_landsdel - P_landsdel, axis=0)
+
+
+    # Dermine which age group needs adjustment
+    print(delta)
+    print(delta.mean())
+    print(delta.std())
+    delta[np.array(params['initial_infected_label_weight'][0]) + 1.1*increment > 1.0] = 0  # Increment must not bring above 1
+    delta[np.array(params['initial_infected_label_weight'][0]) - 1.1*increment < 0.0] = 0  # Increment must not bring below 0
+    I = np.argmax(np.abs(delta))
+    print(I)
+    params['initial_infected_label_weight'][0][I] += np.sign(delta[I]) * increment
+    params['initial_infected_label_weight'][0] = [np.round(s, 2) for s in params['initial_infected_label_weight'][0]]
+    print(params['initial_infected_label_weight'][0])
+

@@ -15,11 +15,14 @@ from src.analysis.plotters import *
 dim = False
 
 # Define the subset to plot on
-subsets = [ {'Intervention_contact_matrices_name' : ['fase3/S2_1', 'fase3/S2_2', 'fase3/S2_3', 'fase3/S2_4', 'fase3/S2_5', 'fase3/S2_6', 'fase3/S2_7', 'fase3/S2_8']} ]
-#subsets = [ {'Intervention_contact_matrices_name' : ['fase3/S2_5']} ]
+subsets = [ {'Intervention_contact_matrices_name' : ['fase4/S2_1', 'fase4/S2_2', 'fase4/S2_3', 'fase4/S2_4', 'fase4/S2_5', 'fase4/S2_6', 'fase4/S2_7', 'fase4/S2_8']} ]
+#subsets = [ {'Intervention_contact_matrices_name' : ['fase4/S2_5']} ]
 
 for subset in subsets :
-    fig_name = Path('Figures/' + subset['Intervention_contact_matrices_name'][-1].replace('/','_') + '.png')
+    fig_name = Path('Figures/' + subset['Intervention_contact_matrices_name'][-1] + '.png')
+
+    if not os.path.exists(os.path.dirname(fig_name)) :
+        os.makedirs(os.path.dirname(fig_name))
 
     # Number of plots to keep
     N = 15
@@ -99,7 +102,7 @@ for subset in subsets :
         #color = plt.cm.tab10(k)
 
         # Color by variable
-        variable = 'lambda_E'
+        variable = 'rho'
         color = plt.cm.tab10(np.argmax(cfg[variable] == np.unique([cfg[variable] for cfg in abm_files.cfgs])))
 
         # Plot

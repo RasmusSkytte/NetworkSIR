@@ -798,7 +798,7 @@ def check_test_results(my, g, intervention, agent, day, click, stratified_positi
                 if np.random.rand() < intervention.cfg.tracing_rates[my.connection_type[agent][ith_contact]] : # * my.testing_probability[contact] :
 
                     test_click = click + my.cfg.tracing_delay + intervention.cfg.test_delay_in_clicks[2]
-                    test_day   = int(click / 10) # TODO: remove hardcode
+                    test_day   = int(click * intervention.nts)
 
                     # Book new test
                     intervention.reason_for_test[contact] = 2

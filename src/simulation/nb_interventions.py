@@ -423,18 +423,18 @@ def check_incidence_against_tresholds(my, intervention, day, click) :
             N_tests *= pcr_to_total_tests_ratio
 
             # Adjust for the number of tests
-            if incidence_label.lower() == 'sogn' :
+            #if incidence_label.lower() == 'sogn' :
 
                 # Compute the incidence on the label
-                incidence = np.sum(N_infected) / (N_inhabitants / intervention.cfg.incidence_reference)
+            incidence = np.sum(N_infected) / (N_inhabitants / intervention.cfg.incidence_reference)
 
-            else :
+            #else :
 
-                # Scaled positives
-                infected_per_label_adjusted = N_infected * (intervention.cfg.test_reference * N_inhabitants / N_tests) ** intervention.cfg.testing_exponent
+            #    # Scaled positives
+            #    infected_per_label_adjusted = N_infected * (intervention.cfg.test_reference * N_inhabitants / N_tests) ** intervention.cfg.testing_exponent
 
                 # Add the scaled positives for the week
-                incidence = np.nansum(infected_per_label_adjusted) / (N_inhabitants / intervention.cfg.incidence_reference)
+            #    incidence = np.nansum(infected_per_label_adjusted) / (N_inhabitants / intervention.cfg.incidence_reference)
 
 
 

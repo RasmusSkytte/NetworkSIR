@@ -103,7 +103,7 @@ for subset in subsets :
 
         # Color by variable
         variable = 'rho'
-        color = plt.cm.tab10(np.argmax(cfg[variable] == np.unique([cfg[variable] for cfg in abm_files.cfgs])))
+        color = plt.cm.tab10(np.argmax(utils.flatten_cfg(cfg)[variable] == np.unique([utils.flatten_cfg(cfg)[variable] for cfg in abm_files.cfgs])))
 
         # Plot
         h  =      plot_simulation_cases_and_variant_fraction(positve_tests, f, total_infections, daily_tests, t_day, t_week, axes1, color=color )

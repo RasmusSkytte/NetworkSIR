@@ -11,20 +11,16 @@ from src.utils      import file_loaders
 from src.analysis.helpers  import *
 from src.analysis.plotters import *
 
-
-# This runs simulations with specified percentage effects of the seasonality model
-params, start_date = utils.load_params("cfg/analyzers/seasonality.yaml")
-
 if utils.is_local_computer():
     f = 0.5
     n_steps = 1
     num_cores_max = 3
     N_runs = 7
 else :
-    f = 0.5
+    f = 0.1
     n_steps = 1
     num_cores_max = 15
-    N_runs = 3
+    N_runs = 1
 
 
 if num_cores_max == 1 :
@@ -33,10 +29,8 @@ else :
     verbose = False
 
 
-# Scale the population
-params["N_tot"]  = int(params["N_tot"]  * f)
-params["N_init"] = int(params["N_init"] * f)
-params["R_init"] = int(params["R_init"] * f)
+# This runs simulations with specified percentage effects of the seasonality model
+params, start_date = utils.load_params("cfg/analyzers/seasonality.yaml", f)
 
 
 N_files_total = 0

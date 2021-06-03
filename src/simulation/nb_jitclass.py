@@ -439,11 +439,11 @@ spec_intervention = {
     'R_true_list' : ListType(nb.float64),
     'R_true_list_brit' : ListType(nb.float64),
     # Testing
-    'daily_pcr_tests' : nb.int32[:],     # TODO: depreciate
-    'daily_antigen_tests' : nb.int32[:],     # TODO: depreciate
+    'daily_pcr_tests' : nb.int64[:],     # TODO: depreciate
+    'daily_antigen_tests' : nb.int64[:],     # TODO: depreciate
     'pcr_to_antigen_test_ratio' : nb.float64[:],
     'daily_test_probability' : nb.float64[:],
-    'random_tests' : nb.int32[:],    # TODO: depreciate
+    'random_tests' : nb.int64[:],    # TODO: depreciate
     'day_found_infected' : nb.int32[:],
     'reason_for_test' : nb.int8[:],
     'result_of_test' : nb.int8[:],

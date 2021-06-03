@@ -440,7 +440,7 @@ def load_seasonal_model(scenario=None, offset = 0) :
     # Scale to starting value
     return model / model[0]
 
-def load_daily_tests(cfg, age_counts=None) :
+def load_daily_tests(cfg, age_counts=None, fraction_vaccinated=None) :
 
     weeks_looking_back = 1
 
@@ -481,25 +481,7 @@ def load_daily_tests(cfg, age_counts=None) :
     T_model_pcr = T_model_pcr.values
     T_model_ag  = T_model_ag.values
 
-
-    # Add projection
-    if cfg.day_max > len(T_model_pcr) :
-
-        # Determine the current test behaviour
-        T_pcr_week_template = np.round(np.mean(np.reshape(T_model_pcr[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
-        T_ag_week_template  = np.round(np.mean(np.reshape(T_model_ag[ -(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
-
-        # Project current test behavior forward.
-        n_repeats = int(np.ceil((cfg.day_max + 1 - len(T_pcr_week_template)) / 7))
-
-        T_pcr_projected = np.tile(T_pcr_week_template, n_repeats)
-        T_ag_projected  = np.tile(T_ag_week_template,  n_repeats)
-
-        # Combine
-        T_model_pcr = np.concatenate((T_model_pcr, T_pcr_projected))
-        T_model_ag  = np.concatenate((T_model_ag,  T_ag_projected))
-
-    # Scale to the tests
+    # Scale to the population size
     T_model_pcr = T_model_pcr[:(cfg.day_max+1)] * cfg.network.N_tot / 5_800_000
     T_model_ag  = T_model_ag[:(cfg.day_max+1)]  * cfg.network.N_tot / 5_800_000
 
@@ -509,12 +491,41 @@ def load_daily_tests(cfg, age_counts=None) :
 
     # Convert to probability for test
     if age_counts is not None :
-        daily_test_modifer = T_model_effective / np.max(T_model_effective)
-        # Compute the factor needed to match testing probability with observed number of tests
-        k =  np.max(T_model_effective) / (np.sum(age_counts * cfg.testing_penetration))
-        daily_test_modifer *= k
+        daily_test_modifer = T_model_effective / np.sum(age_counts * cfg.testing_penetration)
+
     else :
-        daily_test_modifer = - 1
+        daily_test_modifer = np.ones_like(T_model_effective)
+
+    # Convert to probability for test
+    if fraction_vaccinated is not None :
+        daily_test_modifer /= (1 - fraction_vaccinated[:len(daily_test_modifer)])
+
+
+    # Add projection
+    if cfg.day_max > len(T_model_effective) :
+
+        # Determine the current test behaviour
+        T_pcr_week_template      = np.round(np.mean(np.reshape(T_model_pcr[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))   # TODO: Depreciate
+        T_ag_week_template       = np.round(np.mean(np.reshape(T_model_ag[ -(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))  # TODO: Depreciate
+        daily_modifier_template  = np.round(np.mean(np.reshape(daily_test_modifer[ -(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
+        ratio_template           = np.round(np.mean(np.reshape(pcr_to_antigen_test_ratio[ -(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
+
+        # Project current test behavior forward.
+        n_repeats = int(np.ceil((cfg.day_max + 1 - len(T_pcr_week_template)) / 7))
+
+        T_pcr_projected = np.tile(T_pcr_week_template, n_repeats)   # TODO: Depreciate
+        T_ag_projected  = np.tile(T_ag_week_template,  n_repeats)# TODO: Depreciate
+
+        daily_modifier_projected = np.tile(daily_modifier_template, n_repeats)
+        ratio_projected          = np.tile(ratio_template,          n_repeats)
+
+        # Combine
+        T_model_pcr = np.concatenate((T_model_pcr, T_pcr_projected))# TODO: Depreciate
+        T_model_ag  = np.concatenate((T_model_ag,  T_ag_projected))# TODO: Depreciate
+
+        daily_test_modifer         = np.concatenate((daily_test_modifer,         daily_modifier_projected))
+        pcr_to_antigen_test_ratio  = np.concatenate((pcr_to_antigen_test_ratio,  ratio_projected))
+
 
     return np.round(T_model_pcr).astype(int), np.round(T_model_ag).astype(int), daily_test_modifer, pcr_to_antigen_test_ratio
 
@@ -562,6 +573,9 @@ def load_vaccination_schedule(my, cfg) :
     # Get the age distribution in the simulaiton
     age_distribution = np.array([np.sum(my.age==a) for a in np.unique(my.age)])
 
+    # Compute the fraction of vaccinated agents as a function of time
+    f_vaccinated = np.zeros(len(vaccinations_per_age_group[0]) + np.max(cfg.Intervention_vaccination_effect_delays) - cfg.start_date_offset)
+
     # Scale and adjust the vaccination schedules
     for i in range(len(vaccinations_per_age_group)) :
 
@@ -569,9 +583,17 @@ def load_vaccination_schedule(my, cfg) :
         vaccinations_per_age_group[i] = np.round(vaccinations_per_age_group[i] * age_distribution).astype(np.int64)
 
         # Determine the timing of effective vaccines
-        vaccination_schedule[i] = np.array([0, (vaccination_schedule[i][-1] - vaccination_schedule[i][0]).days]) + cfg.Intervention_vaccination_effect_delays[i] - cfg.start_date_offset
+        delta = cfg.Intervention_vaccination_effect_delays[i] - cfg.start_date_offset
+        vaccination_schedule[i] = np.array([0, (vaccination_schedule[i][-1] - vaccination_schedule[i][0]).days]) + delta
 
-    return np.array(vaccinations_per_age_group), np.array(vaccination_schedule, dtype=np.int32)
+        # Update the total number of vaccinated agents
+        new_vaccinated = np.sum(vaccinations_per_age_group[i], axis=1)
+        f_vaccinated[delta:(len(new_vaccinated) + delta)] += new_vaccinated
+
+    # Convert to total fraction vaccinated over time
+    f_vaccinated = np.cumsum(f_vaccinated) / cfg.network.N_tot
+
+    return np.array(vaccinations_per_age_group), np.array(vaccination_schedule, dtype=np.int32), f_vaccinated
 
 
 def load_vaccination_schedule_file(scenario = "reference") :

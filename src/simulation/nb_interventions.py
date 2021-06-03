@@ -67,7 +67,7 @@ def vaccinate(my, g, intervention, day, stratified_vaccination_counts, verbose=F
 
                 # Determine which agents can be vaccinated
                 possible_agents_to_vaccinate = np.array( [ agent for agent in np.arange(my.cfg_network.N_tot, dtype=np.uint32)
-                                                    if my.age[agent] == age_group and my.agent_is_not_vaccinated(agent)])
+                                                            if my.age[agent] == age_group and my.agent_is_not_vaccinated(agent)])
 
                 if len(possible_agents_to_vaccinate) > 0 :
 
@@ -365,21 +365,24 @@ def check_incidence_against_tresholds(my, intervention, day, click) :
     days_looking_back = intervention.cfg.days_looking_back
 
     # Incidence is computed on pcr tests
-    pcr_tests       = np.zeros(days_looking_back, dtype=np.float32)
-    effective_tests = np.zeros(days_looking_back, dtype=np.float32)
-
+    pcr_tests       = np.zeros(days_looking_back, dtype=np.float32)  # TODO: deprciate
+    effective_tests = np.zeros(days_looking_back, dtype=np.float32)  # TODO: deprciate
+    # pcr_to_total_tests_ratio = = np.zeros(days_looking_back, dtype=np.float32)
     for d in range(days_looking_back) :
         if day-d >= 0 :
-            pcr_tests[d]       = intervention.daily_pcr_tests[day-d]
-            effective_tests[d] = pcr_tests[d] + 0.5 * intervention.daily_antigen_tests[day-d]
+            pcr_tests[d]       = intervention.daily_pcr_tests[day-d]  # TODO: deprciate
+            effective_tests[d] = pcr_tests[d] + 0.5 * intervention.daily_antigen_tests[day-d]  # TODO: deprciate
+            #pcr_to_total_tests_ratio[d] = intervention.pcr_to_total_tests_ratio[day-d]
         else :
-            pcr_tests[d]       = pcr_tests[d-1]
-            effective_tests[d] = effective_tests[d-1]
+            pcr_tests[d]       = pcr_tests[d-1]  # TODO: deprciate
+            effective_tests[d] = effective_tests[d-1]   # TODO: deprciate
+            #pcr_to_total_tests_ratio[d] = pcr_to_total_tests_ratio[d-1]
 
-    pcr_to_total_tests_ratio = pcr_tests / effective_tests
+
+    pcr_to_total_tests_ratio = pcr_tests / effective_tests  # TODO: deprciate
 
     # Store the incidence at kommune level
-    incidence_per_kommume = np.zeros(my.N_kommuner, dtype=np.float32)
+    incidence_per_kommume = np.zeros(my.N_kommuner, dtype=np.float32) # TODO depreciate
     # Loop over all interventions and check if condition applies
 
     # Arrays to encode information about which sogne is above the on and off tresholds
@@ -423,24 +426,25 @@ def check_incidence_against_tresholds(my, intervention, day, click) :
             N_tests *= pcr_to_total_tests_ratio
 
             # Adjust for the number of tests
-            #if incidence_label.lower() == 'sogn' :
+            if intervention.use_only_raw_incidence or incidence_label.lower() == 'sogn' :
 
                 # Compute the incidence on the label
-            incidence = np.sum(N_infected) / (N_inhabitants / intervention.cfg.incidence_reference)
+                incidence = np.sum(N_infected) / (N_inhabitants / intervention.cfg.incidence_reference)
 
-            #else :
+            else :
 
-            #    # Scaled positives
-            #    infected_per_label_adjusted = N_infected * (intervention.cfg.test_reference * N_inhabitants / N_tests) ** intervention.cfg.testing_exponent
+                # Scaled positives
+                infected_per_label_adjusted = N_infected * (intervention.cfg.test_reference * N_inhabitants / N_tests) ** intervention.cfg.testing_exponent
 
                 # Add the scaled positives for the week
-            #    incidence = np.nansum(infected_per_label_adjusted) / (N_inhabitants / intervention.cfg.incidence_reference)
+                incidence = np.nansum(infected_per_label_adjusted) / (N_inhabitants / intervention.cfg.incidence_reference)
 
 
 
             # Store the incidence
             if incidence_label.lower() == 'kommune' :
-                incidence_per_kommume[ith_label] = incidence
+                incidence_per_kommume[ith_label] = incidence # TODO: depreciate
+                #intervention.incidence_per_kommume[ith_label] = incidence
 
 
             # Check against infection treshold
@@ -458,7 +462,8 @@ def check_incidence_against_tresholds(my, intervention, day, click) :
                 for sogn in intervention.inverse_incidence_label_map[incidence_label][np.uint16(ith_label)] :
                     intervention_at_sogn[sogn] += 2**ith_intervention    # Encode as binary flags
 
-    incidence_metrics = np.array([np.quantile(incidence_per_kommume, 0.1), np.quantile(incidence_per_kommume, 0.25), np.median(incidence_per_kommume), np.quantile(incidence_per_kommume, 0.75), np.quantile(incidence_per_kommume, 0.9), np.sum(intervention_at_sogn > 1)])
+    incidence_metrics = np.array([np.quantile(incidence_per_kommume, 0.1), np.quantile(incidence_per_kommume, 0.25), np.median(incidence_per_kommume), np.quantile(incidence_per_kommume, 0.75), np.quantile(incidence_per_kommume, 0.9), np.sum(intervention_at_sogn > 1)])  # TODO: depreciate
+    #incidence_metrics = np.array([np.quantile(intervention.incidence_per_kommume, 0.1), np.quantile(intervention.incidence_per_kommume, 0.25), np.median(intervention.incidence_per_kommume), np.quantile(intervention.incidence_per_kommume, 0.75), np.quantile(intervention.incidence_per_kommume, 0.9), np.sum(intervention_at_sogn > 1)])
 
     return intervention_at_sogn, incidence_metrics
 
@@ -804,7 +809,7 @@ def check_test_results(my, g, intervention, agent, day, click, stratified_positi
                     intervention.reason_for_test[contact] = 2
 
                     intervention.clicks_when_tested[contact] = test_click
-                    intervention.random_tests[test_day] -= 1
+                    intervention.random_tests[test_day] -= 1  # TODO: depreciate
 
                     # Isolate while waiting
                     intervention.clicks_when_isolated[contact] = click + my.cfg.tracing_delay
@@ -837,13 +842,13 @@ def apply_symptom_testing(my, intervention, agent, state, click) :
         if np.random.rand() < intervention.cfg.chance_of_finding_infected[state - 4] * my.testing_probability[agent] :   # TODO: Fjern hardcoded 4
 
             test_click = click + intervention.cfg.test_delay_in_clicks[0]
-            test_day   = int(click / 10) # TODO: remove hardcode
+            test_day   = int(click * intervention.nts)
 
 
             # Testing in n_clicks for symptom checking
             intervention.clicks_when_tested[agent] = test_click
             intervention.result_of_test[agent]     = 1
-            intervention.random_tests[test_day] -= 1
+            intervention.random_tests[test_day] -= 1    # TODO: depreciate
 
             # Set the reason for testing to symptoms (0)
             intervention.reason_for_test[agent] = 0
@@ -862,15 +867,24 @@ def apply_random_testing(my, intervention, day, click) :
 
     # Choose the agents
     random_agents_to_be_tested = nb_random_choice(agents, my.testing_probability, size=intervention.random_tests[day], replace=True)    # Replace = True makes it faster and the probability of choosing people twice should be low enough
+    # local_incidence = intervention.incidence_per_kommune[my.kommune]
+    #random_agents_to_be_tested = np.random.uniform(my.cfg_network.N_tot) < my.testing_probability * intervention.daily_test_modifier[day]
 
     # Book test
     intervention.clicks_when_tested[random_agents_to_be_tested] = click + intervention.cfg.test_delay_in_clicks[1]
+    #intervention.clicks_when_tested[random_agents_to_be_tested] = click + intervention.cfg.test_delay_in_clicks[1] + np.random.randint(0, high=int(np.round(1 / intervention.nts)), size=np.sum(random_agents_to_be_tested))
 
     # specify that random test is the reason for test
     intervention.reason_for_test[random_agents_to_be_tested] = 1
 
     # No longer willing to test
     my.testing_probability[random_agents_to_be_tested] = 0.0
+
+
+    return
+
+
+
 
 
 

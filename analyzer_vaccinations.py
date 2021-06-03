@@ -59,7 +59,7 @@ if __name__ == '__main__':
     t_day, _ = parse_time_ranges(start_date, end_date)
 
     # Prepare output file
-    fig_names = ['Figures/vaccination_effect.png', 'Figures/vaccination_breakdown.png']
+    fig_names = ['Figures/analyzers/vaccination_effect.png', 'Figures/analyzers/vaccination_breakdown.png']
 
     for fig_name in fig_names :
         file_loaders.make_sure_folder_exist(fig_name)
@@ -78,7 +78,7 @@ if __name__ == '__main__':
         cfg = file_loaders.filename_to_cfg(filename)
 
         # Load
-        total_tests, _, _, _, _, vaccinations_by_age_group, _ = load_from_file(filename, network_filename, start_date)
+        total_tests, _, _, _, _, vaccinations_by_age_group, _, _, _ = load_from_file(filename, network_filename, start_date)
 
         # Create the plots
         if cfg.start_date_offset == 4 :
@@ -99,7 +99,6 @@ if __name__ == '__main__':
 
         plot_simulation_cases(total_tests, t_day, axes1, color=color, linestyle=linestyle, label=label)
 
-        #plot_simulation_category(vaccinations_by_age_group, t_day, axes2)
 
 
     axes1.set_ylim(0, 8000)
@@ -110,25 +109,3 @@ if __name__ == '__main__':
     fig1.legend(bbox_to_anchor=(0.95, 0.9), loc='upper left')
 
     fig1.savefig(fig_names[0])
-
-
-
-
-
-    # for i in range(len(axes2)) :
-
-    #     set_date_xaxis(axes2[i], start_date, end_date, interval=2)
-
-    #     axes2[i].set_title(f'{10*i}-{10*(i+1)-1}', fontsize=24, pad=5)
-    #     axes2[i].set_ylim(0, 1)
-
-    #     axes2[i].tick_params(axis='x', labelsize=24)
-    #     axes2[i].tick_params(axis='y', labelsize=24)
-
-
-    # # Adjust the last title
-    # axes2[-2].set_title(f'{10*(i-1)}+', fontsize=24, pad=5)
-    # axes2[-1].set_title('all', fontsize=24, pad=5)
-
-
-    # fig2.savefig(fig_names[1])

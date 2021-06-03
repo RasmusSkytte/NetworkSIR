@@ -202,7 +202,7 @@ for subset in subsets :
 
 
     # Plot the covid index on axes 2
-    pcr_tests, ag_tests = file_loaders.load_daily_tests(utils.DotDict({'day_max' : len(logK)-1, 'start_date_offset' : cfg.start_date_offset, 'network':utils.DotDict({'N_tot' : 5_800_000})}))
+    pcr_tests, ag_tests, _, _ = file_loaders.load_daily_tests(utils.DotDict({'day_max' : len(logK)-1, 'start_date_offset' : cfg.start_date_offset, 'network':utils.DotDict({'N_tot' : 5_800_000})}))
     ref_tests = pcr_tests# + 0.5 * ag_tests
     m  = np.exp(logK) * (ref_tests ** beta)
     ub = np.exp(logK + logK_sigma) * (ref_tests ** beta) - m

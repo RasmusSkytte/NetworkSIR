@@ -347,7 +347,8 @@ class Simulation :
         vaccinations_per_age_group, vaccination_schedule = file_loaders.load_vaccination_schedule(self.my, self.cfg)
 
         # Load the number of daily tests
-        daily_pcr_tests, daily_antigen_tests = file_loaders.load_daily_tests(self.cfg)
+        _, age_counts = np.unique(self.my.age, return_counts=True)
+        daily_pcr_tests, daily_antigen_tests, daily_test_modifer, pcr_to_antigen_test_ratio = file_loaders.load_daily_tests(self.cfg, age_counts=age_counts)
 
         # Load the restriction contact matrices
         # TODO: This should properably be done at cfg generation for consistent hashes
@@ -430,6 +431,8 @@ class Simulation :
             other_matrix_restrict       = om,
             daily_pcr_tests             = daily_pcr_tests,
             daily_antigen_tests         = daily_antigen_tests,
+            daily_test_modifer          = daily_test_modifer,
+            pcr_to_antigen_test_ratio   = pcr_to_antigen_test_ratio,
             nts                         = self.nts,
             verbose                     = verbose_interventions)
 

@@ -439,9 +439,11 @@ spec_intervention = {
     'R_true_list' : ListType(nb.float64),
     'R_true_list_brit' : ListType(nb.float64),
     # Testing
-    'daily_pcr_tests' : nb.int64[:],
-    'daily_antigen_tests' : nb.int64[:],
-    'random_tests' : nb.int64[:],
+    'daily_pcr_tests' : nb.int32[:],     # TODO: depreciate
+    'daily_antigen_tests' : nb.int32[:],     # TODO: depreciate
+    'pcr_to_antigen_test_ratio' : nb.float64[:],
+    'daily_test_probability' : nb.float64[:],
+    'random_tests' : nb.int32[:],    # TODO: depreciate
     'day_found_infected' : nb.int32[:],
     'reason_for_test' : nb.int8[:],
     'result_of_test' : nb.int8[:],
@@ -461,6 +463,7 @@ spec_intervention = {
     'incidence_label_map' : DictType(nb.types.unicode_type, DictType(nb.uint16, nb.uint16)),
     'inverse_incidence_label_map' : DictType(nb.types.unicode_type, DictType(nb.uint16, nb.uint16[:])),
     'agents_per_incidence_label' : DictType(nb.types.unicode_type, nb.float32[:]),
+    'incidence_per_kommune' : nb.float64[:],
     'types' : nb.int8[:],
     'clicks_when_restriction_changes' : nb.int32[:],
     'clicks_looking_back' : nb.int64,
@@ -550,6 +553,8 @@ class Intervention(object) :
         other_matrix_restrict,
         daily_pcr_tests,
         daily_antigen_tests,
+        daily_test_modifer,
+        pcr_to_antigen_test_ratio,
         nts,
         verbose=False) :
 
@@ -583,7 +588,10 @@ class Intervention(object) :
         self.incidence_label_map             = incidence_label_map
         self.inverse_incidence_label_map     = inverse_incidence_label_map
 
+
         self.agents_per_incidence_label      = agents_per_incidence_label
+        self.incidence_per_kommune           = np.zeros(my.N_kommuner, dtype=np.float64)
+
         self.types                           = np.zeros(my.N_sogne, dtype=np.int8)
         self.clicks_when_restriction_changes = np.full(my.N_sogne,  fill_value=-1, dtype=np.int32)
         self.clicks_looking_back             = int(np.round(self.cfg.days_looking_back / nts))
@@ -594,9 +602,11 @@ class Intervention(object) :
         self.school_matrix_restrict          = school_matrix_restrict
         self.other_matrix_restrict           = other_matrix_restrict
 
-        self.daily_pcr_tests                 = daily_pcr_tests
-        self.daily_antigen_tests             = daily_antigen_tests
-        self.random_tests                    = daily_pcr_tests + (0.5 * daily_antigen_tests).astype(daily_antigen_tests.dtype)
+        self.daily_pcr_tests                 = daily_pcr_tests                  # TODO Depreciate
+        self.daily_antigen_tests             = daily_antigen_tests              # TODO Depreciate
+        self.random_tests                    = daily_pcr_tests + (0.5 * daily_antigen_tests).astype(daily_antigen_tests.dtype)      # TODO Depreciate
+        self.daily_test_probability          = daily_test_modifer
+        self.pcr_to_antigen_test_ratio       = pcr_to_antigen_test_ratio
 
         self.stratified_label_map            = stratified_label_map
 
@@ -667,3 +677,7 @@ class Intervention(object) :
     @property
     def apply_increased_testing(self) :
         return 2 in self.cfg.incidence_interventions_to_apply
+
+    @property
+    def use_only_raw_incidence(self) :
+        return 3 in self.cfg.incidence_interventions_to_apply

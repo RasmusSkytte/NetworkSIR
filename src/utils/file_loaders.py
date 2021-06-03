@@ -440,7 +440,9 @@ def load_seasonal_model(scenario=None, offset = 0) :
     # Scale to starting value
     return model / model[0]
 
-def load_daily_tests(cfg) :
+def load_daily_tests(cfg, age_counts=None) :
+
+    weeks_looking_back = 1
 
     # Get the newest SSI data filename
     date = newest_SSI_filename()
@@ -462,23 +464,30 @@ def load_daily_tests(cfg) :
     end_date   = datetime.datetime.strptime(date, '%Y_%m_%d') - datetime.timedelta(days=2)
 
     # Extract the range corresponding to simulation
-    T_pcr = T_pcr.loc[pd.to_datetime(T_pcr.index) >= start_date + datetime.timedelta(days=cfg.start_date_offset)]
-    T_ag  = T_ag.loc[ pd.to_datetime(T_ag.index)  >= start_date + datetime.timedelta(days=cfg.start_date_offset)]
+    T_model_pcr = T_pcr.loc[pd.to_datetime(T_pcr.index) >= start_date + datetime.timedelta(days=cfg.start_date_offset)]
+    T_model_ag  = T_ag.loc[ pd.to_datetime(T_ag.index)  >= start_date + datetime.timedelta(days=cfg.start_date_offset)]
 
-    T_pcr = T_pcr.loc[pd.to_datetime(T_pcr.index) <= end_date]
-    T_ag  = T_ag.loc[ pd.to_datetime(T_ag.index)  <= end_date]
+    T_model_pcr = T_model_pcr.loc[pd.to_datetime(T_model_pcr.index) <= end_date]
+    T_model_ag  = T_model_ag.loc[ pd.to_datetime(T_model_ag.index)  <= end_date]
+
+    # If none is loaded, use last weeks_looking_back weeks of data
+    if len(T_model_pcr) == 0 :
+        T_model_pcr = T_pcr.iloc[-7 * weeks_looking_back :]
+
+    if len(T_model_ag) == 0 :
+        T_model_ag = T_ag.iloc[-7 * weeks_looking_back :]
 
     # Convert to numpy
-    T_pcr = T_pcr.values
-    T_ag  = T_ag.values
+    T_model_pcr = T_model_pcr.values
+    T_model_ag  = T_model_ag.values
+
 
     # Add projection
-    if cfg.day_max > len(T_pcr) :
+    if cfg.day_max > len(T_model_pcr) :
 
         # Determine the current test behaviour
-        weeks_looking_back = 1
-        T_pcr_week_template = np.round(np.mean(np.reshape(T_pcr[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
-        T_ag_week_template  = np.round(np.mean(np.reshape( T_ag[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
+        T_pcr_week_template = np.round(np.mean(np.reshape(T_model_pcr[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
+        T_ag_week_template  = np.round(np.mean(np.reshape(T_model_ag[ -(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
 
         # Project current test behavior forward.
         n_repeats = int(np.ceil((cfg.day_max + 1 - len(T_pcr_week_template)) / 7))
@@ -487,14 +496,27 @@ def load_daily_tests(cfg) :
         T_ag_projected  = np.tile(T_ag_week_template,  n_repeats)
 
         # Combine
-        T_pcr = np.concatenate((T_pcr, T_pcr_projected))
-        T_ag  = np.concatenate((T_ag,  T_ag_projected))
+        T_model_pcr = np.concatenate((T_model_pcr, T_pcr_projected))
+        T_model_ag  = np.concatenate((T_model_ag,  T_ag_projected))
 
     # Scale to the tests
-    T_pcr = T_pcr[:(cfg.day_max+1)] * cfg.network.N_tot / 5_800_000
-    T_ag  = T_ag[:(cfg.day_max+1)]  * cfg.network.N_tot / 5_800_000
+    T_model_pcr = T_model_pcr[:(cfg.day_max+1)] * cfg.network.N_tot / 5_800_000
+    T_model_ag  = T_model_ag[:(cfg.day_max+1)]  * cfg.network.N_tot / 5_800_000
 
-    return np.round(T_pcr).astype(int), np.round(T_ag).astype(int)
+    # Compute the number of effective tests
+    T_model_effective = T_model_pcr + 0.5 * T_model_ag
+    pcr_to_antigen_test_ratio = T_model_pcr / T_model_effective
+
+    # Convert to probability for test
+    if age_counts is not None :
+        daily_test_modifer = T_model_effective / np.max(T_model_effective)
+        # Compute the factor needed to match testing probability with observed number of tests
+        k =  np.max(T_model_effective) / (np.sum(age_counts * cfg.testing_penetration))
+        daily_test_modifer *= k
+    else :
+        daily_test_modifer = - 1
+
+    return np.round(T_model_pcr).astype(int), np.round(T_model_ag).astype(int), daily_test_modifer, pcr_to_antigen_test_ratio
 
 
 def load_contact_matrix_set(matrix_path) :

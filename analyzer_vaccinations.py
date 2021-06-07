@@ -18,10 +18,10 @@ if utils.is_local_computer():
     num_cores_max = 3
     N_runs = 1
 else :
-    f = 0.5
+    f = 0.1
     n_steps = 1
     num_cores_max = 15
-    N_runs = 3
+    N_runs = 1
 
 
 if num_cores_max == 1 :

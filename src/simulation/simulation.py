@@ -66,6 +66,9 @@ class Simulation :
 
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
+        # get the start date
+        self.start_date = datetime.datetime(2020,12,28) + datetime.timedelta(days=cfg.start_date_offset)
+
         # Set up the maps
         self.raw_label_map = pd.read_csv('Data/label_map.csv')
         self.label_map = {'region_idx_to_region' :        self.raw_label_map[['region_idx',  'region' ]].drop_duplicates().set_index('region_idx')['region'],
@@ -73,6 +76,7 @@ class Simulation :
                           'kommune_idx_to_kommune' :      self.raw_label_map[['kommune',     'kommune_idx']].drop_duplicates().set_index('kommune_idx')['kommune'],
                           'kommune_idx_to_landsdel_idx' : self.raw_label_map[['kommune_idx', 'landsdel_idx' ]].drop_duplicates().set_index('kommune_idx')['landsdel_idx'],
                           'kommune_idx_to_region_idx' :   self.raw_label_map[['kommune_idx', 'region_idx' ]].drop_duplicates().set_index('kommune_idx')['region_idx'],
+                          'region_to_kommune_idx' :       self.raw_label_map[['region',      'kommune_idx' ]].drop_duplicates().set_index('region')['kommune_idx'],
                           'sogn_to_sogn_idx' :            pd.Series(data=self.raw_label_map.index,                                   index=self.raw_label_map['sogn']),
                           'sogn_to_kommune_idx' :         pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map['sogn']),
                           'sogn_idx_to_kommune_idx' :     pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map.index),
@@ -103,6 +107,8 @@ class Simulation :
         # Update the sogne counter
         self.my.N_sogne    = len(set(sogne_map.values))
         self.my.N_kommuner = len(kommune_name_to_idx)
+        #self.my.N_landsdele = len(...) # TODO: Implement
+        #self.my.N_regioner = len(...) # TODO: Implement
 
         # Place agents
         N_tot = self.my.cfg_network.N_tot
@@ -131,6 +137,8 @@ class Simulation :
 
             sogn_idx    = self.label_map['sogn_to_sogn_idx'][sogn]
             kommune_idx = self.label_map['sogn_to_kommune_idx'][sogn]
+            #landsdel_idx = self.label_map['sogn_to_landsdel_idx'][sogn]    # TODO: implement
+            #region_idx = self.label_map['sogn_to_region_idx'][sogn]    # TODO: implement
 
             coordinates = utils.generate_coordinate(sogn, sogne)
             coordinates = (coordinates.x, coordinates.y)
@@ -159,6 +167,8 @@ class Simulation :
                                                                     mu_counter,
                                                                     sogn_idx,
                                                                     kommune_idx)
+                                                                    #landsdel_idx,  # TODO: implement
+                                                                    #region_idx)
 
         agents_in_age_group = utils.nested_lists_to_list_of_array(agents_in_age_group)
 
@@ -347,8 +357,8 @@ class Simulation :
         vaccinations_per_age_group, vaccination_schedule, f_vaccinated = file_loaders.load_vaccination_schedule(self.my, self.cfg)
 
         # Load the number of daily tests
-        _, age_counts = np.unique(self.my.age, return_counts=True)
-        daily_pcr_tests, daily_antigen_tests, daily_test_modifer, pcr_to_antigen_test_ratio = file_loaders.load_daily_tests(self.cfg, age_counts=age_counts, fraction_vaccinated=f_vaccinated)
+        age_weights = [self.cfg['testing_penetration'][age] for age in self.my.age]
+        _, _, daily_test_modifer, pcr_to_total_tests_ratio = file_loaders.load_daily_tests(self.cfg, age_weights=age_weights, fraction_vaccinated=f_vaccinated)
 
         # Load the restriction contact matrices
         # TODO: This should properably be done at cfg generation for consistent hashes
@@ -385,6 +395,7 @@ class Simulation :
             sm = np.zeros((1, self.N_matrix_labels, self.my.cfg_network.school_matrix.shape[0], self.my.cfg_network.school_matrix.shape[1]))
             om = np.zeros((1, self.N_matrix_labels, self.my.cfg_network.other_matrix.shape[0],  self.my.cfg_network.other_matrix.shape[1]))
 
+
         # Convert maps to numba dicts
         matrix_label_map = Dict.empty(key_type=nb.uint16, value_type=nb.uint16)
         for key, val in self.matrix_label_map.items() :
@@ -392,6 +403,7 @@ class Simulation :
 
         incidence_label_map = Dict.empty(key_type=nb.types.unicode_type, value_type=DictType(nb.uint16, nb.uint16))
         for incidence_label, incidence_map in self.incidence_label_map.items() :
+
             incidence_label_map[incidence_label] = Dict.empty(key_type=nb.uint16, value_type=nb.uint16)
             for key, val in incidence_map.items() :
                 incidence_label_map[incidence_label][np.uint16(key)] = np.uint16(val)
@@ -429,10 +441,8 @@ class Simulation :
             work_matrix_restrict        = wm,
             school_matrix_restrict      = sm,
             other_matrix_restrict       = om,
-            daily_pcr_tests             = daily_pcr_tests,
-            daily_antigen_tests         = daily_antigen_tests,
             daily_test_modifer          = daily_test_modifer,
-            pcr_to_antigen_test_ratio   = pcr_to_antigen_test_ratio,
+            pcr_to_total_tests_ratio    = pcr_to_total_tests_ratio,
             nts                         = self.nts,
             verbose                     = verbose_interventions)
 
@@ -480,7 +490,7 @@ class Simulation :
         # Set the probability to choose agents
         if self.cfg.initialize_at_kommune_level :
 
-            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.label_map, test_reference = self.cfg.test_reference, beta = self.cfg.testing_exponent)
+            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.label_map, test_reference = self.cfg.test_reference, beta = self.cfg.testing_exponent, incidence_reference = self.cfg.incidence_reference)
 
             n_kommuner = len(self.label_map['kommune_to_kommune_idx'])
             w_kommune = np.ones(n_kommuner)
@@ -508,7 +518,9 @@ class Simulation :
             initialization_subgroups = []
 
             # Compute the relative risk for each kommune (based on infection history)
-            risk_per_kommune = immunized_per_kommune / np.mean(immunized_per_kommune)
+            _, _, _, _, incidence_adjusted_per_kommune = file_loaders.load_label_data(self.cfg.initial_infection_distribution, self.label_map['kommune_to_kommune_idx'], test_reference = self.cfg.test_reference, beta = self.cfg.testing_exponent)
+            incidence_adjusted_per_kommune = incidence_adjusted_per_kommune.sum(axis=0)
+            risk_per_kommune = incidence_adjusted_per_kommune / np.mean(incidence_adjusted_per_kommune)
 
             contacts_per_kommune = np.zeros(n_kommuner)
             for agent in possible_agents :
@@ -526,8 +538,13 @@ class Simulation :
             for agent in possible_agents :
                     agents_in_kommuner[self.my.kommune[agent]].append(agent)
 
+            # Determine the fraction of VOC in kommune
+            fraction = file_loaders.load_UK_fraction(self.cfg, self.label_map, self.start_date)
+            kommune_UK_fracs = fraction[self.label_map['region_to_kommune_idx'].sort_values().index].to_numpy()
+
+
             # Loop over kommuner
-            for kommune_id, N, R, agents_in_kommune in zip(kommune_ids, N_kommune, R_kommune, agents_in_kommuner) :
+            for kommune_id, N, R, agents_in_kommune, kommune_UK_frac in zip(kommune_ids, N_kommune, R_kommune, agents_in_kommuner, kommune_UK_fracs) :
 
                 # Check if any are to be infectd
                 if N == 0 and R == 0 :
@@ -558,8 +575,6 @@ class Simulation :
                 prior_infected  /= prior_infected.sum()
                 prior_immunized /= prior_immunized.sum()
 
-                kommune_UK_frac = self.my.cfg.matrix_label_frac[self.label_map['sogn_idx_to_landsdel_idx'][self.my.sogn[agents_in_kommune[0]]]]
-
                 initialization_subgroups.append((agents_in_kommune, N, R, prior_infected, prior_immunized, kommune_UK_frac))
 
         else :
@@ -576,7 +591,12 @@ class Simulation :
             prior_infected  /= prior_infected.sum()
             prior_immunized /= prior_immunized.sum()
 
-            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, self.my.cfg.matrix_label_frac[0])]
+
+            # Only select known regions
+            fraction = file_loaders.load_UK_fraction(self.cfg, {'region_to_kommune_idx' : pd.Series(index=['Whole Denmark'], data=[0])}, self.start_date)
+            national_UK_frac = fraction.to_numpy()
+
+            initialization_subgroups = [(possible_agents, self.my.cfg.N_init, self.my.cfg.R_init, prior_infected, prior_immunized, national_UK_frac)]
 
         # Loop over subgroups and initialize
         for subgroup in tqdm(initialization_subgroups, total=len(initialization_subgroups), disable=(not self.verbose), position=0, leave=True) :
@@ -606,6 +626,7 @@ class Simulation :
             self.intervention,
             self.nts,
             self.stratified_positive,
+            0
         )
 
         # Reset the test counters

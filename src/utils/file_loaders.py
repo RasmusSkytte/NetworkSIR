@@ -440,7 +440,7 @@ def load_seasonal_model(scenario=None, offset = 0) :
     # Scale to starting value
     return model / model[0]
 
-def load_daily_tests(cfg, age_counts=None, fraction_vaccinated=None) :
+def load_daily_tests(cfg, age_weights=None, fraction_vaccinated=None) :
 
     weeks_looking_back = 1
 
@@ -490,8 +490,8 @@ def load_daily_tests(cfg, age_counts=None, fraction_vaccinated=None) :
     pcr_to_antigen_test_ratio = T_model_pcr / T_model_effective
 
     # Convert to probability for test
-    if age_counts is not None :
-        daily_test_modifer = T_model_effective / np.sum(age_counts * cfg.testing_penetration)
+    if age_weights is not None :
+        daily_test_modifer = T_model_effective / np.sum(age_weights)
 
     else :
         daily_test_modifer = np.ones_like(T_model_effective)
@@ -507,8 +507,8 @@ def load_daily_tests(cfg, age_counts=None, fraction_vaccinated=None) :
         # Determine the current test behaviour
         T_pcr_week_template      = np.round(np.mean(np.reshape(T_model_pcr[-(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))   # TODO: Depreciate
         T_ag_week_template       = np.round(np.mean(np.reshape(T_model_ag[ -(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))  # TODO: Depreciate
-        daily_modifier_template  = np.round(np.mean(np.reshape(daily_test_modifer[ -(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
-        ratio_template           = np.round(np.mean(np.reshape(pcr_to_antigen_test_ratio[ -(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0))
+        daily_modifier_template  = np.mean(np.reshape(daily_test_modifer[ -(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0)
+        ratio_template           = np.mean(np.reshape(pcr_to_antigen_test_ratio[ -(weeks_looking_back * 7):], (weeks_looking_back, 7)), axis=0)
 
         # Project current test behavior forward.
         n_repeats = int(np.ceil((cfg.day_max + 1 - len(T_pcr_week_template)) / 7))
@@ -525,7 +525,6 @@ def load_daily_tests(cfg, age_counts=None, fraction_vaccinated=None) :
 
         daily_test_modifer         = np.concatenate((daily_test_modifer,         daily_modifier_projected))
         pcr_to_antigen_test_ratio  = np.concatenate((pcr_to_antigen_test_ratio,  ratio_projected))
-
 
     return np.round(T_model_pcr).astype(int), np.round(T_model_ag).astype(int), daily_test_modifer, pcr_to_antigen_test_ratio
 
@@ -880,7 +879,7 @@ def load_infection_age_distributions(initial_distribution_file, N_ages) :
     return age_distribution_infected, age_distribution_immunized
 
 
-def load_label_data(initial_distribution_file, label_map, test_reference = 0.017, beta = 0.55) :
+def load_label_data(initial_distribution_file, label_map, test_reference = 0.017, beta = 0.55, incidence_reference = 100_000) :
 
     N_labels = len(label_map.unique())
 
@@ -934,12 +933,12 @@ def load_label_data(initial_distribution_file, label_map, test_reference = 0.017
         cases_adjusted_per_label = cases_per_label * label_adjustment_factor
         cases_adjusted_per_label[tests_per_label == 0] = 0
 
-    incidence_adjusted_per_label = 7 * cases_adjusted_per_label / (population_per_label / 100_000)
+    incidence_adjusted_per_label = 7 * cases_adjusted_per_label / (population_per_label / incidence_reference)
 
     return t, tests_per_label, cases_per_label, cases_adjusted_per_label, incidence_adjusted_per_label
 
 
-def load_kommune_infection_distribution(initial_distribution_file, label_map, test_reference = 0.017, beta = 0.55) :
+def load_kommune_infection_distribution(initial_distribution_file, label_map, test_reference = 0.017, beta = 0.55, incidence_reference = 100_000) :
 
     if initial_distribution_file.lower() == 'random' :
         N_kommuner = len(label_map)
@@ -950,7 +949,7 @@ def load_kommune_infection_distribution(initial_distribution_file, label_map, te
     else :
 
         # Load the incidence per kommune
-        _, _, _, cases_adjusted_per_kommune, _ = load_label_data(initial_distribution_file, label_map['kommune_to_kommune_idx'], test_reference = test_reference, beta = beta)
+        _, _, _, cases_adjusted_per_kommune, _ = load_label_data(initial_distribution_file, label_map['kommune_to_kommune_idx'], test_reference = test_reference, beta = beta, incidence_reference = incidence_reference)
 
         # Swap arrays for the last 7 days
         I = cases_adjusted_per_kommune.shape[0] - 7
@@ -962,21 +961,32 @@ def load_kommune_infection_distribution(initial_distribution_file, label_map, te
     return infected_per_kommune, immunized_per_kommune
 
 
-def load_UK_fraction(start_date) :
+def load_UK_fraction(cfg, label_map, start_date) :
 
-    raw_data = pd.read_csv(load_yaml('cfg/files.yaml')['wgsDistribution'], sep=';')
+    if cfg.initial_wgs_distribution == 'none' :
+        index = label_map['region_to_kommune_idx'].index.unique()
+        return pd.Series(index=index, data=np.zeros_like(index))
 
-    raw_data['percent'] = raw_data['yes'] / raw_data['total']
+    else :
+        base_path = load_yaml('cfg/files.yaml')['wgsDistributionFolder']
+        raw_data = pd.read_csv(os.path.join(base_path, cfg.initial_wgs_distribution + '.csv'), sep=';')
 
-    data = pd.pivot_table(raw_data.drop(columns=['yes', 'total']), index='Week', columns='Region', values='percent')
+        raw_data['percent'] = raw_data['yes'] / raw_data['total']
 
-    data.index = data.index.str.replace('[0-9]{4}-W', '', regex=True).astype(int)
+        data = pd.pivot_table(raw_data.drop(columns=['yes', 'total']), index='Week', columns='Region', values='percent')
 
-    week = start_date.isocalendar().week
-    if start_date.isoweekday() <= 3 :
-        week -= 1
+        data.index = data.index.str.replace('[0-9]{4}-W', '', regex=True).astype(int)
 
-    return data.loc[week]
+        week = start_date.isocalendar().week
+        if start_date.isoweekday() <= 3 :
+            week -= 1
+
+        fraction = data.loc[week]
+
+        # Only select known regions
+        fraction = fraction[label_map['region_to_kommune_idx'].index.unique()]
+
+        return fraction
 
 
 

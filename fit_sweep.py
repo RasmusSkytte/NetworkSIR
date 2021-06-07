@@ -10,7 +10,7 @@ from contexttimer import Timer
 if utils.is_local_computer():
     f = 0.1
     n_steps = 2
-    num_cores_max = 1
+    num_cores_max = 2
     N_runs = 1
 else :
     f = 0.1
@@ -30,7 +30,7 @@ if n_steps == 1 :
 else :
     noise = lambda m, d : np.round(m + np.linspace(-d, d, 2*(n_steps - 1) + 1), 5)
 
-params, start_date = utils.load_params('cfg/simulation_parameters_local_lockdowns.yaml', f)
+params, start_date = utils.load_params('cfg/simulation_parameters/local_lockdowns.yaml', f)
 
 #p = [[np.round(0.35/0.55 * p, 2) for p in params['chance_of_finding_infected'][0]],
      #[np.round(0.25/0.55 * p, 2) for p in params['chance_of_finding_infected'][0]],

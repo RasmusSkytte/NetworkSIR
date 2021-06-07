@@ -1026,8 +1026,8 @@ def decode_binary_flags(n):
 
 def get_cfg_default() :
     """ Default Simulation Parameters """
-    cfg              = file_loaders.load_yaml("cfg/simulation_parameters_default.yaml")
-    cfg.network      = file_loaders.load_yaml("cfg/simulation_parameters_network.yaml")
+    cfg              = file_loaders.load_yaml("cfg/simulation_parameters/default.yaml")
+    cfg.network      = file_loaders.load_yaml("cfg/simulation_parameters/network.yaml")
     #cfg.intervention = file_loaders.load_yaml("cfg/simulation_parameters_intervention.yaml")
     return cfg
 
@@ -1860,13 +1860,13 @@ def dict_to_query(d) :
         lst.append(Query()[key] == val)
     return multiple_queries(*lst)
 
-def get_db_cfg(path="Output/db.json") :
+def get_db_cfg(path='Output/db.json') :
 
     if not (os.path.dirname(path) == '') and not os.path.exists(os.path.dirname(path)) :
         os.makedirs(os.path.dirname(path))
 
-    db = TinyDB(path, sort_keys=False, indent=4, separators=(",", " : "))
-    db_cfg = db.table("cfg", cache_size=0)
+    db = TinyDB(path, sort_keys=False, indent=4, separators=(',', ' : '))
+    db_cfg = db.table('cfg', cache_size=0)
     return db_cfg
 
 

@@ -17,7 +17,7 @@ outbreak_position_UK: random
 R_init : 0
 
 initial_infection_distribution : newest
-
+initial_wgs_distribution : '2021_03_25'    # No variants
 
 lambda_E: 1.0  # E->I, Lambda(from E states)
 lambda_I: 1.0  # I->R, Lambda(from I states)
@@ -37,7 +37,7 @@ infection_threshold :           [[ 0             ]]
 percentage_threshold :          [[ 0.0           ]]
 incidence_intervention_effect : [[ [1, 0.9, 0.9] ]]
 
-incidence_interventions_to_apply: [1]
+incidence_interventions_to_apply: [0]
   # 0: Do nothing
   # 1: Rate reductions
 
@@ -49,7 +49,6 @@ testing_exponent :    0.55
 
 matrix_labels: landsdel    # Matrix restriction granularity
 matrix_label_multiplier: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Landsdelniveau
-matrix_label_frac:       [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # Landsdelniveau
 
 initial_infected_label_weight : [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]  # Landsdelniveau
 

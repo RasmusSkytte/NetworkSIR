@@ -749,6 +749,8 @@ def matrix_restriction_on_label(my, g, intervention, label, n, verbose=False) :
 @njit
 def test_agent(my, g, intervention, agent, click) :
 
+    intervention.daily_tests += 1
+
     # Set the time of result
     intervention.clicks_when_tested_result[agent] = click + intervention.cfg.results_delay_in_clicks[intervention.reason_for_test[agent]]
 
@@ -761,9 +763,7 @@ def test_agent(my, g, intervention, agent, click) :
         intervention.result_of_test[agent] = 0
 
 @njit
-def check_test_results(my, g, intervention, agent, day, click, stratified_positive, daily_tests) :
-
-    daily_tests += 1
+def check_test_results(my, g, intervention, agent, day, click, stratified_positive) :
 
     # If agent receives positive test result
     if intervention.result_of_test[agent] == 1 :
@@ -852,8 +852,9 @@ def apply_random_testing(my, intervention, day, click) :
     agents = np.arange(my.cfg_network.N_tot, dtype=np.uint32)
 
     # Choose the agents
-    # local_incidence = intervention.incidence_per_kommune[my.kommune]
-    random_agents_to_be_tested = np.random.uniform(0, 1, size=my.cfg_network.N_tot) < my.testing_probability * intervention.daily_test_probability[day]
+    #local_incidence = intervention.incidence_per_kommune[my.kommune]
+    #local_incidence_modifier = 1 + 0.3 * local_incidence / 400
+    random_agents_to_be_tested = np.random.uniform(0, 1, size=my.cfg_network.N_tot) < my.testing_probability * intervention.daily_test_probability[day] #* local_incidence_modifier
 
     # Book test
     intervention.clicks_when_tested[random_agents_to_be_tested] = click + intervention.cfg.test_delay_in_clicks[1] + np.random.randint(0, high=int(np.round(1 / intervention.nts)), size=np.sum(random_agents_to_be_tested))
@@ -974,7 +975,7 @@ def apply_interventions_on_label(my, g, intervention, day, click, verbose = Fals
 
 
 @njit
-def testing_intervention(my, g, intervention, day, click, stratified_positive, daily_tests) :
+def testing_intervention(my, g, intervention, day, click, stratified_positive) :
 
     # test everybody whose counter say we should test
     for agent in range(my.cfg_network.N_tot) :
@@ -985,7 +986,7 @@ def testing_intervention(my, g, intervention, day, click, stratified_positive, d
 
         # check for test results
         if intervention.clicks_when_tested_result[agent] == click :
-            check_test_results(my, g, intervention, agent, day, click, stratified_positive, daily_tests)
+            check_test_results(my, g, intervention, agent, day, click, stratified_positive)
 
         # check for isolation
         if intervention.apply_isolation and intervention.clicks_when_isolated[agent] == click and not intervention.isolated[agent] :

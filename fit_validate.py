@@ -102,7 +102,7 @@ for subset in subsets :
         #color = plt.cm.tab10(k)
 
         # Color by variable
-        variable = 'rho'
+        variable = 'beta'
         color = plt.cm.tab10(np.argmax(utils.flatten_cfg(cfg)[variable] == np.unique([utils.flatten_cfg(cfg)[variable] for cfg in abm_files.cfgs])))
 
         # Plot

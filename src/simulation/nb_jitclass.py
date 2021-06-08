@@ -454,7 +454,7 @@ spec_intervention = {
     # Testing
     'pcr_to_total_tests_ratio' : nb.float64[:],
     'daily_test_probability' : nb.float64[:],
-
+    'daily_tests' : nb.int64,
     'day_found_infected' : nb.int32[:],
     'reason_for_test' : nb.int8[:],
     'result_of_test' : nb.int8[:],
@@ -613,6 +613,7 @@ class Intervention(object) :
 
         self.daily_test_probability          = daily_test_modifer
         self.pcr_to_total_tests_ratio        = pcr_to_total_tests_ratio
+        self.daily_tests                     = 0
 
         self.stratified_label_map            = stratified_label_map
 

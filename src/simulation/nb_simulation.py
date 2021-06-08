@@ -334,7 +334,7 @@ def initialize_states(
 
 
 @njit
-def initialize_testing(my, g, intervention, nts, stratified_positive, daily_tests) :
+def initialize_testing(my, g, intervention, nts, stratified_positive) :
 
     start_click = -np.float32(g.N_infectious_states) / (my.cfg.lambda_I * nts)
 
@@ -342,7 +342,7 @@ def initialize_testing(my, g, intervention, nts, stratified_positive, daily_test
     for click in range(np.int32(start_click), 0) :
 
         # Implement the consequences of testing
-        testing_intervention(my, g, intervention, np.int32(click*nts), click, stratified_positive, daily_tests)
+        testing_intervention(my, g, intervention, np.int32(click*nts), click, stratified_positive)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -647,7 +647,7 @@ def run_simulation(
 
             # Apply interventions on clicks
             if intervention.apply_testing :
-                testing_intervention(my, g, intervention, day, click, stratified_positive, daily_tests)
+                testing_intervention(my, g, intervention, day, click, stratified_positive)
 
             # Advance click
             click += 1
@@ -663,7 +663,7 @@ def run_simulation(
                     out_state_counts.append(state_total_counts.copy())
                     out_stratified_positive.append(stratified_positive.copy())
                     out_stratified_vaccination_counts.append(stratified_vaccination_counts.copy())
-                    out_daily_tests.append(daily_tests)
+                    out_daily_tests.append(intervention.daily_tests)
                     out_incidence_metrics.append(incidence_metrics)
                     out_my_state.append(my.state.copy())
 
@@ -701,7 +701,7 @@ def run_simulation(
 
                     stratified_positive = np.zeros_like(stratified_positive)
 
-                    daily_tests = 0
+                    intervention.daily_tests = 0
 
                     # Apply interventions for the new day
                     apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)

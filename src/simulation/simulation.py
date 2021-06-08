@@ -520,18 +520,17 @@ class Simulation :
             # Compute the relative risk for each kommune (based on infection history)
             _, _, _, _, incidence_adjusted_per_kommune = file_loaders.load_label_data(self.cfg.initial_infection_distribution, self.label_map['kommune_to_kommune_idx'], test_reference = self.cfg.test_reference, beta = self.cfg.testing_exponent)
             incidence_adjusted_per_kommune = incidence_adjusted_per_kommune.sum(axis=0)
-            risk_per_kommune = incidence_adjusted_per_kommune / np.mean(incidence_adjusted_per_kommune)
 
             contacts_per_kommune = np.zeros(n_kommuner)
             for agent in possible_agents :
                 contacts_per_kommune[self.my.kommune[agent]] += self.my.number_of_contacts[agent]
 
-            relative_risk_per_kommune = risk_per_kommune / contacts_per_kommune
-            relative_risk_per_kommune /= np.mean(relative_risk_per_kommune)
+            risk_per_kommune = (incidence_adjusted_per_kommune / contacts_per_kommune)**(1/3)
+            risk_per_kommune /= risk_per_kommune.sum()
 
             # Adjust the infection_weight based on the relative risk
             for agent in possible_agents :
-                self.my.infection_weight[agent] *= relative_risk_per_kommune[self.my.kommune[agent]]
+                self.my.infection_weight[agent] *= risk_per_kommune[self.my.kommune[agent]]
 
             # Determine which agents are in which kommune
             agents_in_kommuner = [[] for _ in range(n_kommuner)]
@@ -625,8 +624,7 @@ class Simulation :
             self.g,
             self.intervention,
             self.nts,
-            self.stratified_positive,
-            0
+            self.stratified_positive
         )
 
         # Reset the test counters

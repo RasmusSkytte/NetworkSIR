@@ -259,9 +259,13 @@ spec_my = {
     'number_of_contacts' : nb.uint16[:],
     'state' : nb.int8[:],
     'sogn' : nb.uint16[:],
-    'kommune' : nb.uint16[:],
+    'kommune' : nb.uint8[:],
+    'landsdel' : nb.uint8[:],
+    'region' : nb.uint8[:],
     'N_sogne' : nb.uint16,
-    'N_kommuner' : nb.uint16,
+    'N_kommuner' : nb.uint8,
+    'N_landsdele' : nb.uint8,
+    'N_regioner' : nb.uint8,
     'infectious_states' : ListType(nb.int64),
     'corona_type' : nb.uint8[:],
     'vaccination_type' : nb.int8[:],
@@ -284,20 +288,29 @@ class My(object) :
         self.connection_type = utils.initialize_nested_lists(N_tot, np.uint8)
         #self.beta_connection_type = np.array([0.7, 1.0, 1.4, 1.4, 1.0], dtype=np.float32)  # beta multiplier for [House, work, school, others, events]
         self.beta_connection_type = np.array([0.7, 0.5, 0.7, 1.4, 1.0], dtype=np.float32)  # beta multiplier for [House, work, school, others, events] (FASE 4 matrices)
-        self.connection_weight = np.ones(N_tot, dtype=np.float32)
-        self.infection_weight = np.ones(N_tot, dtype=np.float64)
-        self.number_of_contacts = np.zeros(N_tot, dtype=nb.uint16)
-        self.state = np.full(N_tot, fill_value=-1, dtype=np.int8)
-        self.sogn = np.zeros(N_tot, dtype=np.uint16)
-        self.kommune = np.zeros(N_tot, dtype=np.uint16)
-        self.N_sogne = 1
-        self.N_kommuner = 1
+        self.connection_weight    = np.ones(N_tot, dtype=np.float32)
+        self.infection_weight     = np.ones(N_tot, dtype=np.float64)
+        self.number_of_contacts   = np.zeros(N_tot, dtype=nb.uint16)
+        self.state    = np.full(N_tot, fill_value=-1, dtype=np.int8)
+
+        self.sogn     = np.zeros(N_tot, dtype=np.uint16)
+        self.kommune  = np.zeros(N_tot, dtype=np.uint8)
+        self.landsdel = np.zeros(N_tot, dtype=np.uint8)
+        self.region   = np.zeros(N_tot, dtype=np.uint8)
+
+        self.N_sogne     = 1
+        self.N_kommuner  = 1
+        self.N_landsdele = 1
+        self.N_regioner  = 1
+
         self.infectious_states = List([4, 5, 6, 7])
-        self.corona_type = np.zeros(N_tot, dtype=np.uint8)
-        self.vaccination_type = np.zeros(N_tot, dtype=np.uint8)
+
+        self.corona_type         = np.zeros(N_tot, dtype=np.uint8)
+        self.vaccination_type    = np.zeros(N_tot, dtype=np.uint8)
         self.testing_probability = np.zeros(N_tot, dtype=nb.float64)
-        self.restricted_status = np.zeros(N_tot, dtype=np.uint8)
-        self.cfg = nb_cfg
+        self.restricted_status   = np.zeros(N_tot, dtype=np.uint8)
+
+        self.cfg         = nb_cfg
         self.cfg_network = nb_cfg_network
 
     def dist(self, agent1, agent2) :
@@ -439,11 +452,9 @@ spec_intervention = {
     'R_true_list' : ListType(nb.float64),
     'R_true_list_brit' : ListType(nb.float64),
     # Testing
-    'daily_pcr_tests' : nb.int64[:],     # TODO: depreciate
-    'daily_antigen_tests' : nb.int64[:],     # TODO: depreciate
-    'pcr_to_antigen_test_ratio' : nb.float64[:],
+    'pcr_to_total_tests_ratio' : nb.float64[:],
     'daily_test_probability' : nb.float64[:],
-    'random_tests' : nb.int64[:],    # TODO: depreciate
+    'daily_tests' : nb.int64,
     'day_found_infected' : nb.int32[:],
     'reason_for_test' : nb.int8[:],
     'result_of_test' : nb.int8[:],
@@ -551,10 +562,8 @@ class Intervention(object) :
         work_matrix_restrict,
         school_matrix_restrict,
         other_matrix_restrict,
-        daily_pcr_tests,
-        daily_antigen_tests,
         daily_test_modifer,
-        pcr_to_antigen_test_ratio,
+        pcr_to_total_tests_ratio,
         nts,
         verbose=False) :
 
@@ -602,11 +611,9 @@ class Intervention(object) :
         self.school_matrix_restrict          = school_matrix_restrict
         self.other_matrix_restrict           = other_matrix_restrict
 
-        self.daily_pcr_tests                 = daily_pcr_tests                  # TODO Depreciate
-        self.daily_antigen_tests             = daily_antigen_tests              # TODO Depreciate
-        self.random_tests                    = daily_pcr_tests + (0.5 * daily_antigen_tests).astype(daily_antigen_tests.dtype)      # TODO Depreciate
         self.daily_test_probability          = daily_test_modifer
-        self.pcr_to_antigen_test_ratio       = pcr_to_antigen_test_ratio
+        self.pcr_to_total_tests_ratio        = pcr_to_total_tests_ratio
+        self.daily_tests                     = 0
 
         self.stratified_label_map            = stratified_label_map
 

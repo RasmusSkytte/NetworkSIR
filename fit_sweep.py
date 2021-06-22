@@ -8,7 +8,7 @@ from contexttimer import Timer
 
 
 if utils.is_local_computer():
-    f = 0.01
+    f = 0.1
     n_steps = 2
     num_cores_max = 1
     N_runs = 1

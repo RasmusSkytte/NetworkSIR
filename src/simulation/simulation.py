@@ -66,6 +66,9 @@ class Simulation :
 
         utils.set_numba_random_seed(utils.hash_to_seed(self.hash))
 
+        # get the start date
+        self.start_date = datetime.datetime(2020,12,28) + datetime.timedelta(days=cfg.start_date_offset)
+
         # Set up the maps
         self.raw_label_map = pd.read_csv('Data/label_map.csv')
         self.label_map = {'region_idx_to_region' :        self.raw_label_map[['region_idx',  'region' ]].drop_duplicates().set_index('region_idx')['region'],
@@ -73,6 +76,7 @@ class Simulation :
                           'kommune_idx_to_kommune' :      self.raw_label_map[['kommune',     'kommune_idx']].drop_duplicates().set_index('kommune_idx')['kommune'],
                           'kommune_idx_to_landsdel_idx' : self.raw_label_map[['kommune_idx', 'landsdel_idx' ]].drop_duplicates().set_index('kommune_idx')['landsdel_idx'],
                           'kommune_idx_to_region_idx' :   self.raw_label_map[['kommune_idx', 'region_idx' ]].drop_duplicates().set_index('kommune_idx')['region_idx'],
+                          'region_to_kommune_idx' :       self.raw_label_map[['region',      'kommune_idx' ]].drop_duplicates().set_index('region')['kommune_idx'],
                           'sogn_to_sogn_idx' :            pd.Series(data=self.raw_label_map.index,                                   index=self.raw_label_map['sogn']),
                           'sogn_to_kommune_idx' :         pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map['sogn']),
                           'sogn_idx_to_kommune_idx' :     pd.Series(data=self.raw_label_map['kommune_idx'].values,                   index=self.raw_label_map.index),
@@ -103,6 +107,8 @@ class Simulation :
         # Update the sogne counter
         self.my.N_sogne    = len(set(sogne_map.values))
         self.my.N_kommuner = len(kommune_name_to_idx)
+        #self.my.N_landsdele = len(...) # TODO: Implement
+        #self.my.N_regioner = len(...) # TODO: Implement
 
         # Place agents
         N_tot = self.my.cfg_network.N_tot
@@ -131,6 +137,8 @@ class Simulation :
 
             sogn_idx    = self.label_map['sogn_to_sogn_idx'][sogn]
             kommune_idx = self.label_map['sogn_to_kommune_idx'][sogn]
+            #landsdel_idx = self.label_map['sogn_to_landsdel_idx'][sogn]    # TODO: implement
+            #region_idx = self.label_map['sogn_to_region_idx'][sogn]    # TODO: implement
 
             coordinates = utils.generate_coordinate(sogn, sogne)
             coordinates = (coordinates.x, coordinates.y)
@@ -159,6 +167,8 @@ class Simulation :
                                                                     mu_counter,
                                                                     sogn_idx,
                                                                     kommune_idx)
+                                                                    #landsdel_idx,  # TODO: implement
+                                                                    #region_idx)
 
         agents_in_age_group = utils.nested_lists_to_list_of_array(agents_in_age_group)
 
@@ -347,8 +357,9 @@ class Simulation :
         vaccinations_per_age_group, vaccination_schedule, f_vaccinated = file_loaders.load_vaccination_schedule(self.my, self.cfg)
 
         # Load the number of daily tests
-        _, age_counts = np.unique(self.my.age, return_counts=True)
-        daily_pcr_tests, daily_antigen_tests, daily_test_modifer, pcr_to_antigen_test_ratio = file_loaders.load_daily_tests(self.cfg, age_counts=age_counts, fraction_vaccinated=f_vaccinated)
+        age_weights = [self.cfg['testing_penetration'][age] for age in self.my.age]
+        _, _, daily_test_modifer, pcr_to_total_tests_ratio = file_loaders.load_daily_tests(self.cfg, age_weights=age_weights, fraction_vaccinated=f_vaccinated)
+
 
         # Load the restriction contact matrices
         # TODO: This should properably be done at cfg generation for consistent hashes
@@ -429,13 +440,10 @@ class Simulation :
             work_matrix_restrict        = wm,
             school_matrix_restrict      = sm,
             other_matrix_restrict       = om,
-            daily_pcr_tests             = daily_pcr_tests,
-            daily_antigen_tests         = daily_antigen_tests,
             daily_test_modifer          = daily_test_modifer,
-            pcr_to_antigen_test_ratio   = pcr_to_antigen_test_ratio,
+            pcr_to_total_tests_ratio    = pcr_to_total_tests_ratio,
             nts                         = self.nts,
             verbose                     = verbose_interventions)
-
 
     def initialize_states(self) :
 
@@ -480,7 +488,7 @@ class Simulation :
         # Set the probability to choose agents
         if self.cfg.initialize_at_kommune_level :
 
-            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.label_map, test_reference = self.cfg.test_reference, beta = self.cfg.testing_exponent)
+            infected_per_kommune, immunized_per_kommune = file_loaders.load_kommune_infection_distribution(self.cfg.initial_infection_distribution, self.label_map, test_reference = self.cfg.test_reference, beta = self.cfg.testing_exponent, incidence_reference = self.cfg.incidence_reference)
 
             n_kommuner = len(self.label_map['kommune_to_kommune_idx'])
             w_kommune = np.ones(n_kommuner)
@@ -515,12 +523,12 @@ class Simulation :
             for agent in possible_agents :
                 contacts_per_kommune[self.my.kommune[agent]] += self.my.number_of_contacts[agent]
 
-            risk_per_kommune = (incidence_adjusted_per_kommune / contacts_per_kommune)**(1/3)
-            risk_per_kommune /= risk_per_kommune.sum()
+            #risk_per_kommune = (incidence_adjusted_per_kommune / contacts_per_kommune)**(1/3)
+            #risk_per_kommune /= risk_per_kommune.sum()
 
             # Adjust the infection_weight based on the relative risk
-            for agent in possible_agents :
-                self.my.infection_weight[agent] *= risk_per_kommune[self.my.kommune[agent]]
+            #for agent in possible_agents :
+            #    self.my.infection_weight[agent] *= risk_per_kommune[self.my.kommune[agent]]
 
 
             # Determine which agents are in which kommune
@@ -607,7 +615,7 @@ class Simulation :
             self.g,
             self.intervention,
             self.nts,
-            self.stratified_positive,
+            self.stratified_positive
         )
 
         # Reset the test counters

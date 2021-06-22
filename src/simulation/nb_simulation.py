@@ -472,7 +472,7 @@ def run_simulation(
     out_stratified_positive = List()             # The counts of positive tests per age group
     out_stratified_vaccination_counts = List()   # The counts of vaccinations per age group
     out_daily_tests = List()                     # The counts of daily tests
-    out_median_incidence = List()                # The median muncipality incidence
+    out_incidence_metrics = List()               # The median muncipality incidence
     out_my_state = List()
 
     daily_counter = 0
@@ -487,7 +487,7 @@ def run_simulation(
     where_infections_happened_counter = np.zeros(4)
 
     # Compute incidence
-    median_incidence = check_status_for_incidence_interventions(my, g, intervention, day, click)
+    incidence_metrics = check_status_for_incidence_interventions(my, g, intervention, day, click)
 
     # Check for day 0 interventions
     if intervention.apply_interventions :
@@ -660,18 +660,17 @@ def run_simulation(
                     out_state_counts.append(state_total_counts.copy())
                     out_stratified_positive.append(stratified_positive.copy())
                     out_stratified_vaccination_counts.append(stratified_vaccination_counts.copy())
-                    out_daily_tests.append(intervention.daily_pcr_tests[day] + 0.5 * intervention.daily_antigen_tests[day])
-                    out_median_incidence.append(median_incidence)
+                    out_daily_tests.append(intervention.daily_tests)
+                    out_incidence_metrics.append(incidence_metrics)
                     out_my_state.append(my.state.copy())
 
                     intervention.R_true_list.append(calculate_R_True(my, g, day))
                     intervention.R_true_list_brit.append(calculate_R_True_brit(my, g, day))
                     intervention.freedom_impact_list.append(calculate_population_freedom_impact(intervention))
 
-
                 # Print current progress
                 if verbose :
-                    print('--- day : ', day, ' ---')
+                    print('--- day :', day, '---')
                    # print('n_infected : ',        np.round(my.cfg.N_init + np.sum(where_infections_happened_counter)))
                    # print('freedom_impact : ',    np.round(intervention.freedom_impact_list[-1], 3))
                     #print('R_true : ',            np.round(intervention.R_true_list[-1],         3))
@@ -688,7 +687,7 @@ def run_simulation(
                     break
 
                 # Update incidence NPIs
-                median_incidence = check_status_for_incidence_interventions(my, g, intervention, day, click)
+                incidence_metrics = check_status_for_incidence_interventions(my, g, intervention, day, click)
 
                 # Advance day
                 day += 1
@@ -698,6 +697,8 @@ def run_simulation(
                 if intervention.apply_interventions :
 
                     stratified_positive = np.zeros_like(stratified_positive)
+
+                    intervention.daily_tests = 0
 
                     # Apply interventions for the new day
                     apply_daily_interventions(my, g, intervention, day, click, stratified_vaccination_counts, verbose)
@@ -749,4 +750,4 @@ def run_simulation(
     if day > 0 :
         print('positive_test_counter : ', [int(f * P / day) for P in intervention.positive_test_counter])
 
-    return out_time, out_state_counts, out_stratified_positive, out_stratified_vaccination_counts, out_daily_tests, out_median_incidence, out_my_state, intervention
+    return out_time, out_state_counts, out_stratified_positive, out_stratified_vaccination_counts, out_daily_tests, out_incidence_metrics, out_my_state, intervention
